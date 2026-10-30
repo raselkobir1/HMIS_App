@@ -1,0 +1,54 @@
+.shell {
+  height: 100vh;
+}
+
+.sidenav {
+  width: 256px;
+  border-right: 1px solid var(--mat-sys-outline-variant);
+}
+
+.sidenav-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 64px;
+  padding: 0 16px;
+  font: var(--mat-sys-title-large);
+  color: var(--mat-sys-primary);
+}
+
+.active-link {
+  background: var(--mat-sys-secondary-container);
+}
+
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--mat-sys-surface-container);
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+}
+
+.toolbar-title {
+  margin-left: 8px;
+  font: var(--mat-sys-title-medium);
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+.page {
+  padding: 24px;
+}
+
+@media (max-width: 600px) {
+  .toolbar-title,
+  .user-name {
+    display: none;
+  }
+
+  .page {
+    padding: 16px;
+  }
+}

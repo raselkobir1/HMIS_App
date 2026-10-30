@@ -1,0 +1,68 @@
+<mat-sidenav-container class="shell">
+  <mat-sidenav
+    #drawer
+    class="sidenav"
+    [mode]="isHandset() ? 'over' : 'side'"
+    [opened]="!isHandset()"
+    [attr.role]="isHandset() ? 'dialog' : 'navigation'"
+  >
+    <div class="sidenav-brand">
+      <mat-icon>local_hospital</mat-icon>
+      <span>HMIS</span>
+    </div>
+
+    <mat-nav-list>
+      @for (item of menu(); track item.label) {
+        @if (item.route) {
+          <a
+            mat-list-item
+            [routerLink]="item.route"
+            routerLinkActive="active-link"
+            (click)="isHandset() && drawer.close()"
+          >
+            <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+            <span matListItemTitle>{{ item.label }}</span>
+          </a>
+        } @else {
+          <div mat-subheader>{{ item.label }}</div>
+          @for (child of item.children; track child.label) {
+            <a
+              mat-list-item
+              [routerLink]="child.route"
+              routerLinkActive="active-link"
+              (click)="isHandset() && drawer.close()"
+            >
+              <mat-icon matListItemIcon>{{ child.icon }}</mat-icon>
+              <span matListItemTitle>{{ child.label }}</span>
+            </a>
+          }
+        }
+      }
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <mat-sidenav-content class="content">
+    <mat-toolbar class="toolbar">
+      <button mat-icon-button type="button" aria-label="Toggle menu" (click)="drawer.toggle()">
+        <mat-icon>menu</mat-icon>
+      </button>
+      <span class="toolbar-title">Hospital Management System</span>
+      <span class="spacer"></span>
+
+      <button mat-button type="button" [matMenuTriggerFor]="userMenu" aria-label="User menu">
+        <mat-icon>account_circle</mat-icon>
+        <span class="user-name">{{ user()?.fullName ?? 'User' }}</span>
+      </button>
+      <mat-menu #userMenu="matMenu" xPosition="before">
+        <button mat-menu-item type="button" (click)="logout()">
+          <mat-icon>logout</mat-icon>
+          <span>Logout</span>
+        </button>
+      </mat-menu>
+    </mat-toolbar>
+
+    <main class="page">
+      <router-outlet />
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>

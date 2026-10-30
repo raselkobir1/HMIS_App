@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" />
+    <PackageReference Include="Mapster" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Hmis.BuildingBlocks.Domain\Hmis.BuildingBlocks.Domain.csproj" />
+    <ProjectReference Include="..\Hmis.BuildingBlocks.Contracts\Hmis.BuildingBlocks.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

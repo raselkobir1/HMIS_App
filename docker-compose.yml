@@ -1,0 +1,38 @@
+# Local development infrastructure. Credentials below are for the local dev container only.
+name: hmis
+
+services:
+  postgres:
+    image: postgres:17
+    container_name: hmis-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: hmis
+      POSTGRES_USER: ${HMIS_DB_USER:-hmis}
+      POSTGRES_PASSWORD: ${HMIS_DB_PASSWORD:-hmis_dev_password}
+      TZ: UTC
+    ports:
+      - "${HMIS_DB_PORT:-5434}:5432"
+    volumes:
+      - hmis-pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d hmis"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4:9
+    container_name: hmis-pgadmin
+    profiles: ["tools"]
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@hmis.local
+      PGADMIN_DEFAULT_PASSWORD: ${HMIS_PGADMIN_PASSWORD:-admin}
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+
+volumes:
+  hmis-pgdata:

@@ -1,0 +1,27 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.idea/
+*.swp
+TestResults/
+publish/
+logs/
+storage/
+appsettings.*.local.json
+
+## Node / Angular
+node_modules/
+dist/
+.angular/
+coverage/
+
+## Env & secrets
+.env
+*.env.local
+
+## OS
+Thumbs.db
+.DS_Store

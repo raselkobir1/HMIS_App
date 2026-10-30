@@ -1,0 +1,48 @@
+using Hmis.BuildingBlocks.Application.Abstractions;
+using Hmis.BuildingBlocks.Infrastructure.Persistence;
+using Hmis.BuildingBlocks.Infrastructure.Persistence.Interceptors;
+using Hmis.BuildingBlocks.Infrastructure.Services;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Hmis.BuildingBlocks.Infrastructure;
+
+public static class DependencyInjection
+{
+    public const string ConnectionStringName = "HmisDatabase";
+
+    public static IServiceCollection AddBuildingBlocksInfrastructure(this IServiceCollection services)
+    {
+        services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
+        services.AddScoped<AuditableEntityInterceptor>();
+        return services;
+    }
+
+    /// <summary>
+    /// Registers a module DbContext on the shared PostgreSQL database with the migrations-history table
+    /// inside the module's own schema, plus the module's Unit of Work.
+    /// </summary>
+    public static IServiceCollection AddModuleDbContext<TContext>(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        string schema)
+        where TContext : ModuleDbContext
+    {
+        var connectionString = configuration.GetConnectionString(ConnectionStringName)
+            ?? throw new InvalidOperationException($"Connection string '{ConnectionStringName}' is not configured.");
+
+        services.AddDbContext<TContext>((serviceProvider, options) =>
+        {
+            options.UseNpgsql(connectionString, npgsql =>
+            {
+                npgsql.MigrationsAssembly(typeof(TContext).Assembly.FullName);
+                npgsql.MigrationsHistoryTable("__EFMigrationsHistory", schema);
+            });
+            options.AddInterceptors(serviceProvider.GetRequiredService<AuditableEntityInterceptor>());
+        });
+
+        services.AddScoped<UnitOfWork<TContext>>();
+        return services;
+    }
+}

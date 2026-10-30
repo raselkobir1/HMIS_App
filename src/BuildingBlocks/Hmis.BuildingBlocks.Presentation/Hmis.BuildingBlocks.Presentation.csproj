@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Asp.Versioning.Mvc" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Hmis.BuildingBlocks.Application\Hmis.BuildingBlocks.Application.csproj" />
+  </ItemGroup>
+
+</Project>
