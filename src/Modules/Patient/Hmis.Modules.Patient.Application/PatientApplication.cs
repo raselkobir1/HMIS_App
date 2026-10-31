@@ -29,8 +29,9 @@ public sealed class PatientPermissionDefinitionProvider : IPermissionDefinitionP
 {
     public IEnumerable<PermissionDefinition> GetPermissions() =>
     [
+        // The cash counter finds patients to bill and print receipts (Billing, Phase 3).
         new(PatientPermissions.View, PatientPermissions.Module, "Search and view patient demographics",
-            [SystemRoles.HospitalAdministrator, SystemRoles.Receptionist, SystemRoles.Doctor, SystemRoles.Nurse]),
+            [SystemRoles.HospitalAdministrator, SystemRoles.Receptionist, SystemRoles.Doctor, SystemRoles.Nurse, SystemRoles.Accountant]),
         new(PatientPermissions.Create, PatientPermissions.Module, "Register patients", [SystemRoles.Receptionist]),
         new(PatientPermissions.Update, PatientPermissions.Module, "Update patient demographics and photo", [SystemRoles.Receptionist]),
         new(PatientPermissions.Deactivate, PatientPermissions.Module, "Deactivate or reactivate patient records", [SystemRoles.HospitalAdministrator]),
