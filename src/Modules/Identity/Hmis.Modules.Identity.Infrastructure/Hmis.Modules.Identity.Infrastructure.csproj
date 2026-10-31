@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Identity.Core" />
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Hmis.Modules.Identity.Application\Hmis.Modules.Identity.Application.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\Hmis.BuildingBlocks.Infrastructure\Hmis.BuildingBlocks.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

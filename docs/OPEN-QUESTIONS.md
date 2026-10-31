@@ -12,6 +12,10 @@ Answers are recorded here and then copied into the relevant document.
 | Q-TECH-2 | Project granularity | 4 projects per module | 2026-10-31 |
 | Q-TECH-3 | UI library | Angular Material | 2026-10-31 |
 | Q-TECH-4 | Test projects | Not required | 2026-10-31 |
+| Q-SEC-1 | Super Admin excluded from clinical data by default? | Yes — clinical permissions need an explicit, audited grant | 2026-10-31 |
+| Q-SEC-2 | Password policy | Min 8 chars, upper + lower + digit; forced change on first login / admin reset; no expiry | 2026-10-31 |
+| Q-SEC-3 | Session timeout | UI auto-logout after 30 min inactivity; refresh token 7 days | 2026-10-31 |
+| Q-SEC-4 | Login identifier | Username or email | 2026-10-31 |
 
 ## Hospital discovery (BRD §13) — affects module activation and phase order
 
@@ -25,15 +29,6 @@ Answers are recorded here and then copied into the relevant document.
 | Q-HOSP-7 | SMS notifications required? Which provider? | Notifications |
 | Q-HOSP-8 | Online / patient self-service booking required? | Appointment (P2) |
 | Q-HOSP-9 | Separate doctor/nurse mobile app required? | Out of scope for now |
-
-## Identity / Security
-
-| ID | Question | Proposed default | Blocking for |
-|---|---|---|---|
-| Q-SEC-1 | Should Super Administrator be **excluded** from clinical data (`Patient.MedicalInfo.*`)? | Yes, excluded. Super Admin can grant itself access, and that grant is audited. | Identity |
-| Q-SEC-2 | Password policy | Minimum 8 characters, upper + lower + digit; change required on first login; no expiry | Identity |
-| Q-SEC-3 | Idle session timeout | 30 min of inactivity on the UI; refresh token lasts 7 days | Identity |
-| Q-SEC-4 | Login with username, email, or both? | Both | Identity |
 
 ## Administration
 

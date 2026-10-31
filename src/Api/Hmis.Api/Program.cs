@@ -53,7 +53,6 @@ try
     // ---------- Security ----------
     builder.Services.AddJwtAuthentication(builder.Configuration);
     builder.Services.AddPermissionAuthorization();
-    builder.Services.TryAddScoped<IPermissionChecker, DenyAllPermissionChecker>();
 
     var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
     builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy
@@ -62,12 +61,13 @@ try
         .AllowAnyMethod()
         .AllowCredentials()));
 
+    var authPermitPerMinute = builder.Configuration.GetValue("RateLimiting:AuthPermitPerMinute", 10);
     builder.Services.AddRateLimiter(options =>
     {
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
         options.AddPolicy(RateLimitPolicies.Auth, httpContext => RateLimitPartition.GetFixedWindowLimiter(
             httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1) }));
+            _ => new FixedWindowRateLimiterOptions { PermitLimit = authPermitPerMinute, Window = TimeSpan.FromMinutes(1) }));
         options.OnRejected = (context, cancellationToken) => new ValueTask(
             context.HttpContext.Response.WriteAsJsonAsync(ApiResponse.Fail(
                 "Too many requests. Please try again later.",
@@ -77,6 +77,7 @@ try
 
     // ---------- Modules ----------
     builder.Services.AddHmisModules(builder.Configuration);
+    builder.Services.TryAddScoped<IPermissionChecker, DenyAllPermissionChecker>();
 
     // ---------- MVC ----------
     var mvc = builder.Services
@@ -113,6 +114,7 @@ try
 
     // ---------- Pipeline ----------
     var app = builder.Build();
+    await app.RunStartupTasksAsync();
 
     app.UseExceptionHandler();
     app.UseSerilogRequestLogging(options =>
@@ -137,7 +139,7 @@ try
     app.MapControllers();
     app.MapHealthChecks("/health");
 
-    app.Run();
+    await app.RunAsync();
 }
 catch (Exception ex) when (ex is not HostAbortedException)
 {

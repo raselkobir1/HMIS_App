@@ -1,4 +1,5 @@
 using Hmis.BuildingBlocks.Application.Abstractions;
+using Hmis.BuildingBlocks.Domain.Abstractions;
 using Microsoft.EntityFrameworkCore;
 
 namespace Hmis.BuildingBlocks.Infrastructure.Persistence;
@@ -19,4 +20,8 @@ public abstract class BaseRepository<TEntity, TContext>(TContext context) : IRep
     public virtual void Update(TEntity entity) => Set.Update(entity);
 
     public virtual void Remove(TEntity entity) => Set.Remove(entity);
+
+    /// <summary>Implements IConcurrencyRepository for entities that implement IHasConcurrencyToken.</summary>
+    public virtual void SetExpectedRowVersion(TEntity entity, uint rowVersion) =>
+        Context.Entry(entity).Property(nameof(IHasConcurrencyToken.RowVersion)).OriginalValue = rowVersion;
 }

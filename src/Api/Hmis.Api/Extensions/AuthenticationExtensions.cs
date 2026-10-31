@@ -1,24 +1,11 @@
 using System.Text;
 using Hmis.BuildingBlocks.Application.Responses;
+using Hmis.BuildingBlocks.Application.Security;
 using Hmis.BuildingBlocks.Presentation.Http;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Hmis.Api.Extensions;
-
-public sealed class JwtSettings
-{
-    public const string SectionName = "Jwt";
-
-    public string Issuer { get; set; } = string.Empty;
-    public string Audience { get; set; } = string.Empty;
-
-    /// <summary>Secret: supplied by environment variable Jwt__SigningKey or user-secrets, never appsettings.</summary>
-    public string SigningKey { get; set; } = string.Empty;
-
-    public int AccessTokenMinutes { get; set; } = 15;
-    public int RefreshTokenDays { get; set; } = 7;
-}
 
 public static class AuthenticationExtensions
 {
