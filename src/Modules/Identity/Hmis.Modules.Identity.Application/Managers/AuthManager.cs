@@ -1,4 +1,5 @@
 using Hmis.BuildingBlocks.Application.Abstractions;
+using Hmis.BuildingBlocks.Application.Auditing;
 using Hmis.BuildingBlocks.Application.Exceptions;
 using Hmis.Modules.Identity.Application.DTOs.Requests;
 using Hmis.Modules.Identity.Application.DTOs.Responses;
@@ -23,7 +24,8 @@ public sealed class AuthManager(
     ICurrentUser currentUser,
     IRequestContext requestContext,
     IDateTimeProvider dateTime,
-    IOptions<AccountSecurityOptions> securityOptions) : IAuthManager
+    IOptions<AccountSecurityOptions> securityOptions,
+    IAuditService auditService) : IAuthManager
 {
     private const string InvalidCredentialsMessage = "Invalid username or password.";
 
@@ -148,6 +150,7 @@ public sealed class AuthManager(
 
         var now = dateTime.UtcNow;
         user.SetPassword(passwordHasher.Hash(user, request.NewPassword), mustChangePassword: false);
+        auditService.Record(new AuditEvent("PasswordChanged", "Identity", nameof(User), user.Id.ToString()));
 
         // Sign out every other session; the caller receives a fresh one.
         foreach (var token in await refreshTokenRepository.GetActiveByUserAsync(user.Id, now, cancellationToken))

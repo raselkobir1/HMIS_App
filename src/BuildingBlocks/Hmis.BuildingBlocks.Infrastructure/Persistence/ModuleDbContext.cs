@@ -12,6 +12,9 @@ public abstract class ModuleDbContext(DbContextOptions options) : DbContext(opti
     /// <summary>Lowercase PostgreSQL schema owned by the module (e.g. "patient").</summary>
     public abstract string Schema { get; }
 
+    /// <summary>Module name recorded in audit logs (e.g. "Identity"). Defaults to the schema name.</summary>
+    public virtual string ModuleName => Schema;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema(Schema);

@@ -27,8 +27,14 @@ public sealed class User : AuditableEntity, IAggregateRoot, IHasConcurrencyToken
 
     public bool IsActive { get; private set; } = true;
     public bool MustChangePassword { get; private set; }
+    // Login bookkeeping is recorded in LoginHistory, not the audit log.
+    [NotAudited]
     public int AccessFailedCount { get; private set; }
+
+    [NotAudited]
     public DateTime? LockoutEnd { get; private set; }
+
+    [NotAudited]
     public DateTime? LastLoginAt { get; private set; }
 
     /// <summary>Optional link to hr.Employees (no cross-schema FK; validated through a contract).</summary>

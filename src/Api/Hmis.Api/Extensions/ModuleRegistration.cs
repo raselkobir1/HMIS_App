@@ -1,4 +1,5 @@
 using System.Reflection;
+using Hmis.Modules.Audit.Infrastructure;
 using Hmis.Modules.Identity.Infrastructure;
 
 namespace Hmis.Api.Extensions;
@@ -12,18 +13,21 @@ public static class ModuleRegistration
     /// <summary>Presentation assemblies whose controllers are exposed by the API.</summary>
     public static readonly Assembly[] PresentationAssemblies =
     [
-        typeof(Hmis.Modules.Identity.Presentation.IdentityPresentationMarker).Assembly
+        typeof(Hmis.Modules.Identity.Presentation.IdentityPresentationMarker).Assembly,
+        typeof(Hmis.Modules.Audit.Presentation.AuditPresentationMarker).Assembly
     ];
 
     /// <summary>Application assemblies containing FluentValidation validators and Mapster IRegister configs.</summary>
     public static readonly Assembly[] ApplicationAssemblies =
     [
         typeof(Hmis.BuildingBlocks.Application.ApplicationAssemblyMarker).Assembly,
-        typeof(Hmis.Modules.Identity.Application.IdentityApplicationMarker).Assembly
+        typeof(Hmis.Modules.Identity.Application.IdentityApplicationMarker).Assembly,
+        typeof(Hmis.Modules.Audit.Application.AuditApplicationMarker).Assembly
     ];
 
     public static IServiceCollection AddHmisModules(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddAuditModule(configuration);
         services.AddIdentityModule(configuration);
         return services;
     }

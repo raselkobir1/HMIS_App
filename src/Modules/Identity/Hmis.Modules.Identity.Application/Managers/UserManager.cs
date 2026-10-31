@@ -1,4 +1,5 @@
 using Hmis.BuildingBlocks.Application.Abstractions;
+using Hmis.BuildingBlocks.Application.Auditing;
 using Hmis.BuildingBlocks.Application.Exceptions;
 using Hmis.BuildingBlocks.Application.Pagination;
 using Hmis.Modules.Identity.Application.DTOs.Requests;
@@ -20,8 +21,11 @@ public sealed class UserManager(
     IPasswordHasher passwordHasher,
     SuperAdministratorGuard superAdminGuard,
     ICurrentUser currentUser,
-    IDateTimeProvider dateTime) : IUserManager
+    IDateTimeProvider dateTime,
+    IAuditService auditService) : IUserManager
 {
+    private const string Module = "Identity";
+
     public Task<PagedResponse<UserListItemDto>> SearchAsync(UserListQuery query, CancellationToken cancellationToken) =>
         userRepository.SearchAsync(query, dateTime.UtcNow, cancellationToken);
 
@@ -33,12 +37,14 @@ public sealed class UserManager(
     {
         await EnsureUserNameAvailableAsync(request.UserName, cancellationToken);
         await EnsureEmailAvailableAsync(request.Email, null, cancellationToken);
-        var roleIds = await ValidateRoleChangeAsync([], request.RoleIds, cancellationToken);
+        var roles = await ValidateRoleChangeAsync([], request.RoleIds, cancellationToken);
 
         var user = User.Create(request.UserName, request.FullName, request.Email, request.PhoneNumber, request.EmployeeId,
             passwordHash: string.Empty, mustChangePassword: true);
         user.SetPassword(passwordHasher.Hash(user, request.Password), mustChangePassword: true);
-        user.SetRoles(roleIds);
+        user.SetRoles(roles.Select(r => r.Id));
+        auditService.Record(new AuditEvent("RolesChanged", Module, nameof(User), user.Id.ToString(),
+            null, new { Roles = roles.Select(r => r.Name).Order().ToList() }));
 
         await userRepository.AddAsync(user, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -90,6 +96,7 @@ public sealed class UserManager(
 
         user.SetPassword(passwordHasher.Hash(user, request.NewPassword), mustChangePassword: true);
         user.Unlock();
+        auditService.Record(new AuditEvent("PasswordReset", Module, nameof(User), user.Id.ToString()));
         await RevokeSessionsAsync(user.Id, "Password reset by administrator", cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }
@@ -98,6 +105,7 @@ public sealed class UserManager(
     {
         var user = await GetUserAsync(id, cancellationToken);
         user.Unlock();
+        auditService.Record(new AuditEvent("Unlocked", Module, nameof(User), user.Id.ToString()));
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return await GetByIdAsync(id, cancellationToken);
     }
@@ -106,9 +114,12 @@ public sealed class UserManager(
     {
         var user = await GetUserAsync(id, cancellationToken);
         var currentRoleIds = user.Roles.Select(r => r.RoleId).ToList();
-        var roleIds = await ValidateRoleChangeAsync(currentRoleIds, request.RoleIds, cancellationToken, user);
+        var oldRoleNames = await userRepository.GetRoleNamesAsync(user.Id, cancellationToken);
+        var roles = await ValidateRoleChangeAsync(currentRoleIds, request.RoleIds, cancellationToken, user);
 
-        user.SetRoles(roleIds);
+        user.SetRoles(roles.Select(r => r.Id));
+        auditService.Record(new AuditEvent("RolesChanged", Module, nameof(User), user.Id.ToString(),
+            new { Roles = oldRoleNames }, new { Roles = roles.Select(r => r.Name).Order().ToList() }));
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return await GetByIdAsync(id, cancellationToken);
     }
@@ -124,7 +135,12 @@ public sealed class UserManager(
             throw new BusinessException(IdentityErrorCodes.PermissionNotFound, "One or more permissions do not exist.", "permissionIds");
         }
 
+        var oldIds = user.Permissions.Select(p => p.PermissionId).ToList();
+        var oldCodes = (await permissionRepository.GetByIdsAsync(oldIds, cancellationToken)).Select(p => p.Code).Order().ToList();
+
         user.SetDirectPermissions(permissionIds);
+        auditService.Record(new AuditEvent("PermissionsChanged", Module, nameof(User), user.Id.ToString(),
+            new { Permissions = oldCodes }, new { Permissions = found.Select(p => p.Code).Order().ToList() }));
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return await GetByIdAsync(id, cancellationToken);
     }
@@ -133,7 +149,7 @@ public sealed class UserManager(
         await userRepository.GetWithAccessAsync(id, cancellationToken) ?? throw new NotFoundException(nameof(User), id);
 
     /// <summary>Checks the requested roles exist and applies the Super Administrator escalation/lock-out rules.</summary>
-    private async Task<List<Guid>> ValidateRoleChangeAsync(
+    private async Task<IReadOnlyList<Role>> ValidateRoleChangeAsync(
         IReadOnlyCollection<Guid> currentRoleIds,
         IReadOnlyCollection<Guid> requestedRoleIds,
         CancellationToken cancellationToken,
@@ -164,7 +180,7 @@ public sealed class UserManager(
             }
         }
 
-        return roleIds;
+        return roles;
     }
 
     private async Task EnsureCanManageSuperAdministratorAsync(User user, CancellationToken cancellationToken)

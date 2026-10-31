@@ -11,6 +11,8 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
 
     public override string Schema => SchemaName;
 
+    public override string ModuleName => "Identity";
+
     public DbSet<User> Users => Set<User>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<Permission> Permissions => Set<Permission>();

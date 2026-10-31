@@ -1,3 +1,4 @@
+using Hmis.BuildingBlocks.Application.Auditing;
 using Hmis.BuildingBlocks.Application.Exceptions;
 using Hmis.BuildingBlocks.Application.Pagination;
 using Hmis.Modules.Identity.Application.DTOs.Requests;
@@ -15,7 +16,8 @@ public sealed class RoleManager(
     IPermissionRepository permissionRepository,
     IUserRepository userRepository,
     IIdentityUnitOfWork unitOfWork,
-    SuperAdministratorGuard superAdminGuard) : IRoleManager
+    SuperAdministratorGuard superAdminGuard,
+    IAuditService auditService) : IRoleManager
 {
     /// <summary>The Super Administrator role must always keep these, or the system can no longer be administered.</summary>
     private static readonly string[] SuperAdministratorRequiredPermissions =
@@ -90,7 +92,14 @@ public sealed class RoleManager(
             }
         }
 
+        var oldCodes = (await permissionRepository.GetByIdsAsync(role.Permissions.Select(p => p.PermissionId).ToList(), cancellationToken))
+            .Select(p => p.Code).Order().ToList();
+        var newCodes = (await permissionRepository.GetByIdsAsync(permissionIds, cancellationToken)).Select(p => p.Code).Order().ToList();
+
         role.SetPermissions(permissionIds);
+        auditService.Record(new AuditEvent("PermissionsChanged", "Identity", nameof(Role), role.Id.ToString(),
+            new { Permissions = oldCodes }, new { Permissions = newCodes }));
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return await GetByIdAsync(id, cancellationToken);
     }

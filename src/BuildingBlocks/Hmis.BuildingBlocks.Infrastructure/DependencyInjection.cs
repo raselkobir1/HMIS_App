@@ -1,4 +1,5 @@
 using Hmis.BuildingBlocks.Application.Abstractions;
+using Hmis.BuildingBlocks.Infrastructure.Auditing;
 using Hmis.BuildingBlocks.Infrastructure.Persistence;
 using Hmis.BuildingBlocks.Infrastructure.Persistence.Interceptors;
 using Hmis.BuildingBlocks.Infrastructure.Services;
@@ -16,6 +17,9 @@ public static class DependencyInjection
     {
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
         services.AddScoped<AuditableEntityInterceptor>();
+        services.AddScoped<PendingAuditEvents>();
+        services.AddScoped<AuditRecordFactory>();
+        services.AddScoped<AuditSaveChangesInterceptor>();
         return services;
     }
 
@@ -39,7 +43,10 @@ public static class DependencyInjection
                 npgsql.MigrationsAssembly(typeof(TContext).Assembly.FullName);
                 npgsql.MigrationsHistoryTable("__EFMigrationsHistory", schema);
             });
-            options.AddInterceptors(serviceProvider.GetRequiredService<AuditableEntityInterceptor>());
+            // Order matters: stamp Created/Modified first, then capture the audit snapshot.
+            options.AddInterceptors(
+                serviceProvider.GetRequiredService<AuditableEntityInterceptor>(),
+                serviceProvider.GetRequiredService<AuditSaveChangesInterceptor>());
         });
 
         services.AddScoped<UnitOfWork<TContext>>();
