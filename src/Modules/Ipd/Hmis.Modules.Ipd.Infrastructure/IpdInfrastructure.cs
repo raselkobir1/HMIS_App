@@ -274,7 +274,7 @@ public sealed class BedChargeJob(IServiceScopeFactory scopes, IConfiguration con
     {
         try
         {
-            using var scope = scopes.CreateScope();
+            await using var scope = scopes.CreateAsyncScope();
             var admissions = scope.ServiceProvider.GetRequiredService<IAdmissionRepository>();
             var poster = scope.ServiceProvider.GetRequiredService<BedChargePoster>();
             foreach (var admission in await admissions.GetInBedAsync(cancellationToken))

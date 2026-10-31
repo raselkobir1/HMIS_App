@@ -78,7 +78,7 @@ public sealed class AdmissionManager(
             bed is null ? null : context.Wards.GetValueOrDefault(bed.WardId)?.Name,
             bed?.BedNumber,
             admission.AdmittedAt,
-            admission.DischargedAt ?? admission.DischargeOrderedAt,
+            admission.DischargedAt,
             admission.Reason,
             (await DischargeInfoAsync(admission, cancellationToken))!);
     }
