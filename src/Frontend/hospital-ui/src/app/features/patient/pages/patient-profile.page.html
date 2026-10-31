@@ -120,6 +120,15 @@
         </div>
       </mat-tab>
     }
+    @if (can.visitsView) {
+      <mat-tab label="Visits">
+        <ng-template matTabContent>
+          <div class="tab-body">
+            <app-patient-visits-panel [patientId]="p.id" />
+          </div>
+        </ng-template>
+      </mat-tab>
+    }
     @if (can.appointmentsView) {
       <mat-tab label="Appointments">
         <div class="tab-body">

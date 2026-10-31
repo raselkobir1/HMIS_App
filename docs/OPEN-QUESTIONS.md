@@ -31,6 +31,12 @@ Answers are recorded here and then copied into the relevant document.
 | Q-PAT-12 | ID card | Printable credit-card page with Code 128 barcode (browser print / save as PDF) | 2026-10-31 |
 | Q-HR-1 | Employee code | Auto-generated `EMP000001` (EMPLOYEE_CODE sequence, format editable) — default used, not explicitly confirmed | 2026-10-31 |
 | Q-HR-2 | Employment types | Permanent, Contract, Visiting, Intern — default used, not explicitly confirmed | 2026-10-31 |
+| Q-CLIN-1 | Prescription language / layout | English on the hospital letterhead with doctor's qualifications, BMDC number and signature line; advice free text (Bangla allowed) — default used, not explicitly confirmed | 2026-10-31 |
+| Q-CLIN-2 | Medicines | Structured free text: form, name, strength, dose pattern (1+0+1), before/after food, duration, route, quantity, instructions; linked to Pharmacy in Phase 6 — default used | 2026-10-31 |
+| Q-CLIN-3 | Diagnosis coding | Free text, one primary + secondary; ICD-10 later — default used | 2026-10-31 |
+| Q-CLIN-4 | Vitals | BP, pulse, temperature (°F), respiratory rate, SpO₂, weight, height, BMI — default used | 2026-10-31 |
+| Q-CLIN-5 | Follow-up fee | Reception chooses New / Follow-up when booking (no automatic window) — default used | 2026-10-31 |
+| Q-CLIN-6 | Payment before consultation | Not enforced until Billing (Phase 3) — default used | 2026-10-31 |
 | Q-HOSP-4 | Departments to seed | Standard list of 14 (editable); hospital can adjust in the app | 2026-10-31 |
 
 ## Hospital discovery (BRD §13) — affects module activation and phase order

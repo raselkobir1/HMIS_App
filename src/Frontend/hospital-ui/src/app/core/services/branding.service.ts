@@ -10,16 +10,24 @@ interface Branding {
   shortName: string | null;
   hasLogo: boolean;
   logoVersion: string | null;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
 }
 
 /** Public hospital name and logo for the login page and the app shell. */
 @Injectable({ providedIn: 'root' })
 export class BrandingService {
   private readonly http = inject(HttpClient);
-  private readonly branding = signal<Branding>({ name: 'Hospital Management System', shortName: 'HMIS', hasLogo: false, logoVersion: null });
+  private readonly branding = signal<Branding>({ name: 'Hospital Management System', shortName: 'HMIS', hasLogo: false, logoVersion: null, address: null, phone: null, email: null });
 
   readonly name = computed(() => this.branding().name);
   readonly shortName = computed(() => this.branding().shortName || this.branding().name);
+  /** Contact details for printed letterheads (prescriptions). */
+  readonly contact = computed(() => {
+    const b = this.branding();
+    return { address: b.address, phone: b.phone, email: b.email };
+  });
   readonly logoUrl = computed(() =>
     this.branding().hasLogo ? `${environment.apiBaseUrl}/hospital-profile/logo?v=${this.branding().logoVersion}` : null,
   );

@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-31 — Clinical + OPD consultation (Phase 2, step 2)
+- New Clinical module (`clinical` schema): consultations with diagnoses, prescription lines, investigation requests and addenda; vital signs.
+- Nurse station (OPD Vitals) with plausibility checks and BMI; mistakes marked as entered in error, never deleted.
+- Consultation screen from My Queue: allergy banner, vitals, history and previous visits beside the editor; draft save, leave-page warning, finalize & complete.
+- Finalized records are locked; corrections are addenda. Printable A4 prescription with letterhead, BMDC number and Bangla advice.
+- Patient profile Visits tab. Clinical access is explicit-grant, relationship-checked for doctors, and every view is audited.
+- Appointment exposes `IOpdEncounterService`; branding now includes hospital address, phone and email.
+
 ## 2026-10-31 — Doctor profiles, appointments and queues (Phase 2, step 1)
 - HR: doctor profiles (specialization, qualifications, BMDC number, new / follow-up fees, accepting appointments) and a Doctors screen.
 - `appointment` schema: weekly doctor sessions with capacity and minutes per patient, leave (whole day or one session), appointments with serial numbers and estimated times.

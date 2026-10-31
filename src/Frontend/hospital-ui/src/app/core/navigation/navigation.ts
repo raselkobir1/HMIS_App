@@ -37,6 +37,12 @@ export const NAVIGATION: NavItem[] = [
     ],
   },
   {
+    label: 'OPD',
+    icon: 'stethoscope',
+    permissions: [],
+    children: [{ label: 'OPD Vitals', icon: 'monitor_heart', route: '/opd/vitals', permissions: ['Clinical.Vitals.Record'] }],
+  },
+  {
     label: 'HR',
     icon: 'groups',
     permissions: [],

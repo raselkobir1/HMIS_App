@@ -158,3 +158,22 @@ Contract for other modules: `IPatientLookup` (`GetAsync`, `GetByMRNumberAsync`) 
 | GET | `/api/v1/queue-board` (serial numbers only, no patient data) | Appointment.QueueDisplay |
 
 Status flow: Scheduled → Confirmed → Waiting (checked in) → InConsultation → Completed; Cancelled (until the consultation starts) and NoShow (on/after the date). Error codes: `APPOINTMENT_ALREADY_BOOKED`, `LEAVE_ALREADY_RECORDED` (409); `APPOINTMENT_DOCTOR_UNAVAILABLE`, `APPOINTMENT_PATIENT_UNAVAILABLE`, `APPOINTMENT_SESSION_INVALID`, `APPOINTMENT_SESSION_FULL`, `APPOINTMENT_SESSION_ENDED`, `APPOINTMENT_DOCTOR_ON_LEAVE`, `APPOINTMENT_DATE_OUT_OF_RANGE`, `APPOINTMENT_NOT_YOUR_PATIENT`, `APPOINTMENT_CONSULTATION_IN_PROGRESS`, `APPOINTMENT_QUEUE_EMPTY`, `APPOINTMENT_INVALID_STATUS`, `APPOINTMENT_NOT_TODAY`, `APPOINTMENT_IN_FUTURE`, `SCHEDULE_OVERLAP`, `SCHEDULE_IN_USE`, `LEAVE_HAS_APPOINTMENTS` (422); 403 when a doctor acts on another doctor's patient.
+
+### Clinical (implemented)
+OPD encounter id = the checked-in appointment id (ARCHITECTURE D16).
+
+| Method | Route | Permission |
+|---|---|---|
+| GET | `/api/v1/opd/encounters/{encounterId}` (patient, allergies, history, vitals, consultation, previous visits, `canWrite`; **audited**) | Clinical.View |
+| POST | `/api/v1/opd/encounters/{encounterId}/vitals` | Clinical.Vitals.Record |
+| POST | `/api/v1/vital-signs/{id}/entered-in-error` (`reason`) | Clinical.Vitals.Record |
+| POST | `/api/v1/opd/encounters/{encounterId}/consultation` (start or reopen; moves the appointment to InConsultation) | Clinical.Consultation.Manage |
+| GET | `/api/v1/consultations/{id}` (record + patient, doctor incl. BMDC number, allergies, latest vitals; **audited**) | Clinical.View |
+| PUT | `/api/v1/consultations/{id}` (whole draft; lines with `id` updated, without `id` added, missing removed; `rowVersion`) | Clinical.Consultation.Manage |
+| POST | `/api/v1/consultations/{id}/finalize` (locks the record, completes the visit; safe to repeat) | Clinical.Consultation.Manage |
+| POST | `/api/v1/consultations/{id}/addenda` (finalized records only) | Clinical.Consultation.Manage |
+| GET | `/api/v1/patients/{patientId}/consultations` (summaries; **audited**) | Clinical.View |
+
+Doctors may view only patients with an appointment with them; only the encounter's doctor writes. Error codes: `ENCOUNTER_NOT_ACTIVE`, `CLINICAL_NOT_A_DOCTOR`, `CONSULTATION_FINALIZED`, `CONSULTATION_NOT_FINALIZED`, `CONSULTATION_INCOMPLETE`, `CONSULTATION_DIAGNOSIS_PRIMARY`, `CONSULTATION_FOLLOW_UP_DATE`, `CONSULTATION_LINE_UNKNOWN`, `PRESCRIPTION_DURATION`, `VITALS_EMPTY`, `VITALS_BP_INCOMPLETE`, `VITALS_ALREADY_IN_ERROR` (422); `CONCURRENCY_CONFLICT` (409); 403 for access rules.
+
+`GET /api/v1/hospital-profile/branding` now also returns `address`, `phone`, `email` (public contact details for printed letterheads).

@@ -20,6 +20,8 @@ import { FieldError } from '../../../shared/components/field-error/field-error';
 import { apiErrorMessage } from '../../../shared/utilities/server-errors';
 import { PatientAppointmentsPanel } from '../../appointment/components/patient-appointments-panel';
 import { AppointmentPermissions } from '../../appointment/appointment.models';
+import { ClinicalPermissions } from '../../clinical/clinical.models';
+import { PatientVisitsPanel } from '../../clinical/components/patient-visits-panel';
 import { DocumentsPanel } from '../components/documents-panel';
 import { MedicalInfoPanel } from '../components/medical-info-panel';
 import { PatientApiService } from '../patient-api.service';
@@ -39,6 +41,7 @@ import { Address, ageLabel, bloodGroupLabel, idTypeLabel, MedicalInfo, Patient, 
     MedicalInfoPanel,
     DocumentsPanel,
     PatientAppointmentsPanel,
+    PatientVisitsPanel,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './patient-profile.page.html',
@@ -63,6 +66,7 @@ export class PatientProfilePage implements OnInit {
     documentsDelete: this.auth.hasPermission(PatientPermissions.documentsDelete),
     appointmentsView: this.auth.hasPermission(AppointmentPermissions.view),
     book: this.auth.hasPermission(AppointmentPermissions.book),
+    visitsView: this.auth.hasPermission(ClinicalPermissions.view),
   };
 
   protected readonly patient = signal<Patient | null>(null);

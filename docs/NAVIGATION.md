@@ -79,3 +79,9 @@ User menu: My Profile · Change Password · Logout
 - Appointments: Book Appointment (Appointment.Book), Appointments (Appointment.View), My Queue (Appointment.Consult), Doctor Sessions (Appointment.View; editing needs Appointment.Schedules.Manage), Queue Display (Appointment.QueueDisplay — opens `/queue-display` full screen for a waiting-room TV).
 - HR: Doctors (HR.Doctors.View).
 - Patient profile: "Book appointment" button and Appointments tab.
+
+## Implemented menu (Phase 2, step 2)
+- OPD: OPD Vitals (Clinical.Vitals.Record) — today's checked-in patients for the nurse station.
+- My Queue: "Call next" / "See now" / "Open consultation" lead to the consultation screen `/opd/encounters/{appointmentId}` for doctors with Clinical.Consultation.Manage.
+- Consultation screens: `/opd/consultations/{id}` (read-only record) and `/opd/consultations/{id}/print` (A4 prescription).
+- Patient profile: Visits tab (Clinical.View; loaded only when opened, because viewing is audited).

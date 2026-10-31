@@ -24,6 +24,7 @@
 | D13 | File storage | `IFileStorageService` with local disk storage outside the web root (`FileStorage:RootPath`), generated names, paths confined to the root | TAD §17; can be replaced by S3-compatible storage later. |
 | D14 | Patient ID card | Printable HTML page with a Code 128 barcode (JsBarcode, MIT) instead of a server-generated PDF | Avoids a commercial PDF licence (e.g. QuestPDF above its revenue threshold); browsers can save as PDF. |
 | D15 | Patient addresses/contacts | Stored as `jsonb` via value converters | Full old/new values appear in the audit trail; district is still queryable (`->>'District'`). |
+| D16 | OPD visit and Clinical module | In Phase 2 the OPD visit **is** the checked-in appointment (Appointment owns the queue and status). Consultations, prescriptions and vitals live in a new **Clinical** module that refers to the encounter by `(EncounterType, EncounterId)`; Appointment exposes `IOpdEncounterService` to start/complete it. No separate `opd` schema yet. | A separate OPD visit table would duplicate the appointment 1:1 until Billing (Phase 3) adds visit charges; the encounter reference lets IPD and Emergency reuse Clinical later. Cross-module steps run in separate transactions and are idempotent (finalizing again only repeats the visit completion). |
 | D10 | Deferred infrastructure | Redis, Hangfire, Outbox are **not** built in Stage 1 | Built when a module actually needs them (TAD §19, §18). |
 
 ---

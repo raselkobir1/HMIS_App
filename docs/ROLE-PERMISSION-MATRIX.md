@@ -72,7 +72,7 @@ Legend: ✔ granted by default · — not granted
 
 | Restriction | Applies from | Mechanism |
 |---|---|---|
-| Doctor sees full clinical history only of patients they have a relationship with (appointment, admission, referral) | Phase 2 | Manager-level check through `IDoctorPatientRelationship` contract |
+| Doctor sees full clinical history only of patients they have a relationship with (appointment, admission, referral) | Phase 2 — **implemented** for appointments | `ClinicalManager` checks `IOpdEncounterService.HasRelationshipAsync` (any non-cancelled appointment) for logins linked to a doctor; other clinical staff (e.g. nurses) are governed by permissions only |
 | Nurse sees assigned ward/patients | Phase 4 | Ward-assignment check |
 | Department-scoped access | Phase 2+ | User → Employee → Department |
 | "Break-the-glass" emergency access to any record, with mandatory reason + audit | Phase 8 (Emergency) | *Needs approval* |
@@ -100,3 +100,11 @@ Legend: ✔ granted by default · — not granted
 Detailed permission codes for each later module will be added here when that module is approved.
 
 > **As built (Administration):** the `*.View` permissions for hospital profile, departments and designations are granted by default to every staff role (all roles except the Super Administrator, who receives everything automatically). Pharmacist, Laboratory Technician, Radiologist, Accountant/Cashier and Store Manager are not shown as columns above but also receive them.
+
+## Clinical permissions (implemented, Phase 2)
+
+| Permission | Default roles | Notes |
+|---|---|---|
+| `Clinical.View` | Doctor, Nurse | Explicit grant (not given to Super Administrator automatically). Every workspace, consultation and history view is audited. |
+| `Clinical.Vitals.Record` | Doctor, Nurse | Explicit grant. Only while the patient is checked in or in consultation. |
+| `Clinical.Consultation.Manage` | Doctor | Explicit grant. Only the encounter's own doctor may open, edit, finalize or amend. |

@@ -127,3 +127,6 @@ As described in BRD Phase 0 and Phase 1, and the TAD's Stage 1 and Stage 2. **Ea
 
 ## Implemented (Phase 2, step 1)
 - Appointment → Patient (`IPatientLookup`), HR (`IDoctorLookup`), Identity (`IUserEmployeeLookup`, to find the signed-in doctor), Administration (`INumberSequenceService`). No module depends on Appointment yet; `IAppointmentLookup` will be added when OPD needs it.
+
+## Implemented (Phase 2, step 2)
+- Clinical → Appointment (`IOpdEncounterService`: get/start/complete encounter, doctor–patient relationship), Patient (`IPatientLookup`, `IPatientClinicalSummary`), HR (`IDoctorLookup`, now with BMDC number), Identity (`IUserEmployeeLookup` incl. display names), Audit (`IAuditService`). Nothing depends on Clinical yet.

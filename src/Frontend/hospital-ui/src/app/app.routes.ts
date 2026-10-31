@@ -37,6 +37,7 @@ export const routes: Routes = [
       },
       { path: 'patients', loadChildren: () => import('./features/patient/patient.routes') },
       { path: 'appointments', loadChildren: () => import('./features/appointment/appointment.routes') },
+      { path: 'opd', loadChildren: () => import('./features/clinical/clinical.routes') },
       { path: 'administration', loadChildren: () => import('./features/administration/administration.routes') },
       { path: 'hr', loadChildren: () => import('./features/hr/hr.routes') },
       { path: 'security', loadChildren: () => import('./features/security/security.routes') },

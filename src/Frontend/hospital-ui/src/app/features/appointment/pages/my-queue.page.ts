@@ -2,11 +2,13 @@ import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
+import { AuthService } from '../../../core/auth/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { apiErrorMessage } from '../../../shared/utilities/server-errors';
+import { ClinicalPermissions } from '../../clinical/clinical.models';
 import { ageLabel } from '../../patient/patient.models';
 import { Appointment, AppointmentApiService, formatTime, MyQueue, STATUS_LABELS } from '../appointment.models';
 
@@ -42,7 +44,11 @@ const REFRESH_MS = 30_000;
           </mat-card-content>
           <mat-card-actions>
             @if (q.current) {
-              <button mat-flat-button type="button" [disabled]="busy()" (click)="complete(q.current)"><mat-icon>check</mat-icon> Complete</button>
+              @if (charting) {
+                <button mat-flat-button type="button" (click)="openVisit(q.current)"><mat-icon>edit_note</mat-icon> Open consultation</button>
+              } @else {
+                <button mat-flat-button type="button" [disabled]="busy()" (click)="complete(q.current)"><mat-icon>check</mat-icon> Complete</button>
+              }
             } @else {
               <button mat-flat-button type="button" [disabled]="busy() || q.waiting.length === 0" (click)="callNext()">
                 <mat-icon>campaign</mat-icon> Call next
@@ -113,6 +119,10 @@ const REFRESH_MS = 30_000;
 export class MyQueuePage {
   private readonly api = inject(AppointmentApiService);
   private readonly notifications = inject(NotificationService);
+  private readonly router = inject(Router);
+
+  /** Doctors who write consultations go to the consultation screen instead of completing from the queue. */
+  protected readonly charting = inject(AuthService).hasPermission(ClinicalPermissions.consultationManage);
 
   protected readonly formatTime = formatTime;
   protected readonly labels = STATUS_LABELS;
@@ -142,24 +152,40 @@ export class MyQueuePage {
   }
 
   protected callNext(): void {
-    this.act(this.api.callNext(), (a) => `Serial ${a.serialNumber} called.`);
+    this.act(this.api.callNext(), (a) => `Serial ${a.serialNumber} called.`, (a) => this.openVisit(a));
   }
 
   protected start(a: Appointment): void {
+    if (this.charting) {
+      // The consultation screen starts the visit (and checks that no other consultation is open).
+      void this.router.navigate(['/opd/encounters', a.id], { queryParams: { start: 1 } });
+      return;
+    }
     this.act(this.api.action(a.id, 'start'), (x) => `Serial ${x.serialNumber} called.`);
+  }
+
+  protected openVisit(a: Appointment): void {
+    if (this.charting) {
+      void this.router.navigate(['/opd/encounters', a.id]);
+    }
   }
 
   protected complete(a: Appointment): void {
     this.act(this.api.action(a.id, 'complete'), (x) => `Serial ${x.serialNumber} completed.`);
   }
 
-  private act(request$: ReturnType<AppointmentApiService['callNext']>, message: (a: Appointment) => string): void {
+  private act(
+    request$: ReturnType<AppointmentApiService['callNext']>,
+    message: (a: Appointment) => string,
+    then?: (a: Appointment) => void,
+  ): void {
     this.busy.set(true);
     request$.subscribe({
       next: (a) => {
         this.busy.set(false);
         this.notifications.success(message(a));
         this.load();
+        then?.(a);
       },
       error: (err) => {
         this.busy.set(false);

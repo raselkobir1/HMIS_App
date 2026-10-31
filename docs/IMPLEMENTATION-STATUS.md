@@ -11,8 +11,8 @@ Statuses: Not Started · Analysis Completed · Design Completed · Backend Compl
 | Administration | Approved | |
 | HR (basic) | Approved | |
 | Patient | Testing Completed | Backend + frontend; 56 API + 18 browser checks; awaiting approval |
-| Doctor profiles + Appointment & Queue (Phase 2, step 1) | Testing Completed | Backend + frontend; 44 API + 23 browser checks; awaiting approval |
-| Clinical, OPD | Not Started | Needs approval and answers (prescription format etc.) |
+| Doctor profiles + Appointment & Queue (Phase 2, step 1) | Approved | |
+| Clinical + OPD consultation (Phase 2, step 2) | Testing Completed | Backend + frontend; 45 API checks + browser walkthrough (17 checks, print and diagnosis toggle re-checked separately); awaiting approval |
 | Billing | Not Started | |
 | IPD, Bed, Nursing | Not Started | |
 | Laboratory, Radiology | Not Started | |
@@ -105,3 +105,14 @@ Isolated environment (database `hmis_test`, API 7101, UI 4301); the developer's 
 | Browser: reception walk-in (auto check-in), booking, check-in from list, duplicate booking banner, cancel with required reason, no My Queue menu | Pass |
 | Browser: doctor queue — call next, complete; queue display (serials only, no sidebar); patient profile Appointments tab; booking from profile pre-selects patient | Pass |
 | Fixes found during testing | Clear message for duplicate leave (`LEAVE_ALREADY_RECORDED`, was a generic unique-value error); doctor dropdown on Doctor Sessions exceeded max page size; logout now waits for the server to revoke the refresh token before navigating (an immediate reload could previously keep the session) |
+
+### Clinical + OPD consultation — 2026-10-31
+Isolated environment (database `hmis_test`, API 7101, UI 4301); the developer's `hmis` database was only migrated.
+
+| Check | Result |
+|---|---|
+| `dotnet build` / `ng build` | Pass, 0 warnings |
+| API script: access (super admin / receptionist / other doctor 403), vitals ranges, BMI, entered-in-error, workspace content, open consultation (idempotent, one at a time), draft save with line sync, stale row version 409, two primaries, missing duration, follow-up date, unknown line, finalize rules, finalize completes visit and is repeatable, locked after finalize, addenda, print data, history, relationship gained by booking, audited views and line changes, branding contact fields | 45/45 |
+| Regression: Appointment API script on a fresh database | 44/44 |
+| Browser: nurse vitals (validation, BMI preview), doctor queue → consultation, editor (diagnosis, medicine, test, Bangla advice), unsaved indicator and leave guard, draft persists after reload, finalize → read-only, addendum, prescription print (BMDC, Rx, vitals, Bangla), queue shows completed, patient Visits tab; receptionist has no clinical menu or tab | Pass |
+| Fixes found during testing | New prescription/diagnosis lines were treated as existing rows (false concurrency conflict) — child keys now `ValueGeneratedNever`; dropped a filtered unique "one primary" index that would also have broken swapping primary/secondary in one save (rule kept in the domain); nested `<main>` landmark on the consultation page; primary-diagnosis toggle shared its label with the text field and was not visibly selected |

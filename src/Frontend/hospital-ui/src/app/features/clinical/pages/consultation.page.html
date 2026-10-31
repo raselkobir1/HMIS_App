@@ -1,0 +1,325 @@
+@if (loadError(); as message) {
+  <div class="banner error" role="alert">{{ message }}</div>
+} @else if (workspace(); as w) {
+  <header class="head">
+    <div>
+      <div class="encounter">{{ w.encounter.number }} · Serial {{ w.encounter.serialNumber }} · {{ w.encounter.visitType === 'New' ? 'New patient' : 'Follow-up' }} · {{ w.encounter.date }}</div>
+      <h1><a [routerLink]="['/patients', w.patient.id]">{{ w.patient.fullName }}</a></h1>
+      <div class="sub">{{ patientLine() }}</div>
+    </div>
+    <div class="actions">
+      @if (editable()) {
+        <span class="state">{{ form.dirty ? 'Unsaved changes' : 'Saved' }}</span>
+        <button mat-stroked-button type="button" [disabled]="busy() || !form.dirty" (click)="saveDraft()"><mat-icon>save</mat-icon> Save draft</button>
+        <button mat-flat-button type="button" [disabled]="busy()" (click)="finalize()"><mat-icon>task_alt</mat-icon> Finalize &amp; complete</button>
+      }
+      @if (consultation()?.status === 'Finalized') {
+        <a mat-flat-button [routerLink]="['/opd/consultations', consultation()!.id, 'print']"><mat-icon>print</mat-icon> Print prescription</a>
+        @if (w.canWrite) {
+          <button mat-stroked-button type="button" (click)="backToQueue()"><mat-icon>format_list_numbered</mat-icon> Back to queue</button>
+        }
+      }
+    </div>
+  </header>
+  @if (busy()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+
+  @if (w.allergies.length) {
+    <div class="banner allergy" role="alert">
+      <mat-icon>warning</mat-icon>
+      <span><strong>Allergies:</strong>
+        @for (a of w.allergies; track a.allergen; let last = $last) {
+          {{ a.allergen }} ({{ a.severity }}{{ a.reaction ? ', ' + a.reaction : '' }}){{ last ? '' : ', ' }}
+        }
+      </span>
+    </div>
+  } @else {
+    <div class="banner muted-banner"><mat-icon>info</mat-icon> No known allergies recorded.</div>
+  }
+
+  <div class="layout">
+    <aside>
+      <mat-card appearance="outlined">
+        <mat-card-header>
+          <mat-card-title>Vitals</mat-card-title>
+          @if (can.vitals && encounterActive()) {
+            <button mat-button type="button" class="card-action" (click)="recordVitals()"><mat-icon>add</mat-icon> Record</button>
+          }
+        </mat-card-header>
+        <mat-card-content>
+          @for (v of validVitals(); track v.id; let first = $first) {
+            <div class="vital" [class.latest]="first">
+              <div>{{ vitalsSummary(v) }}</div>
+              <div class="muted">{{ v.recordedAt | date: 'h:mm a' }} · {{ v.recordedBy ?? '' }}{{ v.notes ? ' · ' + v.notes : '' }}</div>
+            </div>
+          } @empty {
+            <p class="muted">No vitals recorded for this visit.</p>
+          }
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card appearance="outlined">
+        <mat-card-header><mat-card-title>Medical history</mat-card-title></mat-card-header>
+        <mat-card-content>
+          @for (h of w.history; track $index) {
+            <div class="item"><span class="muted">{{ h.category }}:</span> {{ h.description }}</div>
+          } @empty {
+            <p class="muted">Nothing recorded.</p>
+          }
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card appearance="outlined">
+        <mat-card-header><mat-card-title>Previous visits</mat-card-title></mat-card-header>
+        <mat-card-content>
+          @for (p of w.previousConsultations; track p.id) {
+            <a class="item link" [routerLink]="['/opd/consultations', p.id]">
+              <div>{{ p.encounterDate }} · {{ p.doctorName }}</div>
+              <div class="muted">{{ p.primaryDiagnosis ?? (p.status === 'Draft' ? 'Draft' : '—') }} · {{ p.medicineCount }} medicine(s)</div>
+            </a>
+          } @empty {
+            <p class="muted">First visit.</p>
+          }
+        </mat-card-content>
+      </mat-card>
+    </aside>
+
+    <section class="content">
+      @if (error(); as message) {
+        <div class="banner error" role="alert">{{ message }}</div>
+      }
+
+      @if (consultation(); as c) {
+        @if (editable()) {
+          <form [formGroup]="form" novalidate class="editor">
+            <mat-card appearance="outlined">
+              <mat-card-header><mat-card-title>History &amp; examination</mat-card-title></mat-card-header>
+              <mat-card-content>
+                <mat-form-field class="full">
+                  <mat-label>Chief complaint</mat-label>
+                  <textarea matInput formControlName="chiefComplaint" rows="2" cdkFocusInitial></textarea>
+                  <mat-error><app-field-error [control]="form.controls.chiefComplaint" /></mat-error>
+                </mat-form-field>
+                <mat-form-field class="full">
+                  <mat-label>History of present illness</mat-label>
+                  <textarea matInput formControlName="historyOfPresentIllness" rows="3"></textarea>
+                </mat-form-field>
+                <mat-form-field class="full">
+                  <mat-label>Examination findings</mat-label>
+                  <textarea matInput formControlName="examination" rows="3"></textarea>
+                </mat-form-field>
+              </mat-card-content>
+            </mat-card>
+
+            <mat-card appearance="outlined">
+              <mat-card-header>
+                <mat-card-title>Diagnosis</mat-card-title>
+                <button mat-button type="button" class="card-action" (click)="addDiagnosis()"><mat-icon>add</mat-icon> Add diagnosis</button>
+              </mat-card-header>
+              <mat-card-content formArrayName="diagnoses">
+                @for (g of diagnoses.controls; track g; let i = $index) {
+                  <div class="row" [formGroupName]="i">
+                    <button mat-icon-button type="button" (click)="makePrimary(i)"
+                            aria-label="Mark as primary" [attr.aria-pressed]="g.controls.type.value === 'Primary'">
+                      <mat-icon [class.primary-on]="g.controls.type.value === 'Primary'">star</mat-icon>
+                    </button>
+                    <mat-form-field class="grow">
+                      <mat-label>{{ g.controls.type.value === 'Primary' ? 'Primary diagnosis' : 'Secondary diagnosis' }}</mat-label>
+                      <input matInput formControlName="description" />
+                      <mat-error><app-field-error [control]="g.controls.description" /></mat-error>
+                    </mat-form-field>
+                    <button mat-icon-button type="button" (click)="remove(diagnoses, i)" aria-label="Remove diagnosis"><mat-icon>close</mat-icon></button>
+                  </div>
+                } @empty {
+                  <p class="muted">Add at least the primary diagnosis.</p>
+                }
+              </mat-card-content>
+            </mat-card>
+
+            <mat-card appearance="outlined">
+              <mat-card-header>
+                <mat-card-title>Prescription (Rx)</mat-card-title>
+                <button mat-button type="button" class="card-action" (click)="addMedicine()"><mat-icon>add</mat-icon> Add medicine</button>
+              </mat-card-header>
+              <mat-card-content formArrayName="prescription">
+                <datalist id="dose-patterns">
+                  @for (d of dosePatterns; track d) {
+                    <option [value]="d"></option>
+                  }
+                </datalist>
+                @for (g of prescription.controls; track g; let i = $index; let last = $last) {
+                  <div class="rx" [formGroupName]="i">
+                    <div class="rx-no">{{ i + 1 }}</div>
+                    <div class="rx-fields">
+                      <mat-form-field class="w-form">
+                        <mat-label>Form</mat-label>
+                        <mat-select formControlName="form">
+                          <mat-option [value]="null">—</mat-option>
+                          @for (f of forms; track f) {
+                            <mat-option [value]="f">{{ f }}</mat-option>
+                          }
+                        </mat-select>
+                      </mat-form-field>
+                      <mat-form-field class="w-name">
+                        <mat-label>Medicine</mat-label>
+                        <input matInput formControlName="medicineName" placeholder="Brand or generic" />
+                        <mat-error><app-field-error [control]="g.controls.medicineName" /></mat-error>
+                      </mat-form-field>
+                      <mat-form-field class="w-small">
+                        <mat-label>Strength</mat-label>
+                        <input matInput formControlName="strength" placeholder="500 mg" />
+                      </mat-form-field>
+                      <mat-form-field class="w-small">
+                        <mat-label>Dose</mat-label>
+                        <input matInput formControlName="dosePattern" list="dose-patterns" />
+                        <mat-error><app-field-error [control]="g.controls.dosePattern" /></mat-error>
+                      </mat-form-field>
+                      <mat-form-field class="w-small">
+                        <mat-label>When</mat-label>
+                        <mat-select formControlName="timing">
+                          @for (t of timings; track t) {
+                            <mat-option [value]="t">{{ timingLabels[t] }}</mat-option>
+                          }
+                        </mat-select>
+                      </mat-form-field>
+                      @if (g.controls.durationUnit.value !== 'Continue') {
+                        <mat-form-field class="w-tiny">
+                          <mat-label>For</mat-label>
+                          <input matInput type="number" min="1" formControlName="durationValue" />
+                          <mat-error><app-field-error [control]="g.controls.durationValue" /></mat-error>
+                        </mat-form-field>
+                      }
+                      <mat-form-field class="w-small">
+                        <mat-label>Unit</mat-label>
+                        <mat-select formControlName="durationUnit">
+                          @for (u of durationUnits; track u) {
+                            <mat-option [value]="u">{{ u }}</mat-option>
+                          }
+                        </mat-select>
+                      </mat-form-field>
+                      <mat-form-field class="w-small">
+                        <mat-label>Route</mat-label>
+                        <mat-select formControlName="route">
+                          @for (r of routes; track r) {
+                            <mat-option [value]="r">{{ r }}</mat-option>
+                          }
+                        </mat-select>
+                      </mat-form-field>
+                      <mat-form-field class="w-tiny">
+                        <mat-label>Qty</mat-label>
+                        <input matInput type="number" min="1" formControlName="quantity" />
+                      </mat-form-field>
+                      <mat-form-field class="w-name">
+                        <mat-label>Instructions</mat-label>
+                        <input matInput formControlName="instructions" />
+                      </mat-form-field>
+                    </div>
+                    <div class="rx-actions">
+                      <button mat-icon-button type="button" [disabled]="i === 0" (click)="move(prescription, i, -1)" aria-label="Move up"><mat-icon>arrow_upward</mat-icon></button>
+                      <button mat-icon-button type="button" [disabled]="last" (click)="move(prescription, i, 1)" aria-label="Move down"><mat-icon>arrow_downward</mat-icon></button>
+                      <button mat-icon-button type="button" (click)="remove(prescription, i)" [attr.aria-label]="'Remove medicine ' + (i + 1)"><mat-icon>delete</mat-icon></button>
+                    </div>
+                  </div>
+                } @empty {
+                  <p class="muted">No medicines.</p>
+                }
+              </mat-card-content>
+            </mat-card>
+
+            <mat-card appearance="outlined">
+              <mat-card-header>
+                <mat-card-title>Investigations</mat-card-title>
+                <button mat-button type="button" class="card-action" (click)="addInvestigation()"><mat-icon>add</mat-icon> Add test</button>
+              </mat-card-header>
+              <mat-card-content formArrayName="investigations">
+                @for (g of investigations.controls; track g; let i = $index) {
+                  <div class="row" [formGroupName]="i">
+                    <mat-form-field class="grow">
+                      <mat-label>Test</mat-label>
+                      <input matInput formControlName="name" placeholder="e.g. CBC, ECG, X-ray chest P/A" />
+                      <mat-error><app-field-error [control]="g.controls.name" /></mat-error>
+                    </mat-form-field>
+                    <mat-form-field class="grow">
+                      <mat-label>Notes</mat-label>
+                      <input matInput formControlName="notes" />
+                    </mat-form-field>
+                    <button mat-icon-button type="button" (click)="remove(investigations, i)" aria-label="Remove test"><mat-icon>close</mat-icon></button>
+                  </div>
+                } @empty {
+                  <p class="muted">No tests requested.</p>
+                }
+              </mat-card-content>
+            </mat-card>
+
+            <mat-card appearance="outlined">
+              <mat-card-header><mat-card-title>Advice, follow-up &amp; referral</mat-card-title></mat-card-header>
+              <mat-card-content class="grid">
+                <mat-form-field class="span">
+                  <mat-label>Advice (English or বাংলা)</mat-label>
+                  <textarea matInput formControlName="advice" rows="3"></textarea>
+                </mat-form-field>
+                <mat-form-field>
+                  <mat-label>Follow-up date</mat-label>
+                  <input matInput [matDatepicker]="fu" formControlName="followUpDate" [min]="minFollowUp()" />
+                  <mat-datepicker-toggle matIconSuffix [for]="fu" />
+                  <mat-datepicker #fu />
+                </mat-form-field>
+                <mat-form-field>
+                  <mat-label>Follow-up instructions</mat-label>
+                  <input matInput formControlName="followUpInstructions" />
+                </mat-form-field>
+                <mat-form-field>
+                  <mat-label>Refer to</mat-label>
+                  <input matInput formControlName="referralTo" placeholder="Department, doctor or hospital" />
+                </mat-form-field>
+                <mat-form-field>
+                  <mat-label>Reason for referral</mat-label>
+                  <input matInput formControlName="referralReason" />
+                </mat-form-field>
+              </mat-card-content>
+            </mat-card>
+          </form>
+        } @else {
+          <mat-card appearance="outlined">
+            <mat-card-header>
+              <mat-card-title>Consultation</mat-card-title>
+              <span class="badge" [class.ok]="c.status === 'Finalized'">{{ c.status === 'Finalized' ? 'Finalized ' + (c.finalizedAt | date: 'd MMM y, h:mm a') : 'Draft' }}</span>
+            </mat-card-header>
+            <mat-card-content>
+              <app-consultation-record [consultation]="c" />
+            </mat-card-content>
+          </mat-card>
+          @if (c.status === 'Finalized' && w.canWrite && can.write) {
+            <mat-card appearance="outlined">
+              <mat-card-header><mat-card-title>Add addendum</mat-card-title></mat-card-header>
+              <mat-card-content>
+                <mat-form-field class="full">
+                  <mat-label>Correction or later note</mat-label>
+                  <textarea matInput [formControl]="addendumText" rows="2"></textarea>
+                  <mat-error><app-field-error [control]="addendumText" /></mat-error>
+                </mat-form-field>
+                <button mat-stroked-button type="button" [disabled]="busy()" (click)="addAddendum()">Add addendum</button>
+              </mat-card-content>
+            </mat-card>
+          }
+        }
+      } @else if (canStart()) {
+        <mat-card appearance="outlined" class="start">
+          <mat-card-content>
+            <p>The patient is {{ w.encounter.status === 'Waiting' ? 'waiting' : 'with you' }}. Starting the consultation calls the patient in.</p>
+            <button mat-flat-button type="button" [disabled]="busy()" (click)="openConsultation()"><mat-icon>play_arrow</mat-icon> Start consultation</button>
+          </mat-card-content>
+        </mat-card>
+      } @else {
+        <mat-card appearance="outlined" class="start">
+          <mat-card-content>
+            <p class="muted">No consultation has been recorded for this visit yet.</p>
+          </mat-card-content>
+        </mat-card>
+      }
+    </section>
+  </div>
+} @else {
+  <mat-progress-bar mode="indeterminate" />
+}

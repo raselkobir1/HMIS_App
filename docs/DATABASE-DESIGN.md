@@ -307,3 +307,10 @@ Patient visits, admission history, billing and lab history are **not** stored in
 - `appointment.DoctorLeaves`: `DoctorId`, `Date`, optional `ScheduleId` (null = whole day), `Reason`; unique (`DoctorId`, `Date`, `ScheduleId`) with NULLS NOT DISTINCT.
 - `appointment.Appointments`: `AppointmentNumber` (APPOINTMENT sequence), `PatientId`, `DoctorId`, `ScheduleId`, `AppointmentDate`, `SerialNumber`, `EstimatedTime`, `VisitType`, `Source`, `Fee` (copied at booking), `Status`, check-in/consultation/completion/cancellation timestamps and reason. Unique (`ScheduleId`, `AppointmentDate`, `SerialNumber`); serials are assigned inside a transaction holding `pg_advisory_xact_lock` for the session-day.
 - No cross-schema foreign keys; patient and doctor names come from contracts.
+
+## `clinical` schema (Phase 2, step 2)
+- `Consultations`: `EncounterType` (`Opd`), `EncounterId` (appointment id), `EncounterNumber`, `EncounterDate`, `PatientId`, `DoctorId`, `Status` (Draft/Finalized), complaint, HPI, examination, advice, follow-up date/instructions, referral, `FinalizedAt`, `Revision` (bumped on every draft save so the `xmin` check also covers line-only edits), `RowVersion`. Unique (`EncounterType`, `EncounterId`).
+- `ConsultationDiagnoses` (`Type` Primary/Secondary, description, order), `PrescriptionItems` (form, medicine, strength, route, dose pattern, timing, duration value/unit, quantity, instructions, order), `InvestigationRequests` (name, notes, order): cascade with the consultation; ids generated in the domain.
+- `ConsultationAddenda`: append-only notes on finalized consultations (author/time from audit fields).
+- `VitalSigns`: `PatientId`, encounter reference, BP, pulse, temperature °F, RR, SpO₂, weight, height (BMI computed), notes, `IsEnteredInError` + reason. Never deleted.
+- All tables are `[Audited]`; no cross-schema foreign keys.
