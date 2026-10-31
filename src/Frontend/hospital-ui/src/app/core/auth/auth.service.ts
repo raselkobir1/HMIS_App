@@ -69,9 +69,12 @@ export class AuthService {
   }
 
   logout(reason?: 'idle'): void {
-    this.http.post(`${this.baseUrl}/logout`, {}).subscribe({ error: () => undefined });
+    // Navigate only after the server has revoked the refresh token and cleared its cookie; otherwise an immediate
+    // reload could abort the request and the still-valid cookie would silently sign the user back in.
+    const goToLogin = () => void this.router.navigate(['/login'], reason ? { queryParams: { reason } } : undefined);
+    // Subscribe before clearing the session so the interceptor still attaches the access token.
+    this.http.post(`${this.baseUrl}/logout`, {}).subscribe({ complete: goToLogin, error: goToLogin });
     this.clearSession();
-    void this.router.navigate(['/login'], reason ? { queryParams: { reason } } : undefined);
   }
 
   hasPermission(permission: string): boolean {

@@ -53,6 +53,7 @@ public static class AppointmentErrorCodes
     public const string ScheduleOverlap = "SCHEDULE_OVERLAP";
     public const string ScheduleInUse = "SCHEDULE_IN_USE";
     public const string LeaveConflict = "LEAVE_HAS_APPOINTMENTS";
+    public const string LeaveExists = "LEAVE_ALREADY_RECORDED";
 }
 
 /// <summary>APPOINTMENT numbers are configured by Administration (seeded as APT + YY + 6 digits, yearly reset).</summary>

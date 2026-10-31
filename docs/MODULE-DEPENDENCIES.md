@@ -124,3 +124,6 @@ As described in BRD Phase 0 and Phase 1, and the TAD's Stage 1 and Stage 2. **Ea
 | 4 | Administration | Hospital profile, departments/sub-departments, designations, number sequences, basic settings (timezone, currency, financial year) |
 | 5 | HR (basic) | Basic employee information (ID, name, contact, department, designation, joining date, status), and linking a user to an employee |
 | 6 | Patient (reference module) | Registration, search, profile, MR number, duplicate detection, merge request, ID card (PDF), allergies, medical history, documents |
+
+## Implemented (Phase 2, step 1)
+- Appointment → Patient (`IPatientLookup`), HR (`IDoctorLookup`), Identity (`IUserEmployeeLookup`, to find the signed-in doctor), Administration (`INumberSequenceService`). No module depends on Appointment yet; `IAppointmentLookup` will be added when OPD needs it.

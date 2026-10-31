@@ -74,3 +74,8 @@ User menu: My Profile · Change Password · Logout
 | Patient registration | Single-page keyboard-friendly form; **live duplicate warning** while typing mobile/name/DOB; print ID card after save |
 | Patient search | Search by MR number / mobile / name / ID number; paged results |
 | Patient profile | Header with MR, name, age, gender, blood group and a **prominent allergy banner**; tabs |
+
+## Implemented menu (Phase 2, step 1)
+- Appointments: Book Appointment (Appointment.Book), Appointments (Appointment.View), My Queue (Appointment.Consult), Doctor Sessions (Appointment.View; editing needs Appointment.Schedules.Manage), Queue Display (Appointment.QueueDisplay — opens `/queue-display` full screen for a waiting-room TV).
+- HR: Doctors (HR.Doctors.View).
+- Patient profile: "Book appointment" button and Appointments tab.

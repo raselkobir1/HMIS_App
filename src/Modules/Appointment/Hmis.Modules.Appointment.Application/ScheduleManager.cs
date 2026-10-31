@@ -129,6 +129,12 @@ public sealed class ScheduleManager(
             sessions[schedule.Id] = schedule;
         }
 
+        var existing = await leaves.GetForDateAsync(request.Date, request.DoctorId, cancellationToken);
+        if (existing.Any(l => l.ScheduleId is null || l.ScheduleId == request.ScheduleId))
+        {
+            throw new ConflictException("Leave is already recorded for this doctor at that time.", AppointmentErrorCodes.LeaveExists);
+        }
+
         // Booked patients must be moved first, so nobody arrives for a cancelled session unaware.
         var pending = await appointments.CountPendingAsync(request.DoctorId, request.Date, request.ScheduleId, cancellationToken);
         if (pending > 0)

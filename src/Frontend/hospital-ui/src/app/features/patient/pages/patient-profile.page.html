@@ -51,6 +51,9 @@
       @if (can.update && editable()) {
         <a mat-flat-button [routerLink]="['/patients', p.id, 'edit']"><mat-icon>edit</mat-icon> Edit</a>
       }
+      @if (can.book && p.status === 'Active') {
+        <a mat-stroked-button routerLink="/appointments/book" [queryParams]="{ patientId: p.id }"><mat-icon>event</mat-icon> Book appointment</a>
+      }
       <a mat-stroked-button [routerLink]="['/patients', p.id, 'id-card']"><mat-icon>badge</mat-icon> ID card</a>
       <button mat-icon-button type="button" [matMenuTriggerFor]="more" aria-label="More actions"><mat-icon>more_vert</mat-icon></button>
       <mat-menu #more="matMenu" xPosition="before">
@@ -114,6 +117,13 @@
           @if (medical(); as m) {
             <app-medical-info-panel [patientId]="p.id" [info]="m" [canManage]="can.medicalManage && editable()" (changed)="loadMedical()" />
           }
+        </div>
+      </mat-tab>
+    }
+    @if (can.appointmentsView) {
+      <mat-tab label="Appointments">
+        <div class="tab-body">
+          <app-patient-appointments-panel [patientId]="p.id" />
         </div>
       </mat-tab>
     }

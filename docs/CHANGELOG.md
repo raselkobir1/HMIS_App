@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-31 — Doctor profiles, appointments and queues (Phase 2, step 1)
+- HR: doctor profiles (specialization, qualifications, BMDC number, new / follow-up fees, accepting appointments) and a Doctors screen.
+- `appointment` schema: weekly doctor sessions with capacity and minutes per patient, leave (whole day or one session), appointments with serial numbers and estimated times.
+- Booking screen with patient search, department/doctor filter, live session availability and fee; walk-ins for today are checked in at once.
+- Appointments list with confirm, check-in, reschedule, no-show and cancel (reason required); patient profile Appointments tab and "Book appointment".
+- Doctor's My Queue (call next, see now, complete, auto-refresh) and a full-screen Queue Display showing serial numbers only.
+- Serial numbers and capacity are safe under concurrent booking (per-session advisory lock).
+- Fixes: clear duplicate-leave message; logout waits for the refresh token to be revoked before leaving the page.
+
 ## 2026-10-31 — Patient module (reference module)
 - `patient` schema: Patients, Allergies, MedicalHistories, Documents, MergeRequests; trigram name index.
 - Registration with generated MR numbers, date of birth or age, 64-district address list, emergency contacts, ID documents.

@@ -300,3 +300,10 @@ erDiagram
 Patient visits, admission history, billing and lab history are **not** stored in this schema. The patient profile pulls them from the owning modules through contracts.
 
 > Field lists for Patient depend on answers in `OPEN-QUESTIONS.md` (mandatory fields, MR format, ID types, address structure).
+
+## `hr.DoctorProfiles` and `appointment` schema (Phase 2, step 1)
+- `hr.DoctorProfiles`: one per employee (unique `EmployeeId`), unique BMDC `RegistrationNumber`, `Specialization`, `Qualifications`, `NewPatientFee`, `FollowUpFee`, `IsAcceptingAppointments`, `RowVersion` (xmin).
+- `appointment.DoctorSchedules`: `DoctorId` (HR employee id), `DayOfWeek`, `StartTime`, `EndTime`, `MaxPatients` (1–200, includes walk-ins), `AverageMinutesPerPatient`, `Room`, `EffectiveFrom`/`EffectiveTo`, `IsActive`. Overlapping active sessions for one doctor are rejected.
+- `appointment.DoctorLeaves`: `DoctorId`, `Date`, optional `ScheduleId` (null = whole day), `Reason`; unique (`DoctorId`, `Date`, `ScheduleId`) with NULLS NOT DISTINCT.
+- `appointment.Appointments`: `AppointmentNumber` (APPOINTMENT sequence), `PatientId`, `DoctorId`, `ScheduleId`, `AppointmentDate`, `SerialNumber`, `EstimatedTime`, `VisitType`, `Source`, `Fee` (copied at booking), `Status`, check-in/consultation/completion/cancellation timestamps and reason. Unique (`ScheduleId`, `AppointmentDate`, `SerialNumber`); serials are assigned inside a transaction holding `pg_advisory_xact_lock` for the session-day.
+- No cross-schema foreign keys; patient and doctor names come from contracts.

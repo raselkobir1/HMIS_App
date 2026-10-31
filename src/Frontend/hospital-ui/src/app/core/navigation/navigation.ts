@@ -25,10 +25,25 @@ export const NAVIGATION: NavItem[] = [
     ],
   },
   {
+    label: 'Appointments',
+    icon: 'event',
+    permissions: [],
+    children: [
+      { label: 'Book Appointment', icon: 'event_available', route: '/appointments/book', permissions: ['Appointment.Book'] },
+      { label: 'Appointments', icon: 'calendar_month', route: '/appointments', permissions: ['Appointment.View'], exact: true },
+      { label: 'My Queue', icon: 'format_list_numbered', route: '/appointments/my-queue', permissions: ['Appointment.Consult'] },
+      { label: 'Doctor Sessions', icon: 'schedule', route: '/appointments/sessions', permissions: ['Appointment.View'] },
+      { label: 'Queue Display', icon: 'tv', route: '/queue-display', permissions: ['Appointment.QueueDisplay'] },
+    ],
+  },
+  {
     label: 'HR',
     icon: 'groups',
     permissions: [],
-    children: [{ label: 'Employees', icon: 'badge', route: '/hr/employees', permissions: ['HR.Employees.View'] }],
+    children: [
+      { label: 'Employees', icon: 'badge', route: '/hr/employees', permissions: ['HR.Employees.View'] },
+      { label: 'Doctors', icon: 'stethoscope', route: '/hr/doctors', permissions: ['HR.Doctors.View'] },
+    ],
   },
   {
     label: 'Administration',

@@ -97,6 +97,17 @@ Cross-module contracts (`BuildingBlocks.Contracts.Administration`): `IDepartment
 | PUT | `/api/v1/employees/{id}` | HR.Employees.Manage |
 | PATCH | `/api/v1/employees/{id}/status` (`status`, `exitDate`) | HR.Employees.Manage |
 
+Doctor profiles (HR extension of Employee):
+
+| Method | Route | Permission |
+|---|---|---|
+| GET | `/api/v1/doctors?search&departmentId&isAcceptingAppointments&pageNumber&pageSize` | HR.Doctors.View |
+| GET | `/api/v1/doctors/{id}` | HR.Doctors.View |
+| POST | `/api/v1/doctors` (employee must have a Doctor-category designation) | HR.Doctors.Manage |
+| PUT | `/api/v1/doctors/{id}` (specialization, qualifications, BMDC number, new / follow-up fee, accepting appointments) | HR.Doctors.Manage |
+
+Doctor error codes: `DOCTOR_PROFILE_EXISTS`, `DOCTOR_REGISTRATION_TAKEN` (409); `DOCTOR_EMPLOYEE_INVALID`, `DOCTOR_EMPLOYEE_NOT_DOCTOR` (422). Contract: `IDoctorLookup` in `BuildingBlocks.Contracts.HR`.
+
 Error codes: `EMPLOYEE_DEPARTMENT_INVALID`, `EMPLOYEE_DESIGNATION_INVALID`, `EMPLOYEE_DOB_AFTER_JOINING`, `EMPLOYEE_JOINING_AFTER_EXIT`, `EMPLOYEE_EXIT_DATE_REQUIRED`, `EMPLOYEE_EXIT_BEFORE_JOINING` (422); `DEPARTMENT_IN_USE` (422, from Administration). Identity: `EMPLOYEE_INVALID` (422), `EMPLOYEE_ALREADY_LINKED` (409).
 
 **Validation responses (all modules):** when a request body cannot be read (bad JSON, unknown enum value), the API returns 400 with `"The value is not valid."` on the affected field. It never returns parser text, CLR type names or byte positions.
@@ -126,3 +137,24 @@ Error codes: `EMPLOYEE_DEPARTMENT_INVALID`, `EMPLOYEE_DESIGNATION_INVALID`, `EMP
 Patient files are returned with `Cache-Control: no-store` and `X-Content-Type-Options: nosniff`. Error codes: `PATIENT_IDENTIFICATION_DUPLICATE`, `PATIENT_MERGE_ALREADY_PENDING` (409); `PATIENT_INACTIVE`, `PATIENT_MERGED`, `PATIENT_PHOTO_INVALID`, `PATIENT_DOCUMENT_INVALID`, `PATIENT_MERGE_INVALID`, `MERGE_REQUEST_CLOSED`, `ALLERGY_ENTERED_IN_ERROR`, `HISTORY_ENTERED_IN_ERROR` (422).
 
 Contract for other modules: `IPatientLookup` (`GetAsync`, `GetByMRNumberAsync`) in `BuildingBlocks.Contracts.Patient`.
+
+### Appointment (implemented)
+| Method | Route | Permission |
+|---|---|---|
+| GET | `/api/v1/doctor-schedules?doctorId` | Appointment.View |
+| POST / PUT | `/api/v1/doctor-schedules[/{id}]` (weekly session: day, start/end, max patients incl. walk-ins, minutes per patient, room, effective dates) | Appointment.Schedules.Manage |
+| PATCH | `/api/v1/doctor-schedules/{id}/status` | Appointment.Schedules.Manage |
+| GET | `/api/v1/doctor-leaves?doctorId&from&to` | Appointment.View |
+| POST / DELETE | `/api/v1/doctor-leaves[/{id}]` (whole day or one session) | Appointment.Schedules.Manage |
+| GET | `/api/v1/appointments/availability?doctorId&date` | Appointment.View |
+| GET | `/api/v1/appointments?date&dateFrom&dateTo&doctorId&patientId&status&pageNumber&pageSize`, `/{id}` | Appointment.View |
+| POST | `/api/v1/appointments` (serial assigned under a per-session lock; `source` WalkIn = today only, checked in at once) | Appointment.Book |
+| PUT | `/api/v1/appointments/{id}/reschedule` | Appointment.Book |
+| POST | `/api/v1/appointments/{id}/confirm` | Appointment.Book |
+| POST | `/api/v1/appointments/{id}/check-in`, `/{id}/no-show` | Appointment.CheckIn |
+| POST | `/api/v1/appointments/{id}/cancel` (reason required) | Appointment.Cancel |
+| POST | `/api/v1/appointments/{id}/start`, `/{id}/complete` (own patients only) | Appointment.Consult |
+| GET / POST | `/api/v1/appointments/my-queue`, `/my-queue/call-next` | Appointment.Consult |
+| GET | `/api/v1/queue-board` (serial numbers only, no patient data) | Appointment.QueueDisplay |
+
+Status flow: Scheduled → Confirmed → Waiting (checked in) → InConsultation → Completed; Cancelled (until the consultation starts) and NoShow (on/after the date). Error codes: `APPOINTMENT_ALREADY_BOOKED`, `LEAVE_ALREADY_RECORDED` (409); `APPOINTMENT_DOCTOR_UNAVAILABLE`, `APPOINTMENT_PATIENT_UNAVAILABLE`, `APPOINTMENT_SESSION_INVALID`, `APPOINTMENT_SESSION_FULL`, `APPOINTMENT_SESSION_ENDED`, `APPOINTMENT_DOCTOR_ON_LEAVE`, `APPOINTMENT_DATE_OUT_OF_RANGE`, `APPOINTMENT_NOT_YOUR_PATIENT`, `APPOINTMENT_CONSULTATION_IN_PROGRESS`, `APPOINTMENT_QUEUE_EMPTY`, `APPOINTMENT_INVALID_STATUS`, `APPOINTMENT_NOT_TODAY`, `APPOINTMENT_IN_FUTURE`, `SCHEDULE_OVERLAP`, `SCHEDULE_IN_USE`, `LEAVE_HAS_APPOINTMENTS` (422); 403 when a doctor acts on another doctor's patient.

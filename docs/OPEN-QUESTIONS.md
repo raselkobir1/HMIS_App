@@ -56,7 +56,7 @@ Answers are recorded here and then copied into the relevant document.
 
 | ID | Question | Proposed |
 |---|---|---|
-| Q-OWN-1 | Doctor profile owner | HR (Employee + DoctorProfile); schedules in Appointment |
+| Q-OWN-1 | Doctor profile owner | HR (Employee + DoctorProfile); schedules in Appointment — implemented |
 | Q-OWN-2 | Bed hierarchy owner | Admin owns Building/Floor; IPD owns Ward/Room/Bed |
 | Q-OWN-3 | Encounter owner | Clinical |
 

@@ -11,7 +11,8 @@ Statuses: Not Started · Analysis Completed · Design Completed · Backend Compl
 | Administration | Approved | |
 | HR (basic) | Approved | |
 | Patient | Testing Completed | Backend + frontend; 56 API + 18 browser checks; awaiting approval |
-| Appointment, Clinical, OPD | Not Started | |
+| Doctor profiles + Appointment & Queue (Phase 2, step 1) | Testing Completed | Backend + frontend; 44 API + 23 browser checks; awaiting approval |
+| Clinical, OPD | Not Started | Needs approval and answers (prescription format etc.) |
 | Billing | Not Started | |
 | IPD, Bed, Nursing | Not Started | |
 | Laboratory, Radiology | Not Started | |
@@ -91,3 +92,16 @@ Tested in the isolated environment (`hmis_test`, API 7101, UI 4301).
 | Browser walkthrough (18 checks) | **18/18 pass**: Receptionist registers (age only → estimated DOB), sees live duplicate warning, NID block disables save, searches, uploads a document, prints the ID card (barcode), reports a duplicate; Doctor records an allergy and the banner appears; Super Admin approves the merge and the duplicate shows a read-only banner; mobile layout without page-level horizontal scroll |
 | Regression (Identity / Audit / Administration) | Unchanged: 38/40, 22/22, 40/42; only the known outdated expectations fail |
 | Issues found and fixed | Duplicate check returned 500 when date of birth was omitted (SQL NULL in boolean flags → COALESCE); approving an already-approved merge reported the wrong reason (check order); menu highlighted two items on `/patients/new` (exact-match option) |
+
+### Doctor profiles + Appointment & Queue — 2026-10-31
+Isolated environment (database `hmis_test`, API 7101, UI 4301); the developer's `hmis` database was not used for testing.
+
+| Check | Result |
+|---|---|
+| `dotnet build` / `ng build` | Pass, 0 warnings |
+| API script (doctor profiles, sessions, overlap, leave, availability, booking, walk-ins, capacity, duplicates, reschedule, check-in, no-show, cancel, doctor queue, call next, other doctor blocked, queue board without names) | 44/44 |
+| Concurrency: 8 parallel bookings for a session with 2 places left | Exactly 2 succeed, serials unique |
+| Browser: admin menu, doctors list, new session, invalid times, add/duplicate/remove leave | Pass |
+| Browser: reception walk-in (auto check-in), booking, check-in from list, duplicate booking banner, cancel with required reason, no My Queue menu | Pass |
+| Browser: doctor queue — call next, complete; queue display (serials only, no sidebar); patient profile Appointments tab; booking from profile pre-selects patient | Pass |
+| Fixes found during testing | Clear message for duplicate leave (`LEAVE_ALREADY_RECORDED`, was a generic unique-value error); doctor dropdown on Doctor Sessions exceeded max page size; logout now waits for the server to revoke the refresh token before navigating (an immediate reload could previously keep the session) |

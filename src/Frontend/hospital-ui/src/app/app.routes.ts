@@ -36,6 +36,7 @@ export const routes: Routes = [
           import('./features/auth/change-password/change-password.page').then((m) => m.ChangePasswordPage),
       },
       { path: 'patients', loadChildren: () => import('./features/patient/patient.routes') },
+      { path: 'appointments', loadChildren: () => import('./features/appointment/appointment.routes') },
       { path: 'administration', loadChildren: () => import('./features/administration/administration.routes') },
       { path: 'hr', loadChildren: () => import('./features/hr/hr.routes') },
       { path: 'security', loadChildren: () => import('./features/security/security.routes') },
@@ -46,6 +47,13 @@ export const routes: Routes = [
         loadComponent: () => import('./features/audit/audit-log.page').then((m) => m.AuditLogPage),
       },
     ],
+  },
+  {
+    // Waiting-room TV: full screen, outside the admin layout.
+    path: 'queue-display',
+    title: 'Queue · HMIS',
+    canActivate: [authGuard, permissionGuard('Appointment.QueueDisplay')],
+    loadComponent: () => import('./features/appointment/pages/queue-board.page').then((m) => m.QueueBoardPage),
   },
   { path: '**', redirectTo: '' },
 ];

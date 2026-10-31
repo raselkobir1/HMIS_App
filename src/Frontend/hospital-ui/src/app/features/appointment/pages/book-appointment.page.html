@@ -1,0 +1,108 @@
+<app-page-header title="Book appointment" subtitle="Serial-number booking by doctor session">
+  <a mat-button routerLink="/appointments">Appointments</a>
+</app-page-header>
+
+<div class="layout">
+  <div class="steps">
+    <mat-card appearance="outlined">
+      <mat-card-header><mat-card-title>1. Patient</mat-card-title></mat-card-header>
+      <mat-card-content>
+        <app-patient-picker [(patient)]="patient" />
+        <p class="hint">
+          Not registered yet? <a routerLink="/patients/new">Register the patient</a> first.
+        </p>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card appearance="outlined">
+      <mat-card-header><mat-card-title>2. Doctor and date</mat-card-title></mat-card-header>
+      <mat-card-content class="grid">
+        <mat-form-field>
+          <mat-label>Department</mat-label>
+          <mat-select [ngModel]="departmentId()" (ngModelChange)="departmentId.set($event); doctorId.set('')">
+            <mat-option value="">All departments</mat-option>
+            @for (d of departments(); track d.id) {
+              <mat-option [value]="d.id">{{ d.name }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Doctor</mat-label>
+          <mat-select [ngModel]="doctorId()" (ngModelChange)="doctorId.set($event)">
+            @for (d of doctors(); track d.id) {
+              <mat-option [value]="d.employeeId">{{ d.fullName }} · {{ d.specialization }}</mat-option>
+            } @empty {
+              <mat-option disabled>No doctors accepting appointments</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <div class="wide toggles">
+          <mat-button-toggle-group [ngModel]="walkIn()" (ngModelChange)="walkIn.set($event)" aria-label="Booking type" hideSingleSelectionIndicator>
+            <mat-button-toggle [value]="false">Appointment</mat-button-toggle>
+            <mat-button-toggle [value]="true">Walk-in (today)</mat-button-toggle>
+          </mat-button-toggle-group>
+          <mat-form-field>
+            <mat-label>Date</mat-label>
+            <input matInput [matDatepicker]="picker" [ngModel]="date()" (ngModelChange)="$event && date.set($event)"
+                   [min]="today" [max]="maxDate" [disabled]="walkIn()" />
+            <mat-datepicker-toggle matIconSuffix [for]="picker" />
+            <mat-datepicker #picker />
+          </mat-form-field>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card appearance="outlined">
+      <mat-card-header><mat-card-title>3. Session</mat-card-title></mat-card-header>
+      <mat-card-content>
+        @if (!doctorId()) {
+          <p class="hint">Choose a doctor to see sessions.</p>
+        } @else if (loadingSessions()) {
+          <p class="hint">Checking availability…</p>
+        } @else {
+          <div class="sessions" role="radiogroup" aria-label="Sessions">
+            @for (s of sessions(); track s.scheduleId) {
+              <button type="button" class="session" role="radio" [attr.aria-checked]="sessionId() === s.scheduleId"
+                      [class.selected]="sessionId() === s.scheduleId" [disabled]="!s.isBookable" (click)="sessionId.set(s.scheduleId)">
+                <span class="time">{{ formatTime(s.startTime) }} – {{ formatTime(s.endTime) }}</span>
+                <span class="room">{{ s.room ?? '' }}</span>
+                <span class="state">{{ sessionState(s) }}</span>
+              </button>
+            } @empty {
+              <p class="hint">The doctor has no session on this date.</p>
+            }
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <mat-card appearance="outlined" class="summary">
+    <mat-card-header><mat-card-title>Summary</mat-card-title></mat-card-header>
+    <mat-card-content>
+      @if (error(); as message) {
+        <div class="banner" role="alert">{{ message }}</div>
+      }
+      <dl>
+        <dt>Patient</dt>
+        <dd>{{ patient() ? patient()!.mrNumber + ' · ' + patient()!.fullName : '—' }}</dd>
+        <dt>Doctor</dt>
+        <dd>{{ doctor()?.fullName ?? '—' }}</dd>
+        <dt>Serial</dt>
+        <dd>{{ session() ? session()!.nextSerial + ' (about ' + formatTime(session()!.nextEstimatedTime) + ')' : '—' }}</dd>
+      </dl>
+      <mat-button-toggle-group [ngModel]="visitType()" (ngModelChange)="visitType.set($event)" aria-label="Visit type" hideSingleSelectionIndicator>
+        <mat-button-toggle value="New">New patient</mat-button-toggle>
+        <mat-button-toggle value="FollowUp">Follow-up</mat-button-toggle>
+      </mat-button-toggle-group>
+      <p class="fee">Consultation fee: <strong>{{ fee() !== null ? (fee() | currency: 'BDT' : 'symbol-narrow' : '1.0-0') : '—' }}</strong></p>
+      <mat-form-field class="full">
+        <mat-label>Notes (optional)</mat-label>
+        <input matInput [ngModel]="notes()" (ngModelChange)="notes.set($event)" maxlength="500" />
+      </mat-form-field>
+      <button mat-flat-button type="button" class="full" [disabled]="!canBook()" (click)="book()">
+        {{ walkIn() ? 'Register walk-in & check in' : 'Book appointment' }}
+      </button>
+    </mat-card-content>
+  </mat-card>
+</div>
