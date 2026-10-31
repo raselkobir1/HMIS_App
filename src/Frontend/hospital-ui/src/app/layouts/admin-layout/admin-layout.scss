@@ -17,6 +17,18 @@
   color: var(--mat-sys-primary);
 }
 
+.brand-logo {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.brand-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .active-link {
   background: var(--mat-sys-secondary-container);
 }

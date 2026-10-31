@@ -13,6 +13,17 @@ export interface NavItem {
 export const NAVIGATION: NavItem[] = [
   { label: 'Dashboard', icon: 'dashboard', route: '/dashboard', permissions: [] },
   {
+    label: 'Administration',
+    icon: 'apartment',
+    permissions: [],
+    children: [
+      { label: 'Hospital Profile', icon: 'local_hospital', route: '/administration/hospital-profile', permissions: ['Admin.HospitalProfile.View'] },
+      { label: 'Departments', icon: 'account_tree', route: '/administration/departments', permissions: ['Admin.Departments.View'] },
+      { label: 'Designations', icon: 'badge', route: '/administration/designations', permissions: ['Admin.Designations.View'] },
+      { label: 'Settings & Numbering', icon: 'settings', route: '/administration/settings', permissions: ['Admin.Settings.Manage'] },
+    ],
+  },
+  {
     label: 'Security',
     icon: 'shield_person',
     permissions: [],

@@ -11,6 +11,7 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { map } from 'rxjs';
 
 import { AuthService } from '../../core/auth/auth.service';
+import { BrandingService } from '../../core/services/branding.service';
 import { NAVIGATION, NavItem } from '../../core/navigation/navigation';
 
 @Component({
@@ -34,6 +35,7 @@ export class AdminLayout {
   private readonly auth = inject(AuthService);
 
   protected readonly user = this.auth.user;
+  protected readonly branding = inject(BrandingService);
 
   protected readonly isHandset = toSignal(
     inject(BreakpointObserver)

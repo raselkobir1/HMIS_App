@@ -20,6 +20,8 @@
 | D8 | Error flow | Managers **throw typed exceptions** for failures; global middleware maps them to HTTP status + `ApiResponse` | Avoids per-controller try/catch (TAD §15). |
 | D9 | Identity store | Own `User`/`Role`/`Permission` entities in the `auth` schema, using ASP.NET Core Identity's **PasswordHasher (PBKDF2)**. The full `UserManager` stack is not used. | TAD §13. *Amended during Identity build:* keeps the Domain free of framework types and keeps Identity on Controller → Manager → Repository. |
 | D11 | Local ports | PostgreSQL `5434`, API `7001/5001`, UI `4300` | 5432/5433/4200 are used by other local projects. |
+| D12 | Timezone | Fixed to `Asia/Dhaka` and shown read-only in Settings | Single facility (D3); `IDateTimeProvider` uses the same zone, so the setting and the behaviour cannot diverge. |
+| D13 | File storage | `IFileStorageService` with local disk storage outside the web root (`FileStorage:RootPath`), generated names, paths confined to the root | TAD §17; can be replaced by S3-compatible storage later. |
 | D10 | Deferred infrastructure | Redis, Hangfire, Outbox are **not** built in Stage 1 | Built when a module actually needs them (TAD §19, §18). |
 
 ---

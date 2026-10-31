@@ -39,7 +39,7 @@ import { passwordPolicyValidator } from '../../validators/password-policy.valida
       </mat-dialog-actions>
     </form>
   `,
-  styleUrl: '../dialog.scss',
+  styleUrl: '../../../../shared/styles/dialog.scss',
 })
 export class ResetPasswordDialog {
   protected readonly user = inject<UserListItem>(MAT_DIALOG_DATA);

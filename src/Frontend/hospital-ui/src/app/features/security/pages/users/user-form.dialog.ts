@@ -79,7 +79,7 @@ export type UserFormDialogData = { mode: 'create' } | { mode: 'edit'; user: User
       </mat-dialog-actions>
     </form>
   `,
-  styleUrl: '../dialog.scss',
+  styleUrl: '../../../../shared/styles/dialog.scss',
 })
 export class UserFormDialog {
   private readonly data = inject<UserFormDialogData>(MAT_DIALOG_DATA);

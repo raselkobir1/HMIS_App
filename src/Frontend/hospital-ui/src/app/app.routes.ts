@@ -35,6 +35,7 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/auth/change-password/change-password.page').then((m) => m.ChangePasswordPage),
       },
+      { path: 'administration', loadChildren: () => import('./features/administration/administration.routes') },
       { path: 'security', loadChildren: () => import('./features/security/security.routes') },
       {
         path: 'audit-log',

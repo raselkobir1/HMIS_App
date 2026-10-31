@@ -1,5 +1,7 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+
+import { BrandingService } from '../../core/services/branding.service';
 
 @Component({
   selector: 'app-authentication-layout',
@@ -9,8 +11,12 @@ import { RouterOutlet } from '@angular/router';
     <main class="auth-shell">
       <section class="auth-card-wrapper">
         <header class="brand">
-          <span class="material-symbols-outlined brand-icon" aria-hidden="true">local_hospital</span>
-          <h1>Hospital Management System</h1>
+          @if (branding.logoUrl(); as logo) {
+            <img [src]="logo" alt="" class="brand-logo" />
+          } @else {
+            <span class="material-symbols-outlined brand-icon" aria-hidden="true">local_hospital</span>
+          }
+          <h1>{{ branding.name() }}</h1>
         </header>
         <router-outlet />
       </section>
@@ -40,9 +46,16 @@ import { RouterOutlet } from '@angular/router';
       font: var(--mat-sys-headline-small);
       margin: 0;
     }
+    .brand-logo {
+      width: 48px;
+      height: 48px;
+      object-fit: contain;
+    }
     .brand-icon {
       font-size: 36px;
     }
   `,
 })
-export class AuthenticationLayout {}
+export class AuthenticationLayout {
+  protected readonly branding = inject(BrandingService);
+}

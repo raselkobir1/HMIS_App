@@ -45,6 +45,7 @@ Legend: ✔ granted by default · — not granted
 | `Admin.HospitalProfile.Manage` | ✔ | ✔ | — | — | — | — | — |
 | `Admin.Departments.View` | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
 | `Admin.Departments.Manage` | ✔ | ✔ | — | — | — | — | — |
+| `Admin.Designations.View` | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
 | `Admin.Designations.Manage` | ✔ | ✔ | — | — | — | ✔ | — |
 | `Admin.Settings.Manage` (numbering, timezone, currency) | ✔ | — | — | — | — | — | — |
 | **HR (basic)** |||||||
@@ -97,3 +98,5 @@ Legend: ✔ granted by default · — not granted
 | Reports / Dashboard | Full | Ops | — | Own | — | — | — | — | Finance | HR | Inventory | All |
 
 Detailed permission codes for each later module will be added here when that module is approved.
+
+> **As built (Administration):** the `*.View` permissions for hospital profile, departments and designations are granted by default to every staff role (all roles except the Super Administrator, who receives everything automatically). Pharmacist, Laboratory Technician, Radiologist, Accountant/Cashier and Store Manager are not shown as columns above but also receive them.

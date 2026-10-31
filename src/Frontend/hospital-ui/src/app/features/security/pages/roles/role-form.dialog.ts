@@ -43,7 +43,7 @@ import { SecurityApiService } from '../../services/security-api.service';
       </mat-dialog-actions>
     </form>
   `,
-  styleUrl: '../dialog.scss',
+  styleUrl: '../../../../shared/styles/dialog.scss',
 })
 export class RoleFormDialog {
   protected readonly role = inject<RoleDetail | null>(MAT_DIALOG_DATA);

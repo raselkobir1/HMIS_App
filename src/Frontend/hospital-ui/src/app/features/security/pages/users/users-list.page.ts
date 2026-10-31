@@ -52,7 +52,7 @@ import { UserFormDialog, UserFormDialogData } from './user-form.dialog';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './users-list.page.html',
-  styleUrl: '../security-pages.scss',
+  styleUrl: '../../../../shared/styles/list-page.scss',
 })
 export class UsersListPage {
   private readonly api = inject(SecurityApiService);

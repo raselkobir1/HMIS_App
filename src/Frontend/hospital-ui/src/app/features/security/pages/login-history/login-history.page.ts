@@ -114,7 +114,7 @@ const FAILURE_LABELS: Record<string, string> = {
       }
     </div>
   `,
-  styleUrl: '../security-pages.scss',
+  styleUrl: '../../../../shared/styles/list-page.scss',
 })
 export class LoginHistoryPage {
   private readonly api = inject(SecurityApiService);

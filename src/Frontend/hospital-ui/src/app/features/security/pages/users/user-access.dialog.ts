@@ -50,7 +50,7 @@ import { SecurityApiService } from '../../services/security-api.service';
       <button mat-flat-button type="button" [disabled]="saving() || loading()" (click)="save()">Save</button>
     </mat-dialog-actions>
   `,
-  styleUrl: '../dialog.scss',
+  styleUrl: '../../../../shared/styles/dialog.scss',
 })
 export class UserAccessDialog {
   protected readonly user = inject<UserDetail>(MAT_DIALOG_DATA);

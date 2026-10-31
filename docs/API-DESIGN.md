@@ -65,3 +65,24 @@ See ARCHITECTURE.md §6.2. Responses are never 200 with `success: false`.
 | GET | `/api/v1/audit-logs/filter-options` | Audit.View |
 
 The audit log is read-only through the API. Results are always sorted by most recent first.
+
+### Administration (implemented)
+| Method | Route | Permission |
+|---|---|---|
+| GET | `/api/v1/hospital-profile` | Admin.HospitalProfile.View |
+| PUT | `/api/v1/hospital-profile` | Admin.HospitalProfile.Manage |
+| GET | `/api/v1/hospital-profile/branding` | anonymous (name, short name, logo flag) |
+| GET | `/api/v1/hospital-profile/logo` | anonymous (image) |
+| POST / DELETE | `/api/v1/hospital-profile/logo` (multipart `file`, PNG/JPEG/WebP ≤ 1 MB, checked by content) | Admin.HospitalProfile.Manage |
+| GET | `/api/v1/system-settings` | Admin.HospitalProfile.View |
+| PUT | `/api/v1/system-settings` | Admin.Settings.Manage |
+| GET | `/api/v1/departments`, `/departments/lookup`, `/departments/{id}` | Admin.Departments.View |
+| POST / PUT / PATCH status | `/api/v1/departments[/{id}[/status]]` | Admin.Departments.Manage |
+| GET | `/api/v1/designations`, `/designations/lookup` | Admin.Designations.View |
+| POST / PUT / PATCH status | `/api/v1/designations[/{id}[/status]]` | Admin.Designations.Manage |
+| GET | `/api/v1/number-sequences` | Admin.Settings.Manage |
+| PUT | `/api/v1/number-sequences/{key}` and `/{key}/next-value` | Admin.Settings.Manage |
+
+Error codes: `DEPARTMENT_CODE_TAKEN`, `DEPARTMENT_NAME_TAKEN`, `DESIGNATION_NAME_TAKEN` (409); `DEPARTMENT_DEPTH`, `DEPARTMENT_HAS_SUB_DEPARTMENTS`, `DEPARTMENT_HAS_ACTIVE_SUB_DEPARTMENTS`, `DEPARTMENT_PARENT_INACTIVE`, `DEPARTMENT_NOT_FOUND`, `LOGO_INVALID`, `SEQUENCE_RESET_NEEDS_YEAR`, `SEQUENCE_CANNOT_DECREASE`, `SEQUENCE_PAD_LENGTH` (422).
+
+Cross-module contracts (`BuildingBlocks.Contracts.Administration`): `IDepartmentLookup`, `IDesignationLookup`, `IHospitalSettingsProvider`, `INumberSequenceService` (`NextAsync("PATIENT_MRN")`), `INumberSequenceDefinitionProvider`.

@@ -104,7 +104,7 @@ import { RoleFormDialog } from './role-form.dialog';
       }
     </div>
   `,
-  styleUrl: '../security-pages.scss',
+  styleUrl: '../../../../shared/styles/list-page.scss',
 })
 export class RolesListPage {
   private readonly api = inject(SecurityApiService);

@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-31 — Administration module
+- `admin` schema: HospitalProfile (with logo), SystemSettings, Departments (two levels), Designations, NumberSequences.
+- Public branding endpoint; hospital name and logo shown on the login page and in the app shell.
+- Atomic, forward-only number sequences with yearly reset and live format preview; PATIENT_MRN, INVOICE and APPOINTMENT seeded.
+- Contracts for other modules: department/designation lookups, hospital settings, number sequence service.
+- Shared `IFileStorageService` (local storage) and shared list/dialog styles moved to `shared/styles`.
+- Seeded 14 standard departments and 12 designations on first run; July–June financial year.
+
 ## 2026-10-31 — Audit module
 - `audit` schema with append-only `AuditLogs` (jsonb old/new values) and a database trigger that blocks UPDATE/DELETE/TRUNCATE.
 - `AuditSaveChangesInterceptor` on every module DbContext: captures `[Audited]` entity changes and queued business events in the same transaction as the change.

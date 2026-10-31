@@ -184,8 +184,8 @@ erDiagram
     }
 ```
 
-`SystemSettings` holds the timezone (`Asia/Dhaka`), currency (`BDT`), financial year start and other simple settings.  
-`NumberSequences.Next` runs `SELECT … FOR UPDATE` inside the caller's transaction.
+**As built:** `SystemSettings` is a typed single-row table (TimeZone fixed to `Asia/Dhaka`, CurrencyCode, CurrencySymbol, FinancialYearStartMonth with a 1–12 check), not a key/value table. `HospitalProfile` stores `LogoPath`/`LogoContentType` (file in `IFileStorageService`, not in the database). `Departments` have a unique `Code` and `NormalizedName`, and a self-referencing FK limited to two levels by the domain. `Designations` have a unique `NormalizedName`. Enums are stored as strings.  
+`NumberSequences` allocation is a single `UPDATE … SET "CurrentValue" = … RETURNING` statement (row lock, yearly reset in the same statement), run on the Administration connection. Numbers are unique, but gaps are possible if the caller's own transaction later fails. `CurrentValue >= 0` is enforced by a check constraint.
 
 ---
 

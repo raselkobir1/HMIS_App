@@ -16,6 +16,8 @@ Answers are recorded here and then copied into the relevant document.
 | Q-SEC-2 | Password policy | Min 8 chars, upper + lower + digit; forced change on first login / admin reset; no expiry | 2026-10-31 |
 | Q-SEC-3 | Session timeout | UI auto-logout after 30 min inactivity; refresh token 7 days | 2026-10-31 |
 | Q-SEC-4 | Login identifier | Username or email | 2026-10-31 |
+| Q-ADM-2 | Financial year | July–June (editable in Settings) | 2026-10-31 |
+| Q-HOSP-4 | Departments to seed | Standard list of 14 (editable); hospital can adjust in the app | 2026-10-31 |
 
 ## Hospital discovery (BRD §13) — affects module activation and phase order
 
@@ -35,7 +37,6 @@ Answers are recorded here and then copied into the relevant document.
 | ID | Question | Proposed default | Blocking for |
 |---|---|---|---|
 | Q-ADM-1 | Who owns the hospital **service master and prices**: Administration or Billing? | Billing (see MODULE-DEPENDENCIES §3) | Billing |
-| Q-ADM-2 | Financial year | July–June (Bangladesh fiscal year) | Administration |
 
 ## Patient (reference module) — **blocking**
 

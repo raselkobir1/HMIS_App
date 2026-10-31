@@ -8,6 +8,7 @@ import { routes } from './app.routes';
 import { AuthService } from './core/auth/auth.service';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
+import { BrandingService } from './core/services/branding.service';
 import { IdleService } from './core/services/idle.service';
 
 export const appConfig: ApplicationConfig = {
@@ -16,6 +17,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes, withComponentInputBinding()),
     // errorInterceptor is outermost so it only sees errors after authInterceptor's refresh-and-retry.
     provideHttpClient(withInterceptors([errorInterceptor, authInterceptor])),
+    provideAppInitializer(() => inject(BrandingService).load()),
     provideAppInitializer(() => {
       inject(IdleService);
       // Restore the session from the HttpOnly refresh cookie before the first route is resolved.
