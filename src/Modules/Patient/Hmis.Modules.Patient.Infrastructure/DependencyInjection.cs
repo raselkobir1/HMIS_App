@@ -25,7 +25,9 @@ public static class DependencyInjection
         services.AddScoped<PatientManager>();
         services.AddScoped<IPatientManager>(sp => sp.GetRequiredService<PatientManager>());
         services.AddScoped<IPatientLookup>(sp => sp.GetRequiredService<PatientManager>());
-        services.AddScoped<IPatientMedicalManager, PatientMedicalManager>();
+        services.AddScoped<PatientMedicalManager>();
+        services.AddScoped<IPatientMedicalManager>(sp => sp.GetRequiredService<PatientMedicalManager>());
+        services.AddScoped<IPatientClinicalSummary>(sp => sp.GetRequiredService<PatientMedicalManager>());
         services.AddScoped<IPatientDocumentManager, PatientDocumentManager>();
         services.AddScoped<IPatientMergeManager, PatientMergeManager>();
 

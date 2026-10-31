@@ -2,6 +2,7 @@ using Hmis.BuildingBlocks.Application.Abstractions;
 using Hmis.BuildingBlocks.Application.Exceptions;
 using Hmis.BuildingBlocks.Application.Pagination;
 using Hmis.BuildingBlocks.Contracts.Administration;
+using Hmis.BuildingBlocks.Contracts.Appointment;
 using Hmis.BuildingBlocks.Contracts.HR;
 using Hmis.BuildingBlocks.Contracts.Identity;
 using Hmis.BuildingBlocks.Contracts.Patient;
@@ -20,7 +21,7 @@ public sealed class AppointmentManager(
     IUserEmployeeLookup userEmployeeLookup,
     INumberSequenceService numberSequences,
     ICurrentUser currentUser,
-    IDateTimeProvider dateTime) : IAppointmentManager
+    IDateTimeProvider dateTime) : IAppointmentManager, IOpdEncounterService
 {
     // ---------- Availability ----------
 
@@ -213,6 +214,42 @@ public sealed class AppointmentManager(
 
         return new QueueBoardDto(date, dateTime.UtcNow, board);
     }
+
+    // ---------- IOpdEncounterService (contract for Clinical; encounter id = appointment id) ----------
+
+    async Task<OpdEncounter?> IOpdEncounterService.GetAsync(Guid encounterId, CancellationToken cancellationToken) =>
+        await appointments.GetByIdAsync(encounterId, cancellationToken) is { } a ? ToEncounter(a) : null;
+
+    async Task<OpdEncounter> IOpdEncounterService.StartAsync(Guid encounterId, CancellationToken cancellationToken)
+    {
+        var appointment = await GetAsync(encounterId, cancellationToken);
+        await EnsureOwnPatientAsync(appointment, cancellationToken);
+        if (appointment.Status != AppointmentStatus.InConsultation)
+        {
+            await StartAsync(appointment, cancellationToken);
+        }
+
+        return ToEncounter(appointment);
+    }
+
+    async Task<OpdEncounter> IOpdEncounterService.CompleteAsync(Guid encounterId, CancellationToken cancellationToken)
+    {
+        var appointment = await GetAsync(encounterId, cancellationToken);
+        if (appointment.Status != AppointmentStatus.Completed)
+        {
+            await EnsureOwnPatientAsync(appointment, cancellationToken);
+            appointment.Complete(dateTime.UtcNow);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+
+        return ToEncounter(appointment);
+    }
+
+    Task<bool> IOpdEncounterService.HasRelationshipAsync(Guid doctorId, Guid patientId, CancellationToken cancellationToken) =>
+        appointments.HasRelationshipAsync(doctorId, patientId, cancellationToken);
+
+    private static OpdEncounter ToEncounter(AppointmentEntity a) =>
+        new(a.Id, a.AppointmentNumber, a.PatientId, a.DoctorId, a.AppointmentDate, a.SerialNumber, a.VisitType.ToString(), a.Status.ToString());
 
     // ---------- helpers ----------
 

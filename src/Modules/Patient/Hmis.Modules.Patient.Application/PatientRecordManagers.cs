@@ -3,6 +3,7 @@ using Hmis.BuildingBlocks.Application.Auditing;
 using Hmis.BuildingBlocks.Application.Exceptions;
 using Hmis.BuildingBlocks.Application.Files;
 using Hmis.BuildingBlocks.Application.Pagination;
+using Hmis.BuildingBlocks.Contracts.Patient;
 using Hmis.Modules.Patient.Domain.Entities;
 using PatientEntity = Hmis.Modules.Patient.Domain.Entities.Patient;
 
@@ -14,8 +15,20 @@ public sealed class PatientMedicalManager(
     IPatientAllergyRepository allergies,
     IPatientMedicalHistoryRepository histories,
     IPatientUnitOfWork unitOfWork,
-    IAuditService auditService) : IPatientMedicalManager
+    IAuditService auditService) : IPatientMedicalManager, IPatientClinicalSummary
 {
+    /// <summary>Contract for Clinical: active allergies and valid history entries (Clinical audits its own access).</summary>
+    async Task<PatientClinicalSummary> IPatientClinicalSummary.GetAsync(Guid patientId, CancellationToken cancellationToken)
+    {
+        var allergyList = await allergies.GetForPatientAsync(patientId, cancellationToken);
+        var historyList = await histories.GetForPatientAsync(patientId, cancellationToken);
+        return new PatientClinicalSummary(
+            allergyList.Where(a => a.Status == AllergyStatus.Active)
+                .Select(a => new PatientAllergyAlert(a.Allergen, a.Type.ToString(), a.Severity.ToString(), a.Reaction)).ToList(),
+            historyList.Where(h => !h.IsEnteredInError)
+                .Select(h => new PatientHistoryItem(h.Category.ToString(), h.Description, h.OnsetDate)).ToList());
+    }
+
     public async Task<MedicalInfoDto> GetAsync(Guid patientId, CancellationToken cancellationToken)
     {
         await GetPatientAsync(patientId, cancellationToken);

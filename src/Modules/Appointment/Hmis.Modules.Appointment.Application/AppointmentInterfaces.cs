@@ -52,6 +52,9 @@ public interface IAppointmentRepository : IRepository<AppointmentEntity>, IConcu
 
     Task<FutureUsage> GetFutureUsageAsync(Guid scheduleId, DateOnly fromDate, CancellationToken cancellationToken);
 
+    /// <summary>True when the doctor has any non-cancelled appointment with the patient (clinical access rule).</summary>
+    Task<bool> HasRelationshipAsync(Guid doctorId, Guid patientId, CancellationToken cancellationToken);
+
     /// <summary>Appointments not yet seen (Scheduled/Confirmed/Waiting) that a leave would affect.</summary>
     Task<int> CountPendingAsync(Guid doctorId, DateOnly date, Guid? scheduleId, CancellationToken cancellationToken);
 }

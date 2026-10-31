@@ -25,6 +25,7 @@ public sealed record DoctorSummary(
     Guid DepartmentId,
     string Specialization,
     string Qualifications,
+    string RegistrationNumber,
     decimal NewPatientFee,
     decimal FollowUpFee,
     bool IsAcceptingAppointments,

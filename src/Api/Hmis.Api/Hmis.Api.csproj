@@ -33,6 +33,8 @@
     <ProjectReference Include="..\..\Modules\Patient\Hmis.Modules.Patient.Presentation\Hmis.Modules.Patient.Presentation.csproj" />
     <ProjectReference Include="..\..\Modules\Appointment\Hmis.Modules.Appointment.Infrastructure\Hmis.Modules.Appointment.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\Appointment\Hmis.Modules.Appointment.Presentation\Hmis.Modules.Appointment.Presentation.csproj" />
+    <ProjectReference Include="..\..\Modules\Clinical\Hmis.Modules.Clinical.Infrastructure\Hmis.Modules.Clinical.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Clinical\Hmis.Modules.Clinical.Presentation\Hmis.Modules.Clinical.Presentation.csproj" />
     <ProjectReference Include="..\..\Modules\Identity\Hmis.Modules.Identity.Infrastructure\Hmis.Modules.Identity.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\Identity\Hmis.Modules.Identity.Presentation\Hmis.Modules.Identity.Presentation.csproj" />
   </ItemGroup>

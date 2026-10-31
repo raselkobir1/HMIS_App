@@ -2,6 +2,7 @@ using System.Reflection;
 using Hmis.Modules.Administration.Infrastructure;
 using Hmis.Modules.Appointment.Infrastructure;
 using Hmis.Modules.Audit.Infrastructure;
+using Hmis.Modules.Clinical.Infrastructure;
 using Hmis.Modules.HR.Infrastructure;
 using Hmis.Modules.Patient.Infrastructure;
 using Hmis.Modules.Identity.Infrastructure;
@@ -22,7 +23,8 @@ public static class ModuleRegistration
         typeof(Hmis.Modules.Administration.Presentation.Controllers.AdministrationPresentationMarker).Assembly,
         typeof(Hmis.Modules.HR.Presentation.HrPresentationMarker).Assembly,
         typeof(Hmis.Modules.Patient.Presentation.PatientPresentationMarker).Assembly,
-        typeof(Hmis.Modules.Appointment.Presentation.AppointmentPresentationMarker).Assembly
+        typeof(Hmis.Modules.Appointment.Presentation.AppointmentPresentationMarker).Assembly,
+        typeof(Hmis.Modules.Clinical.Presentation.ClinicalPresentationMarker).Assembly
     ];
 
     /// <summary>Application assemblies containing FluentValidation validators and Mapster IRegister configs.</summary>
@@ -34,7 +36,8 @@ public static class ModuleRegistration
         typeof(Hmis.Modules.Administration.Application.AdministrationApplicationMarker).Assembly,
         typeof(Hmis.Modules.HR.Application.HrApplicationMarker).Assembly,
         typeof(Hmis.Modules.Patient.Application.PatientApplicationMarker).Assembly,
-        typeof(Hmis.Modules.Appointment.Application.AppointmentApplicationMarker).Assembly
+        typeof(Hmis.Modules.Appointment.Application.AppointmentApplicationMarker).Assembly,
+        typeof(Hmis.Modules.Clinical.Application.ClinicalApplicationMarker).Assembly
     ];
 
     public static IServiceCollection AddHmisModules(this IServiceCollection services, IConfiguration configuration)
@@ -45,6 +48,7 @@ public static class ModuleRegistration
         services.AddHrModule(configuration);
         services.AddPatientModule(configuration);
         services.AddAppointmentModule(configuration);
+        services.AddClinicalModule(configuration);
         return services;
     }
 

@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Hmis.Modules.Clinical.Domain\Hmis.Modules.Clinical.Domain.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\Hmis.BuildingBlocks.Application\Hmis.BuildingBlocks.Application.csproj" />
+  </ItemGroup>
+
+</Project>

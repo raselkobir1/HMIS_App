@@ -9,4 +9,9 @@ public sealed class UserEmployeeLookup(IdentityDbContext context) : IUserEmploye
 {
     public Task<Guid?> GetEmployeeIdAsync(Guid userId, CancellationToken cancellationToken) =>
         context.Users.AsNoTracking().Where(u => u.Id == userId).Select(u => u.EmployeeId).FirstOrDefaultAsync(cancellationToken);
+
+    public async Task<IReadOnlyDictionary<Guid, string>> GetFullNamesAsync(IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken) =>
+        userIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : await context.Users.AsNoTracking().Where(u => userIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
 }

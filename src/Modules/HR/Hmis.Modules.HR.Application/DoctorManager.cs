@@ -214,7 +214,7 @@ public sealed class DoctorManager(
         (await doctors.GetByEmployeeIdsAsync(doctorIds, cancellationToken))
             .Select(i => new DoctorSummary(
                 i.Employee.Id, i.Employee.EmployeeCode, i.Employee.FullName, i.Employee.DepartmentId,
-                i.Profile.Specialization, i.Profile.Qualifications, i.Profile.NewPatientFee, i.Profile.FollowUpFee,
+                i.Profile.Specialization, i.Profile.Qualifications, i.Profile.RegistrationNumber, i.Profile.NewPatientFee, i.Profile.FollowUpFee,
                 i.Profile.IsAcceptingAppointments, i.Employee.IsCurrent))
             .ToList();
 

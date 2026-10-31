@@ -89,7 +89,8 @@ public sealed class HospitalProfileManager(
     public async Task<BrandingDto> GetBrandingAsync(CancellationToken cancellationToken)
     {
         var profile = await GetProfileAsync(cancellationToken);
-        return new BrandingDto(profile.Name, profile.ShortName, profile.LogoPath is not null, profile.LogoPath is null ? null : profile.RowVersion.ToString());
+        return new BrandingDto(profile.Name, profile.ShortName, profile.LogoPath is not null, profile.LogoPath is null ? null : profile.RowVersion.ToString(),
+            profile.Address, profile.Phone, profile.Email);
     }
 
     public async Task<LogoFile?> OpenLogoAsync(CancellationToken cancellationToken)

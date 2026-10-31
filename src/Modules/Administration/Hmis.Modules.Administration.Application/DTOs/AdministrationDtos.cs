@@ -37,7 +37,8 @@ public sealed record HospitalProfileUpdateDto
 }
 
 /// <summary>Public, non-sensitive branding for the login page and header.</summary>
-public sealed record BrandingDto(string Name, string? ShortName, bool HasLogo, string? LogoVersion);
+/// <summary>Public hospital identity for the login page, app shell and printed letterheads (contact details are public).</summary>
+public sealed record BrandingDto(string Name, string? ShortName, bool HasLogo, string? LogoVersion, string? Address, string? Phone, string? Email);
 
 public sealed record LogoFile(Stream Content, string ContentType);
 

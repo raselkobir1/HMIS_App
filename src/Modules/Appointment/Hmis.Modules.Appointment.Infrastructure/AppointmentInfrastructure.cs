@@ -1,5 +1,6 @@
 using Hmis.BuildingBlocks.Application.Pagination;
 using Hmis.BuildingBlocks.Application.Security;
+using Hmis.BuildingBlocks.Contracts.Appointment;
 using Hmis.BuildingBlocks.Infrastructure;
 using Hmis.BuildingBlocks.Infrastructure.Persistence;
 using Hmis.Modules.Appointment.Application;
@@ -257,6 +258,9 @@ public sealed class AppointmentRepository(AppointmentDbContext context)
             : new FutureUsage(perDay.Sum(d => d.Count), perDay.Max(d => d.Count), perDay.Max(d => d.Date));
     }
 
+    public Task<bool> HasRelationshipAsync(Guid doctorId, Guid patientId, CancellationToken cancellationToken) =>
+        Set.AnyAsync(a => a.DoctorId == doctorId && a.PatientId == patientId && a.Status != AppointmentStatus.Cancelled, cancellationToken);
+
     public Task<int> CountPendingAsync(Guid doctorId, DateOnly date, Guid? scheduleId, CancellationToken cancellationToken) =>
         Set.CountAsync(a => a.DoctorId == doctorId && a.AppointmentDate == date && Pending.Contains(a.Status) &&
                             (scheduleId == null || a.ScheduleId == scheduleId), cancellationToken);
@@ -272,7 +276,9 @@ public static class DependencyInjection
         services.AddScoped<ILeaveRepository, LeaveRepository>();
         services.AddScoped<IAppointmentRepository, AppointmentRepository>();
         services.AddScoped<IScheduleManager, ScheduleManager>();
-        services.AddScoped<IAppointmentManager, AppointmentManager>();
+        services.AddScoped<AppointmentManager>();
+        services.AddScoped<IAppointmentManager>(sp => sp.GetRequiredService<AppointmentManager>());
+        services.AddScoped<IOpdEncounterService>(sp => sp.GetRequiredService<AppointmentManager>());
         services.AddSingleton<IPermissionDefinitionProvider, AppointmentPermissionDefinitionProvider>();
         return services;
     }
