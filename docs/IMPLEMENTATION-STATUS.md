@@ -12,8 +12,8 @@ Statuses: Not Started · Analysis Completed · Design Completed · Backend Compl
 | HR (basic) | Approved | |
 | Patient | Testing Completed | Backend + frontend; 56 API + 18 browser checks; awaiting approval |
 | Doctor profiles + Appointment & Queue (Phase 2, step 1) | Approved | |
-| Clinical + OPD consultation (Phase 2, step 2) | Testing Completed | Backend + frontend; 45 API checks + browser walkthrough (17 checks, print and diagnosis toggle re-checked separately); awaiting approval |
-| Billing | Not Started | |
+| Clinical + OPD consultation (Phase 2, step 2) | Approved | |
+| Billing & Payments (Phase 3) | Testing Completed | Backend + frontend; 85 API + 26 browser checks; Appointment 44/44 and Clinical 45/45 regression; awaiting approval |
 | IPD, Bed, Nursing | Not Started | |
 | Laboratory, Radiology | Not Started | |
 | Pharmacy, Inventory, Procurement | Not Started | |
@@ -116,3 +116,14 @@ Isolated environment (database `hmis_test`, API 7101, UI 4301); the developer's 
 | Regression: Appointment API script on a fresh database | 44/44 |
 | Browser: nurse vitals (validation, BMI preview), doctor queue → consultation, editor (diagnosis, medicine, test, Bangla advice), unsaved indicator and leave guard, draft persists after reload, finalize → read-only, addendum, prescription print (BMDC, Rx, vitals, Bangla), queue shows completed, patient Visits tab; receptionist has no clinical menu or tab | Pass |
 | Fixes found during testing | New prescription/diagnosis lines were treated as existing rows (false concurrency conflict) — child keys now `ValueGeneratedNever`; dropped a filtered unique "one primary" index that would also have broken swapping primary/secondary in one save (rule kept in the domain); nested `<main>` landmark on the consultation page; primary-diagnosis toggle shared its label with the text field and was not visibly selected |
+
+### Billing & Payments — 2026-10-31
+Isolated environment (database `hmis_test`, API 7101, UI 4301); the developer's `hmis` database was only migrated.
+
+| Check | Result |
+|---|---|
+| `dotnet build` / `ng build` | Pass, 0 warnings |
+| API script: access by role; price list (codes, validation, deactivation, stale row version); OPD fee posted at check-in (once), walk-in billed, unpaid bill cancelled with the appointment, paid bill kept; draft invoices (inactive service, fixed vs editable price, line sync, stale row version, finalize, locked after finalize); payments (partial, over-payment, reference rule, two decimals, idempotent retry, reused request id); discounts (within limit, pending, one at a time, approval rights, above due, decided twice); two cashiers paying the same bill at once (one wins); advance deposit, apply, insufficient advance, wrong patient; advance return and cancellation refund (approval, payout, rejection, pending blocks payments, invoice cancelled, advance released); cancel permissions; account, receipt, lists; collection report (own vs all, totals by method and cashier, 31-day limit); audit rows; database refuses deleting/editing financial rows | 85/85 |
+| Regression on fresh databases: Appointment / Clinical API scripts | 44/44, 45/45 |
+| Browser: cashier menu, new invoice (patient picker, services, quantity, editable price, save & finalize), advance and bKash payments, receipt print, discount needing approval, patient account, collections; administrator approves discount and refund, adds a service; cancel & refund, payout, invoice cancelled and advance released, invoice print; phone width; receptionist has no billing access | 26/26 |
+| Fixes found during testing | Cashier role could not search patients (Patient.View added to its defaults); reason/note dialog did a native form submit that reloaded the page (approvals did nothing); cancelling an already-cancelled invoice reported a permission error instead of "already cancelled"; receipt wording for payments from advance; appointment list offered a page size above the API maximum |

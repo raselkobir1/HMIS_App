@@ -177,3 +177,28 @@ OPD encounter id = the checked-in appointment id (ARCHITECTURE D16).
 Doctors may view only patients with an appointment with them; only the encounter's doctor writes. Error codes: `ENCOUNTER_NOT_ACTIVE`, `CLINICAL_NOT_A_DOCTOR`, `CONSULTATION_FINALIZED`, `CONSULTATION_NOT_FINALIZED`, `CONSULTATION_INCOMPLETE`, `CONSULTATION_DIAGNOSIS_PRIMARY`, `CONSULTATION_FOLLOW_UP_DATE`, `CONSULTATION_LINE_UNKNOWN`, `PRESCRIPTION_DURATION`, `VITALS_EMPTY`, `VITALS_BP_INCOMPLETE`, `VITALS_ALREADY_IN_ERROR` (422); `CONCURRENCY_CONFLICT` (409); 403 for access rules.
 
 `GET /api/v1/hospital-profile/branding` now also returns `address`, `phone`, `email` (public contact details for printed letterheads).
+
+### Billing (implemented)
+All under `/api/v1/billing`. Money is `numeric(18,2)`; amounts accept at most two decimals.
+
+| Method | Route | Permission |
+|---|---|---|
+| GET/POST | `/services` (paged search, `category`, `isActive`) / add | Billing.View / Billing.Services.Manage |
+| PUT, PATCH | `/services/{id}` (`rowVersion`), `/services/{id}/status` | Billing.Services.Manage |
+| GET | `/invoices` (paged; `search` = invoice or appointment number, `patientId`, `status`, `dueOnly`, `dateFrom`, `dateTo`) | Billing.View |
+| GET | `/invoices/{id}` (lines, discounts, payments, refunds, patient advance balance) | Billing.View |
+| POST, PUT | `/invoices` (draft from price-list services), `/invoices/{id}` (draft; `rowVersion`) | Billing.Invoice.Manage |
+| POST | `/invoices/{id}/finalize` (`rowVersion`) | Billing.Invoice.Manage |
+| POST | `/invoices/{id}/cancel` (`reason`; draft needs Invoice.Manage, finalized needs Invoice.Cancel and no cash received) | Billing.View + check |
+| POST | `/invoices/{id}/discounts` (`type` Amount/Percent, `value`, `reason`) | Billing.Discount.Apply |
+| POST | `/discounts/{id}/approve`, `/discounts/{id}/reject` (`note`) | Billing.Discount.Approve |
+| POST | `/payments` (`clientRequestId`, `patientId`, `invoiceId` or null for an advance deposit, `amount`, `method`, `reference`) — idempotent per `clientRequestId` | Billing.Payment.Collect |
+| GET | `/payments/{id}/receipt` | Billing.View |
+| POST | `/refunds` (`type` AdvanceReturn with `amount`, or InvoiceCancellation with `invoiceId`; `reason`) | Billing.Refund.Request |
+| POST | `/refunds/{id}/approve`, `/refunds/{id}/reject` (`note`) | Billing.Refund.Approve |
+| POST | `/refunds/{id}/pay` (`method`, `reference`) | Billing.Refund.Request |
+| GET | `/patients/{patientId}/account`, `/approvals`, `/reports/collections?from&to&cashierId` | Billing.View (+ Reports.View for all cashiers) |
+
+Error codes (422 unless noted): `INVOICE_FINALIZED`, `INVOICE_NOT_FINALIZED`, `INVOICE_CANCELLED`, `INVOICE_EMPTY`, `INVOICE_LINE_UNKNOWN`, `INVOICE_LINE_INVALID`, `INVOICE_HAS_PAYMENTS`, `INVOICE_REFUND_PENDING`, `INVOICE_NOTHING_TO_REFUND`, `INVOICE_PATIENT_MISMATCH`, `PAYMENT_EXCEEDS_DUE`, `PAYMENT_AMOUNT_INVALID`, `PAYMENT_METHOD_INVALID`, `PAYMENT_REFERENCE_REQUIRED`, `PAYMENT_ADVANCE_INSUFFICIENT`, `DISCOUNT_INVALID`, `DISCOUNT_PENDING`, `DISCOUNT_EXCEEDS_DUE`, `DISCOUNT_DECIDED`, `REFUND_EXCEEDS_ADVANCE`, `REFUND_NOT_APPROVED`, `REFUND_DECIDED`, `BILLING_PATIENT_UNAVAILABLE`, `BILLING_SERVICE_UNAVAILABLE`; `SERVICE_CODE_EXISTS`, `PAYMENT_DUPLICATE_REQUEST`, `CONCURRENCY_CONFLICT` (409).
+
+Appointment check-in (and walk-in booking) now posts the consultation fee to Billing; cancelling a checked-in appointment cancels its unpaid bill.

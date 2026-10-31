@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-31 — Billing & Payments (Phase 3)
+- New Billing module (`billing` schema): price list, invoices, discounts, payments, advance deposits and refunds.
+- OPD consultation fee billed automatically at check-in; cancelling a checked-in appointment cancels its unpaid bill.
+- Cash counter: invoices from the price list, partial payments (cash, card, bKash, Nagad, Rocket, bank transfer), advance applied to bills, A5 receipts and invoices.
+- Discounts above 10% and all refunds need an administrator's approval; cancellation refunds cancel the invoice.
+- Patient account page, approvals queue and collection report by cashier and method.
+- Financial safety: per-patient lock for money operations, idempotent payments, database triggers against deleting financial records.
+- Cashier role can now search patients (Patient.View default).
+
 ## 2026-10-31 — Clinical + OPD consultation (Phase 2, step 2)
 - New Clinical module (`clinical` schema): consultations with diagnoses, prescription lines, investigation requests and addenda; vital signs.
 - Nurse station (OPD Vitals) with plausibility checks and BMI; mistakes marked as entered in error, never deleted.

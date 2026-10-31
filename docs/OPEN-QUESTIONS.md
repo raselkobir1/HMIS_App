@@ -37,6 +37,14 @@ Answers are recorded here and then copied into the relevant document.
 | Q-CLIN-4 | Vitals | BP, pulse, temperature (°F), respiratory rate, SpO₂, weight, height, BMI — default used | 2026-10-31 |
 | Q-CLIN-5 | Follow-up fee | Reception chooses New / Follow-up when booking (no automatic window) — default used | 2026-10-31 |
 | Q-CLIN-6 | Payment before consultation | Not enforced until Billing (Phase 3) — default used | 2026-10-31 |
+| Q-BILL-1 | Price list | One price per service; no corporate/insurance rates yet — default used | 2026-10-31 |
+| Q-BILL-2 | OPD charge | Posted automatically at check-in from the appointment fee; paid at the cash counter; never blocks the consultation — default used | 2026-10-31 |
+| Q-BILL-3 | Payment methods | Cash, card, bKash, Nagad, Rocket (reference required), bank transfer; partial payments and advance deposits — default used | 2026-10-31 |
+| Q-BILL-4 | Discounts | Amount or %, reason required; above 10% of the subtotal in total needs Billing.Discount.Approve (Hospital Administrator) — default used | 2026-10-31 |
+| Q-BILL-5 | Refunds | Always approved by a Hospital Administrator, then paid out by the cashier; invoice refunds return all cash and cancel the invoice (partial service refunds need credit notes, later) — default used | 2026-10-31 |
+| Q-BILL-6 | VAT | None on medical services — default used | 2026-10-31 |
+| Q-BILL-7 | Receipt | Printable A5 money receipt and A5 invoice — default used | 2026-10-31 |
+| Q-BILL-8 | Who collects at reception | Billing permissions go to Accountant / Cashier by default; a hospital where reception collects grants Billing.View + Billing.Payment.Collect to the Receptionist role — default used | 2026-10-31 |
 | Q-HOSP-4 | Departments to seed | Standard list of 14 (editable); hospital can adjust in the app | 2026-10-31 |
 
 ## Hospital discovery (BRD §13) — affects module activation and phase order

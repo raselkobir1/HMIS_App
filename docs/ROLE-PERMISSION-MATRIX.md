@@ -108,3 +108,20 @@ Detailed permission codes for each later module will be added here when that mod
 | `Clinical.View` | Doctor, Nurse | Explicit grant (not given to Super Administrator automatically). Every workspace, consultation and history view is audited. |
 | `Clinical.Vitals.Record` | Doctor, Nurse | Explicit grant. Only while the patient is checked in or in consultation. |
 | `Clinical.Consultation.Manage` | Doctor | Explicit grant. Only the encounter's own doctor may open, edit, finalize or amend. |
+
+## Billing permissions (implemented, Phase 3)
+
+| Permission | Default roles | Notes |
+|---|---|---|
+| `Billing.View` | Accountant / Cashier, Hospital Administrator | Invoices, patient accounts, approvals list, own collection report |
+| `Billing.Services.Manage` | Hospital Administrator | Price list |
+| `Billing.Invoice.Manage` | Accountant / Cashier | Create, edit, finalize and discard draft invoices |
+| `Billing.Invoice.Cancel` | Hospital Administrator | Cancel a finalized invoice with no cash received |
+| `Billing.Payment.Collect` | Accountant / Cashier | Payments, advance deposits, applying advance |
+| `Billing.Discount.Apply` | Accountant / Cashier | Applies at once up to 10% of the subtotal in total; above that it waits for approval |
+| `Billing.Discount.Approve` | Hospital Administrator | A user holding both Apply and Approve gets larger discounts applied at once |
+| `Billing.Refund.Request` | Accountant / Cashier | Request refunds and pay out approved ones |
+| `Billing.Refund.Approve` | Hospital Administrator | A requester who may approve is approved at once (still paid out separately) |
+| `Billing.Reports.View` | Accountant / Cashier, Hospital Administrator, Hospital Owner | Collection report for all cashiers; without it a user sees only their own collection |
+
+`Patient.View` now also defaults to Accountant / Cashier (the cash counter must find patients). Defaults apply when a permission is first created; existing databases grant it on the Roles screen.

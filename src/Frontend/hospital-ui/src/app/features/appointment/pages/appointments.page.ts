@@ -170,7 +170,7 @@ type SimpleAction = 'confirm' | 'check-in' | 'no-show';
         </table>
       </div>
       <mat-paginator [length]="page()?.totalCount ?? 0" [pageIndex]="query().pageNumber - 1" [pageSize]="query().pageSize"
-                     [pageSizeOptions]="[50, 100, 200]" (page)="onPage($event)" aria-label="Appointment pages" />
+                     [pageSizeOptions]="[25, 50, 100]" (page)="onPage($event)" aria-label="Appointment pages" />
     </div>
   `,
   styleUrl: '../../../shared/styles/list-page.scss',

@@ -54,6 +54,9 @@
       @if (can.book && p.status === 'Active') {
         <a mat-stroked-button routerLink="/appointments/book" [queryParams]="{ patientId: p.id }"><mat-icon>event</mat-icon> Book appointment</a>
       }
+      @if (can.billingView) {
+        <a mat-stroked-button [routerLink]="['/billing/patients', p.id]"><mat-icon>receipt_long</mat-icon> Billing</a>
+      }
       <a mat-stroked-button [routerLink]="['/patients', p.id, 'id-card']"><mat-icon>badge</mat-icon> ID card</a>
       <button mat-icon-button type="button" [matMenuTriggerFor]="more" aria-label="More actions"><mat-icon>more_vert</mat-icon></button>
       <mat-menu #more="matMenu" xPosition="before">

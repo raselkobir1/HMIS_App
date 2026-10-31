@@ -85,3 +85,8 @@ User menu: My Profile · Change Password · Logout
 - My Queue: "Call next" / "See now" / "Open consultation" lead to the consultation screen `/opd/encounters/{appointmentId}` for doctors with Clinical.Consultation.Manage.
 - Consultation screens: `/opd/consultations/{id}` (read-only record) and `/opd/consultations/{id}/print` (A4 prescription).
 - Patient profile: Visits tab (Clinical.View; loaded only when opened, because viewing is audited).
+
+## Implemented menu (Phase 3)
+- Billing: Invoices (Billing.View) · New Invoice (Billing.Invoice.Manage) · Approvals (Discount.Approve, Refund.Approve or Refund.Request) · Collections (Billing.View) · Price List (Billing.View; editing needs Services.Manage).
+- Screens: `/billing/invoices/{id}` (actions by status and permission), `/billing/invoices/{id}/edit` (drafts), `/billing/patients/{patientId}` (account), `/billing/invoices/{id}/print` and `/billing/receipts/{paymentId}/print` (A5).
+- Patient profile: "Billing" button (Billing.View) opens the patient's account. Not yet done: cashier closing (planned with Finance).

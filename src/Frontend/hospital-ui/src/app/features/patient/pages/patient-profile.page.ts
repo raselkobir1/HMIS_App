@@ -20,6 +20,7 @@ import { FieldError } from '../../../shared/components/field-error/field-error';
 import { apiErrorMessage } from '../../../shared/utilities/server-errors';
 import { PatientAppointmentsPanel } from '../../appointment/components/patient-appointments-panel';
 import { AppointmentPermissions } from '../../appointment/appointment.models';
+import { BillingPermissions } from '../../billing/billing.models';
 import { ClinicalPermissions } from '../../clinical/clinical.models';
 import { PatientVisitsPanel } from '../../clinical/components/patient-visits-panel';
 import { DocumentsPanel } from '../components/documents-panel';
@@ -67,6 +68,7 @@ export class PatientProfilePage implements OnInit {
     appointmentsView: this.auth.hasPermission(AppointmentPermissions.view),
     book: this.auth.hasPermission(AppointmentPermissions.book),
     visitsView: this.auth.hasPermission(ClinicalPermissions.view),
+    billingView: this.auth.hasPermission(BillingPermissions.view),
   };
 
   protected readonly patient = signal<Patient | null>(null);

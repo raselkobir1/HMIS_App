@@ -43,6 +43,23 @@ export const NAVIGATION: NavItem[] = [
     children: [{ label: 'OPD Vitals', icon: 'monitor_heart', route: '/opd/vitals', permissions: ['Clinical.Vitals.Record'] }],
   },
   {
+    label: 'Billing',
+    icon: 'receipt_long',
+    permissions: [],
+    children: [
+      { label: 'Invoices', icon: 'receipt', route: '/billing/invoices', permissions: ['Billing.View'], exact: true },
+      { label: 'New Invoice', icon: 'note_add', route: '/billing/invoices/new', permissions: ['Billing.Invoice.Manage'] },
+      {
+        label: 'Approvals',
+        icon: 'approval',
+        route: '/billing/approvals',
+        permissions: ['Billing.Discount.Approve', 'Billing.Refund.Approve', 'Billing.Refund.Request'],
+      },
+      { label: 'Collections', icon: 'account_balance_wallet', route: '/billing/collections', permissions: ['Billing.View'] },
+      { label: 'Price List', icon: 'sell', route: '/billing/services', permissions: ['Billing.View'] },
+    ],
+  },
+  {
     label: 'HR',
     icon: 'groups',
     permissions: [],

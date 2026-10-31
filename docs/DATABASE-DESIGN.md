@@ -314,3 +314,12 @@ Patient visits, admission history, billing and lab history are **not** stored in
 - `ConsultationAddenda`: append-only notes on finalized consultations (author/time from audit fields).
 - `VitalSigns`: `PatientId`, encounter reference, BP, pulse, temperature °F, RR, SpO₂, weight, height (BMI computed), notes, `IsEnteredInError` + reason. Never deleted.
 - All tables are `[Audited]`; no cross-schema foreign keys.
+
+## `billing` schema (Phase 3)
+- `Services`: unique `Code`, name, category, `Price`, `IsPriceEditable`, `IsActive`.
+- `Invoices`: unique `InvoiceNumber` (INVOICE sequence), `PatientId`, `InvoiceDate`, `Status` (Draft/Finalized/Cancelled), `SourceType`/`SourceId`/`SourceReference` (unique per source when set), `Subtotal`, `DiscountAmount`, `NetAmount`, `PaidAmount`, `AdvanceAppliedAmount`, `RefundedAmount`, `CancellationRequested`, finalize/cancel times and reason, `Revision`, `RowVersion`. Checks: amounts ≥ 0 and `PaidAmount` ≤ `NetAmount`.
+- `InvoiceLines` (service code, description, category, quantity, unit price, line total; removable only while the invoice is a draft) and `InvoiceDiscounts` (type, value, amount, reason, Pending/Approved/Rejected, decided by/at, note).
+- `Payments`: unique `ReceiptNumber` (RECEIPT sequence, RCP) and `ClientRequestId`, `PatientId`, `InvoiceId` (null = advance deposit), `Amount`, `Method`, `Reference`, `ReceivedAt`.
+- `Refunds`: unique `RefundNumber` (REFUND sequence, RFD), `Type` (AdvanceReturn/InvoiceCancellation), `Amount`, `Reason`, `Status` (Requested/Approved/Rejected/Paid), decision and payout details.
+- Advance balance = deposits − advance applied to invoices that are not cancelled − advance returns not rejected (computed, not stored).
+- Triggers: DELETE/TRUNCATE refused on Invoices, InvoiceDiscounts, Payments, Refunds; UPDATE also refused on Payments. All tables `[Audited]`; no cross-schema foreign keys.
