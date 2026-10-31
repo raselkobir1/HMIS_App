@@ -24,6 +24,7 @@ public sealed class HrDbContext(DbContextOptions<HrDbContext> options) : ModuleD
     public override string ModuleName => "HR";
 
     public DbSet<Employee> Employees => Set<Employee>();
+    public DbSet<DoctorProfile> DoctorProfiles => Set<DoctorProfile>();
 }
 
 public sealed class HrUnitOfWork(HrDbContext context) : UnitOfWork<HrDbContext>(context), IHrUnitOfWork;
@@ -129,12 +130,17 @@ public static class DependencyInjection
         services.AddScoped<IHrUnitOfWork, HrUnitOfWork>();
         services.AddScoped<IEmployeeRepository, EmployeeRepository>();
         services.AddScoped<IEmployeeManager, EmployeeManager>();
+        services.AddScoped<IDoctorProfileRepository, DoctorProfileRepository>();
+        services.AddScoped<DoctorManager>();
+        services.AddScoped<IDoctorManager>(sp => sp.GetRequiredService<DoctorManager>());
+        services.AddScoped<IDoctorLookup>(sp => sp.GetRequiredService<DoctorManager>());
 
         services.AddScoped<HrContractServices>();
         services.AddScoped<IEmployeeLookup>(sp => sp.GetRequiredService<HrContractServices>());
         services.AddScoped<IDepartmentUsageGuard>(sp => sp.GetRequiredService<HrContractServices>());
 
         services.AddSingleton<IPermissionDefinitionProvider, HrPermissionDefinitionProvider>();
+        services.AddSingleton<IPermissionDefinitionProvider, DoctorPermissionDefinitionProvider>();
         services.AddSingleton<INumberSequenceDefinitionProvider, HrNumberSequences>();
         return services;
     }

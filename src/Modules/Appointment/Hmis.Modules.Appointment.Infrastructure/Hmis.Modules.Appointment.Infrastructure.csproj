@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Hmis.Modules.Appointment.Application\Hmis.Modules.Appointment.Application.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\Hmis.BuildingBlocks.Infrastructure\Hmis.BuildingBlocks.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

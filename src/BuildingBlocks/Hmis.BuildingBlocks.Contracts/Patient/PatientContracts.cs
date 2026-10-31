@@ -17,4 +17,6 @@ public interface IPatientLookup
     Task<PatientSummary?> GetAsync(Guid patientId, CancellationToken cancellationToken);
 
     Task<PatientSummary?> GetByMRNumberAsync(string mrNumber, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<PatientSummary>> GetManyAsync(IReadOnlyCollection<Guid> patientIds, CancellationToken cancellationToken);
 }

@@ -1,5 +1,6 @@
 using System.Reflection;
 using Hmis.Modules.Administration.Infrastructure;
+using Hmis.Modules.Appointment.Infrastructure;
 using Hmis.Modules.Audit.Infrastructure;
 using Hmis.Modules.HR.Infrastructure;
 using Hmis.Modules.Patient.Infrastructure;
@@ -20,7 +21,8 @@ public static class ModuleRegistration
         typeof(Hmis.Modules.Audit.Presentation.AuditPresentationMarker).Assembly,
         typeof(Hmis.Modules.Administration.Presentation.Controllers.AdministrationPresentationMarker).Assembly,
         typeof(Hmis.Modules.HR.Presentation.HrPresentationMarker).Assembly,
-        typeof(Hmis.Modules.Patient.Presentation.PatientPresentationMarker).Assembly
+        typeof(Hmis.Modules.Patient.Presentation.PatientPresentationMarker).Assembly,
+        typeof(Hmis.Modules.Appointment.Presentation.AppointmentPresentationMarker).Assembly
     ];
 
     /// <summary>Application assemblies containing FluentValidation validators and Mapster IRegister configs.</summary>
@@ -31,7 +33,8 @@ public static class ModuleRegistration
         typeof(Hmis.Modules.Audit.Application.AuditApplicationMarker).Assembly,
         typeof(Hmis.Modules.Administration.Application.AdministrationApplicationMarker).Assembly,
         typeof(Hmis.Modules.HR.Application.HrApplicationMarker).Assembly,
-        typeof(Hmis.Modules.Patient.Application.PatientApplicationMarker).Assembly
+        typeof(Hmis.Modules.Patient.Application.PatientApplicationMarker).Assembly,
+        typeof(Hmis.Modules.Appointment.Application.AppointmentApplicationMarker).Assembly
     ];
 
     public static IServiceCollection AddHmisModules(this IServiceCollection services, IConfiguration configuration)
@@ -41,6 +44,7 @@ public static class ModuleRegistration
         services.AddAdministrationModule(configuration);
         services.AddHrModule(configuration);
         services.AddPatientModule(configuration);
+        services.AddAppointmentModule(configuration);
         return services;
     }
 

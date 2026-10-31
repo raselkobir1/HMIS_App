@@ -163,6 +163,9 @@ public sealed class PatientManager(
     async Task<PatientSummary?> IPatientLookup.GetByMRNumberAsync(string mrNumber, CancellationToken cancellationToken) =>
         ToSummary(await repository.GetByMRNumberAsync(mrNumber.Trim().ToUpperInvariant(), cancellationToken));
 
+    async Task<IReadOnlyList<PatientSummary>> IPatientLookup.GetManyAsync(IReadOnlyCollection<Guid> patientIds, CancellationToken cancellationToken) =>
+        (await repository.GetByIdsAsync(patientIds, cancellationToken)).Select(p => ToSummary(p)!).ToList();
+
     private static PatientSummary? ToSummary(PatientEntity? p) =>
         p is null
             ? null

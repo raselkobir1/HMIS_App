@@ -8,6 +8,7 @@ public sealed class DateTimeProvider : IDateTimeProvider
 
     public DateTime UtcNow => DateTime.UtcNow;
 
-    public DateOnly LocalToday =>
-        DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, HospitalTimeZone));
+    public DateTime LocalNow => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, HospitalTimeZone);
+
+    public DateOnly LocalToday => DateOnly.FromDateTime(LocalNow);
 }
