@@ -57,9 +57,20 @@ public sealed class InvoiceManager(
     {
         var invoice = await GetAsync(id, cancellationToken);
         invoices.SetExpectedRowVersion(invoice, request.RowVersion);
+
+        // On a running bill, charges posted by other modules stay as they are; the cashier edits only their own lines.
+        var posted = invoice.Lines.Where(l => l.ChargeKey is not null).OrderBy(l => l.SortOrder).ToList();
+        if (request.Lines.Any(l => l.Id is { } lineId && posted.Any(p => p.Id == lineId)))
+        {
+            throw new BusinessException(BillingErrorCodes.LineLocked, "Charges posted by the ward cannot be changed here.");
+        }
+
         var lines = await ToLineValuesAsync(request.Lines, cancellationToken);
         invoice.UpdateNotes(request.Notes);
-        invoice.SetLines(lines);
+        invoice.SetLines(posted
+            .Select(l => new InvoiceLineValues(l.Id, l.ServiceId, l.ServiceCode, l.Description, l.Category, l.Quantity, l.UnitPrice, l.ChargeKey))
+            .Concat(lines)
+            .ToList());
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return await dtos.InvoiceAsync(invoice, cancellationToken);
     }
@@ -67,6 +78,7 @@ public sealed class InvoiceManager(
     public async Task<InvoiceDto> FinalizeAsync(Guid id, RowVersionDto request, CancellationToken cancellationToken)
     {
         var invoice = await GetAsync(id, cancellationToken);
+        EnsureNotRunningBill(invoice);
         invoices.SetExpectedRowVersion(invoice, request.RowVersion);
         invoice.Finalize(dateTime.UtcNow);
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -78,6 +90,8 @@ public sealed class InvoiceManager(
     {
         var invoice = await LockedAsync(id, async (invoice, ct) =>
         {
+            EnsureNotRunningBill(invoice);
+
             // An invoice that is already cancelled falls through to the domain, which reports that plainly.
             var required = invoice.Status == InvoiceStatus.Draft ? BillingPermissions.InvoiceManage : BillingPermissions.InvoiceCancel;
             if (invoice.Status != InvoiceStatus.Cancelled && !await HasPermissionAsync(required, ct))
@@ -130,8 +144,8 @@ public sealed class InvoiceManager(
             return ToResult(existing);
         }
 
-        var lines = request.Lines.Select(l => new InvoiceLineValues(null, null, null, l.Description,
-            Enum.TryParse<ServiceCategory>(l.Category, out var category) ? category : ServiceCategory.Other, l.Quantity, l.UnitPrice)).ToList();
+        var lines = request.Lines.Select(l => new InvoiceLineValues(null, null, null, l.Description, ToCategory(l.Category), l.Quantity, l.UnitPrice))
+            .ToList();
         var number = await numberSequences.NextAsync(BillingNumberSequences.Invoice, cancellationToken);
 
         return await unitOfWork.ExecuteInTransactionAsync(async ct =>
@@ -170,6 +184,76 @@ public sealed class InvoiceManager(
         }, cancellationToken);
 
         return ToResult(invoice);
+    }
+
+    async Task<BillStatus> IChargeService.AddToRunningBillAsync(RunningChargeRequest request, CancellationToken cancellationToken)
+    {
+        var charges = request.Lines.Select(l => new InvoiceLineValues(null, null, null, l.Description, ToCategory(l.Category), l.Quantity,
+            l.UnitPrice, l.Key)).ToList();
+
+        // Allocated outside the transaction only when the bill does not exist yet (a lost race leaves a gap, never a duplicate).
+        var number = await invoices.GetBySourceAsync(request.SourceType, request.SourceId, cancellationToken) is null
+            ? await numberSequences.NextAsync(BillingNumberSequences.Invoice, cancellationToken)
+            : null;
+
+        return await unitOfWork.ExecuteInTransactionAsync(async ct =>
+        {
+            await invoices.LockPatientAsync(request.PatientId, ct);
+            Invoice bill;
+            if (await invoices.GetBySourceAsync(request.SourceType, request.SourceId, ct) is { } found)
+            {
+                bill = await invoices.GetWithDetailsAsync(found.Id, ct) ?? throw new NotFoundException("Invoice", found.Id);
+            }
+            else
+            {
+                bill = Invoice.CreateRunning(number ?? await numberSequences.NextAsync(BillingNumberSequences.Invoice, ct), request.PatientId,
+                    dateTime.LocalToday, request.SourceType, request.SourceId, request.SourceReference);
+                await invoices.AddAsync(bill, ct);
+            }
+
+            bill.AddCharges(charges);
+            await unitOfWork.SaveChangesAsync(ct);
+            return ToBillStatus(bill);
+        }, cancellationToken);
+    }
+
+    async Task<BillStatus> IChargeService.FinalizeRunningBillAsync(string sourceType, Guid sourceId, CancellationToken cancellationToken)
+    {
+        var found = await invoices.GetBySourceAsync(sourceType, sourceId, cancellationToken)
+            ?? throw new BusinessException(BillingErrorCodes.NoRunningBill, "There is no bill for this stay yet.");
+        var bill = await LockedAsync(found.Id, (invoice, _) =>
+        {
+            if (invoice.Status == InvoiceStatus.Draft)
+            {
+                invoice.Finalize(dateTime.UtcNow);
+            }
+
+            return Task.CompletedTask;
+        }, cancellationToken);
+        return ToBillStatus(bill);
+    }
+
+    async Task<BillStatus?> IChargeService.GetBillAsync(string sourceType, Guid sourceId, CancellationToken cancellationToken) =>
+        await invoices.GetBySourceAsync(sourceType, sourceId, cancellationToken) is { } found
+            ? ToBillStatus(await invoices.GetWithDetailsAsync(found.Id, cancellationToken) ?? found)
+            : null;
+
+    /// <summary>While the bill is still a draft, "due" is everything charged so far (deposits sit in the advance until settlement).</summary>
+    private static BillStatus ToBillStatus(Invoice i) =>
+        new(i.Id, i.InvoiceNumber, i.Status.ToString(), i.Subtotal, i.NetAmount, i.PaidAmount,
+            i.Status switch { InvoiceStatus.Finalized => i.DueAmount, InvoiceStatus.Draft => i.NetAmount - i.PaidAmount, _ => 0 },
+            i.Lines.Count);
+
+    private static ServiceCategory ToCategory(string category) =>
+        Enum.TryParse<ServiceCategory>(category, out var parsed) ? parsed : ServiceCategory.Other;
+
+    private static void EnsureNotRunningBill(Invoice invoice)
+    {
+        if (invoice.IsRunningBill)
+        {
+            throw new BusinessException(BillingErrorCodes.RunningBill,
+                "This bill is still collecting charges for an ongoing stay. It is finalized from the ward at discharge.");
+        }
     }
 
     private static ChargeResult ToResult(Invoice i) => new(i.Id, i.InvoiceNumber, i.NetAmount, i.PaidAmount, i.Status.ToString());

@@ -14,4 +14,7 @@ public sealed class DateTimeProvider : IDateTimeProvider
 
     public DateTime StartOfLocalDayUtc(DateOnly date) =>
         TimeZoneInfo.ConvertTimeToUtc(date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified), HospitalTimeZone);
+
+    public DateOnly ToLocalDate(DateTime utc) =>
+        DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), HospitalTimeZone));
 }

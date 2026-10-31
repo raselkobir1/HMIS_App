@@ -53,7 +53,7 @@ public sealed class BillingDtoFactory(
             invoice.Id, invoice.InvoiceNumber, invoice.InvoiceDate, Brief(names.Patient(invoice.PatientId)), invoice.Status,
             invoice.PaymentStatus, invoice.SourceType, invoice.SourceReference, invoice.Notes, invoice.Subtotal, invoice.DiscountAmount,
             invoice.NetAmount, invoice.PaidAmount, invoice.AdvanceAppliedAmount, invoice.RefundedAmount, invoice.DueAmount,
-            invoice.CancellationRequested, invoice.FinalizedAt, invoice.CancelledAt, invoice.CancellationReason, invoice.CreatedAt,
+            invoice.CancellationRequested, invoice.IsRunningBill, invoice.FinalizedAt, invoice.CancelledAt, invoice.CancellationReason, invoice.CreatedAt,
             names.User(invoice.CreatedBy),
             Lines(invoice),
             invoice.Discounts.OrderBy(d => d.CreatedAt).Select(d => new DiscountDto(
@@ -100,7 +100,8 @@ public sealed class BillingDtoFactory(
 
     public static IReadOnlyList<InvoiceLineDto> Lines(Invoice invoice) =>
         invoice.Lines.OrderBy(l => l.SortOrder)
-            .Select(l => new InvoiceLineDto(l.Id, l.ServiceId, l.ServiceCode, l.Description, l.Category, l.Quantity, l.UnitPrice, l.LineTotal))
+            .Select(l => new InvoiceLineDto(l.Id, l.ServiceId, l.ServiceCode, l.Description, l.Category, l.Quantity, l.UnitPrice, l.LineTotal,
+                l.ChargeKey is not null))
             .ToList();
 
     public static PaymentDto Payment(Payment p, Names names) =>

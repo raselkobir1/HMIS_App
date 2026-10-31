@@ -2,6 +2,7 @@ using Hmis.BuildingBlocks.Application.Abstractions;
 using Hmis.BuildingBlocks.Application.Exceptions;
 using Hmis.BuildingBlocks.Application.Security;
 using Hmis.BuildingBlocks.Contracts.Administration;
+using Hmis.BuildingBlocks.Contracts.Billing;
 using Hmis.BuildingBlocks.Contracts.Patient;
 using Hmis.Modules.Billing.Domain.Entities;
 
@@ -21,8 +22,11 @@ public sealed class PaymentManager(
     INumberSequenceService numberSequences,
     IPermissionChecker permissions,
     ICurrentUser currentUser,
-    IDateTimeProvider dateTime) : IPaymentManager
+    IDateTimeProvider dateTime) : IPaymentManager, IPatientBalanceLookup
 {
+    async Task<PatientBalance> IPatientBalanceLookup.GetAsync(Guid patientId, CancellationToken cancellationToken) =>
+        new(await invoices.GetOutstandingAsync(patientId, cancellationToken), await payments.GetAdvanceBalanceAsync(patientId, cancellationToken));
+
     // ---------- Payments ----------
 
     /// <summary>Idempotent per ClientRequestId: a retried submission returns the original receipt instead of charging twice.</summary>

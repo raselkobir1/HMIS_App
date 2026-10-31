@@ -274,6 +274,10 @@ namespace Hmis.Modules.Billing.Infrastructure.Persistence.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<string>("ChargeKey")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -318,6 +322,10 @@ namespace Hmis.Modules.Billing.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("InvoiceId");
+
+                    b.HasIndex("InvoiceId", "ChargeKey")
+                        .IsUnique()
+                        .HasFilter("\"ChargeKey\" IS NOT NULL");
 
                     b.ToTable("InvoiceLines", "billing", t =>
                         {

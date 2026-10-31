@@ -4,6 +4,7 @@ using Hmis.Modules.Appointment.Infrastructure;
 using Hmis.Modules.Audit.Infrastructure;
 using Hmis.Modules.Billing.Infrastructure;
 using Hmis.Modules.Clinical.Infrastructure;
+using Hmis.Modules.Ipd.Infrastructure;
 using Hmis.Modules.HR.Infrastructure;
 using Hmis.Modules.Patient.Infrastructure;
 using Hmis.Modules.Identity.Infrastructure;
@@ -26,7 +27,8 @@ public static class ModuleRegistration
         typeof(Hmis.Modules.Patient.Presentation.PatientPresentationMarker).Assembly,
         typeof(Hmis.Modules.Appointment.Presentation.AppointmentPresentationMarker).Assembly,
         typeof(Hmis.Modules.Clinical.Presentation.ClinicalPresentationMarker).Assembly,
-        typeof(Hmis.Modules.Billing.Presentation.BillingPresentationMarker).Assembly
+        typeof(Hmis.Modules.Billing.Presentation.BillingPresentationMarker).Assembly,
+        typeof(Hmis.Modules.Ipd.Presentation.IpdPresentationMarker).Assembly
     ];
 
     /// <summary>Application assemblies containing FluentValidation validators and Mapster IRegister configs.</summary>
@@ -40,7 +42,8 @@ public static class ModuleRegistration
         typeof(Hmis.Modules.Patient.Application.PatientApplicationMarker).Assembly,
         typeof(Hmis.Modules.Appointment.Application.AppointmentApplicationMarker).Assembly,
         typeof(Hmis.Modules.Clinical.Application.ClinicalApplicationMarker).Assembly,
-        typeof(Hmis.Modules.Billing.Application.BillingApplicationMarker).Assembly
+        typeof(Hmis.Modules.Billing.Application.BillingApplicationMarker).Assembly,
+        typeof(Hmis.Modules.Ipd.Application.IpdApplicationMarker).Assembly
     ];
 
     public static IServiceCollection AddHmisModules(this IServiceCollection services, IConfiguration configuration)
@@ -53,6 +56,7 @@ public static class ModuleRegistration
         services.AddAppointmentModule(configuration);
         services.AddClinicalModule(configuration);
         services.AddBillingModule(configuration);
+        services.AddIpdModule(configuration);
         return services;
     }
 

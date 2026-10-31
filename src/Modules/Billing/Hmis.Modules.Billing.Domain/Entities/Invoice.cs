@@ -32,7 +32,7 @@ public enum ApprovalStatus
     Rejected
 }
 
-/// <summary>Values for one invoice line; Id is null for a new line.</summary>
+/// <summary>Values for one invoice line; Id is null for a new line. ChargeKey identifies a line posted by another module.</summary>
 public sealed record InvoiceLineValues(
     Guid? Id,
     Guid? ServiceId,
@@ -40,7 +40,8 @@ public sealed record InvoiceLineValues(
     string Description,
     ServiceCategory Category,
     int Quantity,
-    decimal UnitPrice);
+    decimal UnitPrice,
+    string? ChargeKey = null);
 
 /// <summary>
 /// A patient invoice. Lines are editable only while Draft. A finalized invoice is never changed or deleted (BRD Module 17
@@ -100,6 +101,9 @@ public sealed class Invoice : AuditableEntity, IAggregateRoot, IHasConcurrencyTo
     /// <summary>Money actually held for this invoice (excluding advance applied and refunds already returned).</summary>
     public decimal CashHeldAmount => PaidAmount - AdvanceAppliedAmount - RefundedAmount;
 
+    /// <summary>A draft posted to by another module (e.g. an IPD stay); it is finalized by that module, not by the cashier.</summary>
+    public bool IsRunningBill => SourceType is not null && Status == InvoiceStatus.Draft;
+
     public PaymentStatus PaymentStatus =>
         PaidAmount <= 0 ? PaymentStatus.Unpaid : PaidAmount >= NetAmount ? PaymentStatus.Paid : PaymentStatus.PartiallyPaid;
 
@@ -123,6 +127,40 @@ public sealed class Invoice : AuditableEntity, IAggregateRoot, IHasConcurrencyTo
         invoice.SetLines(lines);
         invoice.Finalize(utcNow);
         return invoice;
+    }
+
+    /// <summary>A draft that another module adds charges to until it is finalized (e.g. an IPD stay).</summary>
+    public static Invoice CreateRunning(string invoiceNumber, Guid patientId, DateOnly invoiceDate, string sourceType, Guid sourceId,
+        string sourceReference)
+    {
+        var invoice = CreateDraft(invoiceNumber, patientId, invoiceDate, null);
+        invoice.SourceType = sourceType;
+        invoice.SourceId = sourceId;
+        invoice.SourceReference = sourceReference;
+        return invoice;
+    }
+
+    /// <summary>Appends posted charges whose key is not on the bill yet; returns how many were added.</summary>
+    public int AddCharges(IReadOnlyList<InvoiceLineValues> charges)
+    {
+        EnsureDraft();
+        var existing = _lines.Where(l => l.ChargeKey is not null).Select(l => l.ChargeKey!).ToHashSet();
+        var added = 0;
+        foreach (var charge in charges.Where(c => c.ChargeKey is not null && !existing.Contains(c.ChargeKey)))
+        {
+            _lines.Add(InvoiceLine.Create(Id, charge, _lines.Count == 0 ? 0 : _lines.Max(l => l.SortOrder) + 1));
+            existing.Add(charge.ChargeKey!);
+            added++;
+        }
+
+        if (added > 0)
+        {
+            Subtotal = _lines.Sum(l => l.LineTotal);
+            NetAmount = Subtotal - DiscountAmount;
+            Revision++;
+        }
+
+        return added;
     }
 
     public void UpdateNotes(string? notes)
@@ -369,6 +407,10 @@ public sealed class InvoiceLine : AuditableEntity
     public int SortOrder { get; private set; }
     public Guid? ServiceId { get; private set; }
     public string? ServiceCode { get; private set; }
+
+    /// <summary>Set for charges posted by another module; such lines are never edited by the cashier.</summary>
+    public string? ChargeKey { get; private set; }
+
     public string Description { get; private set; } = string.Empty;
     public ServiceCategory Category { get; private set; }
     public int Quantity { get; private set; }
@@ -390,6 +432,7 @@ public sealed class InvoiceLine : AuditableEntity
         }
 
         SortOrder = sortOrder;
+        ChargeKey ??= v.ChargeKey;
         ServiceId = v.ServiceId;
         ServiceCode = v.ServiceCode;
         Description = v.Description.Trim();

@@ -12,4 +12,7 @@ public interface IDateTimeProvider
 
     /// <summary>The UTC instant at which a hospital-local date begins (for "from date / to date" filters on UTC timestamps).</summary>
     DateTime StartOfLocalDayUtc(DateOnly date);
+
+    /// <summary>The hospital-local calendar date of a UTC instant.</summary>
+    DateOnly ToLocalDate(DateTime utc);
 }

@@ -97,11 +97,14 @@ public sealed class InvoiceLineConfiguration : IEntityTypeConfiguration<InvoiceL
         // Lines are added through the Invoice collection with ids generated in the domain: insert, never assume they exist.
         builder.Property(x => x.Id).ValueGeneratedNever();
         builder.Property(x => x.ServiceCode).HasMaxLength(20);
+        builder.Property(x => x.ChargeKey).HasMaxLength(60);
         builder.Property(x => x.Description).HasMaxLength(200).IsRequired();
         builder.Property(x => x.Category).HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.UnitPrice).HasPrecision(18, 2);
         builder.Property(x => x.LineTotal).HasPrecision(18, 2);
         builder.HasIndex(x => x.InvoiceId);
+        // A posted charge appears once per bill (idempotent posting); the domain skips known keys, this backs it up.
+        builder.HasIndex(x => new { x.InvoiceId, x.ChargeKey }).IsUnique().HasFilter("\"ChargeKey\" IS NOT NULL");
     }
 }
 
@@ -355,7 +358,9 @@ public static class DependencyInjection
         services.AddScoped<InvoiceManager>();
         services.AddScoped<IInvoiceManager>(sp => sp.GetRequiredService<InvoiceManager>());
         services.AddScoped<IChargeService>(sp => sp.GetRequiredService<InvoiceManager>());
-        services.AddScoped<IPaymentManager, PaymentManager>();
+        services.AddScoped<PaymentManager>();
+        services.AddScoped<IPaymentManager>(sp => sp.GetRequiredService<PaymentManager>());
+        services.AddScoped<IPatientBalanceLookup>(sp => sp.GetRequiredService<PaymentManager>());
         services.AddSingleton<IPermissionDefinitionProvider, BillingPermissionDefinitionProvider>();
         services.AddSingleton<INumberSequenceDefinitionProvider, BillingNumberSequences>();
         return services;

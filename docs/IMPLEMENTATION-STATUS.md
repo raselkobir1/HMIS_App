@@ -13,7 +13,7 @@ Statuses: Not Started · Analysis Completed · Design Completed · Backend Compl
 | Patient | Testing Completed | Backend + frontend; 56 API + 18 browser checks; awaiting approval |
 | Doctor profiles + Appointment & Queue (Phase 2, step 1) | Approved | |
 | Clinical + OPD consultation (Phase 2, step 2) | Approved | |
-| Billing & Payments (Phase 3) | Testing Completed | Backend + frontend; 85 API + 26 browser checks; Appointment 44/44 and Clinical 45/45 regression; awaiting approval |
+| Billing & Payments (Phase 3) | Approved | |
 | IPD, Bed, Nursing | Not Started | |
 | Laboratory, Radiology | Not Started | |
 | Pharmacy, Inventory, Procurement | Not Started | |

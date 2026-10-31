@@ -67,6 +67,9 @@ public static class BillingErrorCodes
     public const string AdvanceInsufficient = "PAYMENT_ADVANCE_INSUFFICIENT";
     public const string DuplicateRequest = "PAYMENT_DUPLICATE_REQUEST";
     public const string RefundExceedsAdvance = "REFUND_EXCEEDS_ADVANCE";
+    public const string LineLocked = "INVOICE_LINE_LOCKED";
+    public const string RunningBill = "INVOICE_RUNNING_BILL";
+    public const string NoRunningBill = "INVOICE_NO_RUNNING_BILL";
 }
 
 /// <summary>Receipt and refund numbers (INVOICE is declared by Administration). Formats are editable in Settings.</summary>
@@ -121,8 +124,10 @@ public sealed class ServiceQuery : PaginationRequest
 
 public sealed record PatientBriefDto(Guid Id, string MRNumber, string FullName, string Gender, DateOnly? DateOfBirth, string MobileNumber, string Status);
 
+/// <param name="IsPosted">Posted by another module (e.g. daily bed rent); never edited by the cashier.</param>
 public sealed record InvoiceLineDto(
-    Guid Id, Guid? ServiceId, string? ServiceCode, string Description, ServiceCategory Category, int Quantity, decimal UnitPrice, decimal LineTotal);
+    Guid Id, Guid? ServiceId, string? ServiceCode, string Description, ServiceCategory Category, int Quantity, decimal UnitPrice, decimal LineTotal,
+    bool IsPosted);
 
 /// <summary>A draft line: an active service from the price list. UnitPrice is used only for price-editable services.</summary>
 public sealed record InvoiceLineInputDto
@@ -196,6 +201,7 @@ public sealed record InvoiceDto(
     decimal RefundedAmount,
     decimal DueAmount,
     bool CancellationRequested,
+    bool IsRunningBill,
     DateTime? FinalizedAt,
     DateTime? CancelledAt,
     string? CancellationReason,

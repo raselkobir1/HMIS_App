@@ -19,7 +19,8 @@ $modules = @(
     @{ Project = 'src/Modules/Patient/Hmis.Modules.Patient.Infrastructure'; Context = 'PatientDbContext' },
     @{ Project = 'src/Modules/Appointment/Hmis.Modules.Appointment.Infrastructure'; Context = 'AppointmentDbContext' },
     @{ Project = 'src/Modules/Clinical/Hmis.Modules.Clinical.Infrastructure'; Context = 'ClinicalDbContext' },
-    @{ Project = 'src/Modules/Billing/Hmis.Modules.Billing.Infrastructure'; Context = 'BillingDbContext' }
+    @{ Project = 'src/Modules/Billing/Hmis.Modules.Billing.Infrastructure'; Context = 'BillingDbContext' },
+    @{ Project = 'src/Modules/Ipd/Hmis.Modules.Ipd.Infrastructure'; Context = 'IpdDbContext' }
 )
 
 # Build once; each module migration then runs without rebuilding (avoids repeated, conflicting builds).

@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Hmis.Modules.Ipd.Application\Hmis.Modules.Ipd.Application.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\Hmis.BuildingBlocks.Infrastructure\Hmis.BuildingBlocks.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>
