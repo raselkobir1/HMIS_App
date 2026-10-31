@@ -20,6 +20,7 @@ export const NAVIGATION: NavItem[] = [
       { label: 'Users', icon: 'group', route: '/security/users', permissions: ['Identity.Users.View'] },
       { label: 'Roles & Permissions', icon: 'admin_panel_settings', route: '/security/roles', permissions: ['Identity.Roles.View'] },
       { label: 'Login History', icon: 'history', route: '/security/login-history', permissions: ['Identity.LoginHistory.View'] },
+      { label: 'Audit Log', icon: 'policy', route: '/audit-log', permissions: ['Audit.View'] },
     ],
   },
 ];

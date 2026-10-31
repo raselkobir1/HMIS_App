@@ -56,3 +56,12 @@ See ARCHITECTURE.md §6.2. Responses are never 200 with `success: false`.
 - `POST /auth/login` and `POST /auth/change-password` are rate limited per IP (`RateLimiting:AuthPermitPerMinute`, 10 by default).
 - Users with `mustChangePassword = true` have **no** effective permissions until they change their password.
 - Error codes: `INVALID_CREDENTIALS`, `ACCOUNT_LOCKED`, `ACCOUNT_INACTIVE`, `INVALID_REFRESH_TOKEN` (401); `USERNAME_TAKEN`, `EMAIL_TAKEN`, `ROLE_NAME_TAKEN`, `ROLE_IN_USE`, `CONCURRENCY_CONFLICT` (409); `INVALID_CURRENT_PASSWORD`, `PASSWORD_SAME_AS_CURRENT`, `CANNOT_CHANGE_OWN_ACCOUNT`, `LAST_SUPER_ADMINISTRATOR`, `SUPER_ADMINISTRATOR_REQUIRED`, `SUPER_ADMINISTRATOR_PERMISSIONS_REQUIRED`, `ROLE_SYSTEM_DELETE`, `ROLE_NOT_FOUND`, `PERMISSION_NOT_FOUND` (422).
+
+### Audit (implemented)
+| Method | Route | Permission |
+|---|---|---|
+| GET | `/api/v1/audit-logs?fromUtc&toUtc&module&entityName&entityId&action&userId&search&pageNumber&pageSize` | Audit.View |
+| GET | `/api/v1/audit-logs/{id}` (includes old and new values) | Audit.View |
+| GET | `/api/v1/audit-logs/filter-options` | Audit.View |
+
+The audit log is read-only through the API. Results are always sorted by most recent first.

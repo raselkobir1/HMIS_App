@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 
 import { authGuard, guestGuard, passwordChangeGuard } from './core/guards/auth.guard';
+import { permissionGuard } from './core/guards/permission.guard';
 
 export const routes: Routes = [
   {
@@ -35,6 +36,12 @@ export const routes: Routes = [
           import('./features/auth/change-password/change-password.page').then((m) => m.ChangePasswordPage),
       },
       { path: 'security', loadChildren: () => import('./features/security/security.routes') },
+      {
+        path: 'audit-log',
+        title: 'Audit Log · HMIS',
+        canActivate: [permissionGuard('Audit.View')],
+        loadComponent: () => import('./features/audit/audit-log.page').then((m) => m.AuditLogPage),
+      },
     ],
   },
   { path: '**', redirectTo: '' },

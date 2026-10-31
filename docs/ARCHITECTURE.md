@@ -215,8 +215,11 @@ Every response carries `TraceId`. Controllers inherit `ApiControllerBase` and us
 
 - The `audit` module owns `audit.AuditLogs`, which is append-only. Its repository has no update or delete.
 - `IAuditService.RecordAsync(...)` is in `BB.Application` and is implemented by the Audit module.
-- **Entity change auditing:** a `AuditSaveChangesInterceptor` in `BB.Infrastructure` captures entity changes (old and new values, minus excluded sensitive fields) for entities marked `[Audited]`. It writes them through `IAuditService` on the **same connection and transaction**, so audit rows commit atomically with the change.
-- **Business-event auditing:** managers call `IAuditService` for actions that are not entity changes, such as a login, a permission change or viewing a sensitive patient record.
+- **Entity change auditing:** `AuditSaveChangesInterceptor` (BB.Infrastructure) runs on every module DbContext. For entities marked `[Audited]` it records `Create` (new values), `Update` (only changed fields, old and new) and `Delete` (old values). It leaves out `[NotAudited]` properties, the Created/Modified stamps and the row version. An update that only touches excluded fields, such as login counters, produces no row.
+- **Business events:** `IAuditService.Record(AuditEvent)` queues an event, such as `RolesChanged` or `PasswordReset`, which is written together with the next `SaveChangesAsync` in the same request. `RecordImmediateAsync` writes at once in its own transaction, for events with no data change such as sensitive reads.
+- **Atomicity:** the interceptor writes audit rows with plain SQL (`IAuditLogWriter`, implemented by the Audit module) on the **same connection and transaction** as the change. If no transaction is active, it opens one around the save. Both directions were verified: a failed change leaves no audit row, and a failed audit write rolls the change back.
+- **Append-only:** a database trigger rejects `UPDATE`, `DELETE` and `TRUNCATE` on `audit."AuditLogs"`. A retention purge needs a DBA to disable the trigger deliberately.
+- Audited changes must be saved with `SaveChangesAsync`; the synchronous `SaveChanges` is rejected.
 - Each record holds: UserId, Action, Module, EntityName, EntityId, Timestamp (UTC), IP address, TraceId, OldValues (jsonb), NewValues (jsonb).
 
 ---

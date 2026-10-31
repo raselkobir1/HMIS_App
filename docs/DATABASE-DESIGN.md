@@ -131,7 +131,7 @@ erDiagram
     }
 ```
 
-The table is append-only: there is no update or delete path in the application. Indexes: `(EntityName, EntityId)`, `(UserId, Timestamp)`, `(Timestamp)`.
+The table is append-only: there is no update or delete path in the application, and trigger `TR_AuditLogs_AppendOnly` rejects `UPDATE`, `DELETE` and `TRUNCATE`. `OldValues` and `NewValues` are `jsonb`. Indexes: `(Timestamp DESC)`, `(EntityName, EntityId)`, `(UserId, Timestamp)`, `(Module, Timestamp)`.
 
 ---
 
