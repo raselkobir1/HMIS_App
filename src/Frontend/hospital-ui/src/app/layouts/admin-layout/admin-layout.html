@@ -34,6 +34,7 @@
               mat-list-item
               [routerLink]="child.route"
               routerLinkActive="active-link"
+              [routerLinkActiveOptions]="{ exact: !!child.exact }"
               (click)="isHandset() && drawer.close()"
             >
               <mat-icon matListItemIcon>{{ child.icon }}</mat-icon>

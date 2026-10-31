@@ -100,3 +100,29 @@ Cross-module contracts (`BuildingBlocks.Contracts.Administration`): `IDepartment
 Error codes: `EMPLOYEE_DEPARTMENT_INVALID`, `EMPLOYEE_DESIGNATION_INVALID`, `EMPLOYEE_DOB_AFTER_JOINING`, `EMPLOYEE_JOINING_AFTER_EXIT`, `EMPLOYEE_EXIT_DATE_REQUIRED`, `EMPLOYEE_EXIT_BEFORE_JOINING` (422); `DEPARTMENT_IN_USE` (422, from Administration). Identity: `EMPLOYEE_INVALID` (422), `EMPLOYEE_ALREADY_LINKED` (409).
 
 **Validation responses (all modules):** when a request body cannot be read (bad JSON, unknown enum value), the API returns 400 with `"The value is not valid."` on the affected field. It never returns parser text, CLR type names or byte positions.
+
+### Patient (implemented)
+| Method | Route | Permission |
+|---|---|---|
+| GET | `/api/v1/patients?search&status&pageNumber&pageSize` (MR prefix, mobile digits, name, exact ID) | Patient.View |
+| GET | `/api/v1/patients/duplicate-candidates?fullName&mobileNumber&dateOfBirth&gender&identificationType&identificationNumber&excludePatientId` | Patient.View |
+| GET | `/api/v1/patients/districts` | Patient.View |
+| GET | `/api/v1/patients/{id}`, `/api/v1/patients/by-mrn/{mrNumber}` | Patient.View |
+| POST | `/api/v1/patients` (MR number generated) | Patient.Create |
+| PUT | `/api/v1/patients/{id}` | Patient.Update |
+| PATCH | `/api/v1/patients/{id}/status` | Patient.Deactivate |
+| GET | `/api/v1/patients/{id}/photo` | Patient.View |
+| POST / DELETE | `/api/v1/patients/{id}/photo` (PNG/JPEG/WebP ≤ 2 MB) | Patient.Update |
+| GET | `/api/v1/patients/{id}/medical-info` (**each call audited**) | Patient.MedicalInfo.View |
+| POST / PUT / PATCH status | `/api/v1/patients/{id}/allergies[/{allergyId}[/status]]` | Patient.MedicalInfo.Manage |
+| POST / PUT | `/api/v1/patients/{id}/medical-history[/{historyId}]`, `POST …/{historyId}/entered-in-error` | Patient.MedicalInfo.Manage |
+| GET | `/api/v1/patients/{id}/documents`, `…/documents/{documentId}/content` | Patient.Documents.View |
+| POST | `/api/v1/patients/{id}/documents` (multipart `file`, `category`, `title`; PDF/JPEG/PNG ≤ 10 MB) | Patient.Documents.Upload |
+| DELETE | `/api/v1/patients/{id}/documents/{documentId}` (soft delete) | Patient.Documents.Delete |
+| GET | `/api/v1/patient-merge-requests?status` | Patient.Merge.Approve |
+| POST | `/api/v1/patient-merge-requests` | Patient.Merge.Request |
+| POST | `/api/v1/patient-merge-requests/{id}/approve`, `/{id}/reject` | Patient.Merge.Approve |
+
+Patient files are returned with `Cache-Control: no-store` and `X-Content-Type-Options: nosniff`. Error codes: `PATIENT_IDENTIFICATION_DUPLICATE`, `PATIENT_MERGE_ALREADY_PENDING` (409); `PATIENT_INACTIVE`, `PATIENT_MERGED`, `PATIENT_PHOTO_INVALID`, `PATIENT_DOCUMENT_INVALID`, `PATIENT_MERGE_INVALID`, `MERGE_REQUEST_CLOSED`, `ALLERGY_ENTERED_IN_ERROR`, `HISTORY_ENTERED_IN_ERROR` (422).
+
+Contract for other modules: `IPatientLookup` (`GetAsync`, `GetByMRNumberAsync`) in `BuildingBlocks.Contracts.Patient`.

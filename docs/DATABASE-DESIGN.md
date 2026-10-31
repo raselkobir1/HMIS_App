@@ -296,6 +296,7 @@ erDiagram
 - A `pg_trgm` GIN index on `FullName` for fuzzy search and duplicate detection.
 - `(IdentificationType, IdentificationNumber)`: unique where not null. *Needs confirmation.*
 
+**As built:** `PresentAddress`, `PermanentAddress` (Line, Upazila, District, PostCode) and `EmergencyContacts` (≤ 3) are `jsonb` columns. `DateOfBirth` is required, with `IsDateOfBirthEstimated` when only the age was given. `IdentificationNumber` is stored normalized (letters/digits, upper case). Indexes: unique `MRNumber`; GIN `gin_trgm_ops` on `FullName`; `MobileNumber`; `(DateOfBirth, Gender)`; `Status`; unique `(IdentificationType, IdentificationNumber)` where not null. `MergeRequests` has a unique filtered index allowing one Pending request per source patient. `Documents` keep `IsDeleted/DeletedAt/DeletedBy` (soft delete; file retained). Allergies use `Status` (Active/Resolved/EnteredInError) and history uses `IsEnteredInError`; neither is ever deleted. Photo paths are `[NotAudited]`.  
 Patient visits, admission history, billing and lab history are **not** stored in this schema. The patient profile pulls them from the owning modules through contracts.
 
 > Field lists for Patient depend on answers in `OPEN-QUESTIONS.md` (mandatory fields, MR format, ID types, address structure).

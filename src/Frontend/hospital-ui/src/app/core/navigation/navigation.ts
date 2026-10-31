@@ -4,6 +4,8 @@ export interface NavItem {
   route?: string;
   /** Shown when the user holds ANY of these permissions; empty = every signed-in user. */
   permissions: string[];
+  /** Highlight only on an exact URL match (for routes that prefix other menu routes, e.g. /patients vs /patients/new). */
+  exact?: boolean;
   children?: NavItem[];
 }
 
@@ -12,6 +14,16 @@ export interface NavItem {
  */
 export const NAVIGATION: NavItem[] = [
   { label: 'Dashboard', icon: 'dashboard', route: '/dashboard', permissions: [] },
+  {
+    label: 'Patients',
+    icon: 'personal_injury',
+    permissions: [],
+    children: [
+      { label: 'Find Patient', icon: 'person_search', route: '/patients', permissions: ['Patient.View'], exact: true },
+      { label: 'Register Patient', icon: 'person_add', route: '/patients/new', permissions: ['Patient.Create'] },
+      { label: 'Merge Requests', icon: 'merge', route: '/patients/merge-requests', permissions: ['Patient.Merge.Approve'] },
+    ],
+  },
   {
     label: 'HR',
     icon: 'groups',

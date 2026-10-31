@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-31 — Patient module (reference module)
+- `patient` schema: Patients, Allergies, MedicalHistories, Documents, MergeRequests; trigram name index.
+- Registration with generated MR numbers, date of birth or age, 64-district address list, emergency contacts, ID documents.
+- Live duplicate check (warnings) and exact ID-number block; single-box search.
+- Profile with allergy banner, photo, Overview / Medical info / Documents tabs; printable ID card with barcode.
+- Allergies and medical history (explicit-grant clinical permissions, audited views, entered-in-error instead of delete).
+- Documents (PDF/JPEG/PNG, content-checked, soft delete); duplicate merge requests with approval.
+- Shared `FileSignatures` helper (also used for the hospital logo); menu items support exact-match highlighting.
+
 ## 2026-10-31 — HR module (basic employees)
 - `hr` schema: Employees with generated codes (`EMP000001`), employment type and status (with exit date).
 - Employees screen: search, filters, register/edit dialog with date pickers, status dialog.

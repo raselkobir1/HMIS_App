@@ -1,0 +1,128 @@
+@if (loading()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+@if (error(); as message) {
+  <div class="banner error" role="alert">{{ message }}</div>
+}
+
+@if (patient(); as p) {
+  @if (p.status === 'Merged') {
+    <div class="banner warn" role="status">
+      <mat-icon>merge</mat-icon>
+      This record was merged into
+      <a [routerLink]="['/patients', p.mergedIntoPatientId]">{{ p.mergedIntoMRNumber }}</a>. It is kept for history and is read-only.
+    </div>
+  } @else if (p.status === 'Inactive') {
+    <div class="banner muted" role="status"><mat-icon>block</mat-icon> This record is inactive and cannot be changed.</div>
+  }
+
+  @if (activeAllergies().length) {
+    <div class="banner allergy" role="alert">
+      <mat-icon>warning</mat-icon>
+      <strong>Allergies:</strong>
+      @for (a of activeAllergies(); track a.id; let last = $last) {
+        <span>{{ a.allergen }} ({{ a.severity }}){{ last ? '' : ',' }}</span>
+      }
+    </div>
+  }
+
+  <mat-card appearance="outlined" class="header">
+    <div class="photo">
+      @if (photoUrl(); as url) {
+        <img [src]="url" alt="Patient photo" />
+      } @else {
+        <mat-icon>person</mat-icon>
+      }
+    </div>
+    <div class="identity">
+      <div class="mrn">{{ p.mrNumber }}</div>
+      <h1>{{ p.fullName }}</h1>
+      @if (p.fullNameBangla) {
+        <div class="bn" lang="bn">{{ p.fullNameBangla }}</div>
+      }
+      <div class="facts">
+        <span>{{ age() }} · {{ p.gender }}</span>
+        <span>Blood group: {{ bloodGroup() }}</span>
+        <span>{{ p.mobileNumber }}</span>
+        <span class="badge" [class.ok]="p.status === 'Active'" [class.muted]="p.status !== 'Active'">{{ p.status }}</span>
+      </div>
+    </div>
+    <div class="actions">
+      @if (can.update && editable()) {
+        <a mat-flat-button [routerLink]="['/patients', p.id, 'edit']"><mat-icon>edit</mat-icon> Edit</a>
+      }
+      <a mat-stroked-button [routerLink]="['/patients', p.id, 'id-card']"><mat-icon>badge</mat-icon> ID card</a>
+      <button mat-icon-button type="button" [matMenuTriggerFor]="more" aria-label="More actions"><mat-icon>more_vert</mat-icon></button>
+      <mat-menu #more="matMenu" xPosition="before">
+        @if (can.update && editable()) {
+          <input #photoInput type="file" accept="image/png,image/jpeg,image/webp" hidden (change)="uploadPhoto(photoInput)" />
+          <button mat-menu-item type="button" (click)="photoInput.click()"><mat-icon>photo_camera</mat-icon><span>Upload photo</span></button>
+        }
+        @if (can.mergeRequest && editable()) {
+          <button mat-menu-item type="button" (click)="requestMerge()"><mat-icon>merge</mat-icon><span>Report as duplicate</span></button>
+        }
+        @if (can.deactivate && p.status !== 'Merged') {
+          <button mat-menu-item type="button" (click)="toggleStatus()">
+            <mat-icon>{{ p.status === 'Active' ? 'block' : 'check_circle' }}</mat-icon>
+            <span>{{ p.status === 'Active' ? 'Deactivate record' : 'Reactivate record' }}</span>
+          </button>
+        }
+      </mat-menu>
+    </div>
+  </mat-card>
+
+  <mat-tab-group class="tabs" animationDuration="0ms">
+    <mat-tab label="Overview">
+      <div class="overview">
+        <section>
+          <h3>Personal</h3>
+          <dl>
+            <dt>Date of birth</dt>
+            <dd>{{ p.dateOfBirth | date: 'dd MMM yyyy' }}{{ p.isDateOfBirthEstimated ? ' (estimated)' : '' }}</dd>
+            <dt>Email</dt>
+            <dd>{{ p.email ?? '—' }}</dd>
+            <dt>ID document</dt>
+            <dd>{{ p.identificationNumber ? idType() + ' · ' + p.identificationNumber : '—' }}</dd>
+            <dt>Guardian</dt>
+            <dd>{{ p.guardianName ? p.guardianName + (p.guardianRelation ? ' (' + p.guardianRelation + ')' : '') : '—' }}</dd>
+            <dt>Registered</dt>
+            <dd>{{ p.createdAt | date: 'dd MMM yyyy, h:mm a' }}</dd>
+          </dl>
+        </section>
+        <section>
+          <h3>Address</h3>
+          <dl>
+            <dt>Present</dt>
+            <dd>{{ formatAddress(p.presentAddress) }}</dd>
+            <dt>Permanent</dt>
+            <dd>{{ formatAddress(p.permanentAddress) }}</dd>
+          </dl>
+        </section>
+        <section>
+          <h3>Emergency contacts</h3>
+          @for (c of p.emergencyContacts; track $index) {
+            <div>{{ c.name }} ({{ c.relation }}) · {{ c.mobileNumber }}</div>
+          } @empty {
+            <div class="hint">None recorded</div>
+          }
+        </section>
+      </div>
+    </mat-tab>
+    @if (can.medicalView) {
+      <mat-tab label="Medical info">
+        <div class="tab-body">
+          @if (medical(); as m) {
+            <app-medical-info-panel [patientId]="p.id" [info]="m" [canManage]="can.medicalManage && editable()" (changed)="loadMedical()" />
+          }
+        </div>
+      </mat-tab>
+    }
+    @if (can.documentsView) {
+      <mat-tab label="Documents">
+        <div class="tab-body">
+          <app-documents-panel [patientId]="p.id" [canUpload]="can.documentsUpload && editable()" [canDelete]="can.documentsDelete" />
+        </div>
+      </mat-tab>
+    }
+  </mat-tab-group>
+}

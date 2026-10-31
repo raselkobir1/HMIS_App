@@ -49,3 +49,20 @@ body {
   --mat-snack-bar-supporting-text-color: var(--mat-sys-on-primary);
   --mat-snack-bar-button-color: var(--mat-sys-on-primary);
 }
+
+/* Printing (e.g. patient ID card): only the page content, without the app shell. */
+@media print {
+  mat-sidenav,
+  mat-toolbar,
+  .no-print {
+    display: none !important;
+  }
+
+  mat-sidenav-content {
+    margin-left: 0 !important;
+  }
+
+  body {
+    background: #fff;
+  }
+}

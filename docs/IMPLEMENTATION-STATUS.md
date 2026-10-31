@@ -9,8 +9,8 @@ Statuses: Not Started · Analysis Completed · Design Completed · Backend Compl
 | Identity | Approved | |
 | Audit | Approved | |
 | Administration | Approved | |
-| HR (basic) | Testing Completed | Backend + frontend; 30 API + 14 browser checks; awaiting approval |
-| Patient | Analysis Completed | SRS §5; Q-PAT-1..12 blocking |
+| HR (basic) | Approved | |
+| Patient | Testing Completed | Backend + frontend; 56 API + 18 browser checks; awaiting approval |
 | Appointment, Clinical, OPD | Not Started | |
 | Billing | Not Started | |
 | IPD, Bed, Nursing | Not Started | |
@@ -79,3 +79,15 @@ Tested in an **isolated environment** (database `hmis_test`, API on 7101, UI on 
 | Browser walkthrough (14 checks) | 12 passed. The 2 remaining failed only because the test read the table before it reloaded; the database confirmed the edit and the Resigned status. Dates entered in Asia/Dhaka are stored exactly (no day shift). |
 | Regression: Identity / Audit / Administration scripts | 38/40, 22/22, 40/42. All 5 failures were outdated expectations (more modules now add permissions and sequences) or a test query against the wrong database; no product regressions |
 | Issue found and fixed | 400 responses for unreadable request bodies exposed CLR type names and JSON positions, and added a redundant "request field is required" error. Now sanitized for all modules. |
+
+### Patient — 2026-10-31
+Tested in the isolated environment (`hmis_test`, API 7101, UI 4301).
+
+| Check | Result |
+|---|---|
+| Build (`dotnet build`, `ng build`) | Pass, 0 warnings (`jsbarcode` allowed as CommonJS) |
+| Migration `InitialPatient` | Applied (`patient` schema, 5 tables, `pg_trgm` extension, trigram index) |
+| API script (56 checks) | **56/56 pass**: MR numbers; **25 concurrent registrations, unique MR numbers**; validation (incl. district list, post code, ID pairing); NID normalization and duplicate block; duplicate warnings (same mobile + similar name, similar name + same DOB/gender) and exclusion of the record being edited and of merged records; search by MR, mobile digits, name, ID; update + 409; photo (content-sniffed, no-store); clinical permissions need explicit grant for Super Admin, every medical-info view audited; allergies/history lifecycle (entered-in-error locks); documents (content-sniffed, 10 MB limit, safe filenames, soft delete keeps row and file); inactive and merged records read-only; merge request/approve/reject rules; permissions for Receptionist, Doctor, HR Manager; full address change in audit |
+| Browser walkthrough (18 checks) | **18/18 pass**: Receptionist registers (age only → estimated DOB), sees live duplicate warning, NID block disables save, searches, uploads a document, prints the ID card (barcode), reports a duplicate; Doctor records an allergy and the banner appears; Super Admin approves the merge and the duplicate shows a read-only banner; mobile layout without page-level horizontal scroll |
+| Regression (Identity / Audit / Administration) | Unchanged: 38/40, 22/22, 40/42; only the known outdated expectations fail |
+| Issues found and fixed | Duplicate check returned 500 when date of birth was omitted (SQL NULL in boolean flags → COALESCE); approving an already-approved merge reported the wrong reason (check order); menu highlighted two items on `/patients/new` (exact-match option) |
