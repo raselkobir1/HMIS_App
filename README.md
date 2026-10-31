@@ -26,15 +26,26 @@ docker compose up -d postgres
 # 2. API secrets (never committed)
 cd src/Api/Hmis.Api
 dotnet user-secrets set "Jwt:SigningKey" "<random string of at least 32 characters>"
+dotnet user-secrets set "Identity:SeedAdmin:Password" "<initial Super Admin password>"
+cd ../../..
 
-# 3. Run the API
+# 3. Apply database migrations
+./scripts/migrate.ps1
+
+# 4. Run the API (seeds roles, permissions and the Super Admin on first start)
+cd src/Api/Hmis.Api
 dotnet run --launch-profile https
 
-# 4. Run the UI (in a second terminal)
+# 5. Run the UI (in a second terminal). It proxies /api to the API.
 cd src/Frontend/hospital-ui
 npm install
 npm start
 ```
+
+Sign in at http://localhost:4300 as `superadmin` with the seed password. You must change it at first sign-in.
+To see the configured seed password: `dotnet user-secrets list --project src/Api/Hmis.Api`.
+
+New migration: `./scripts/add-migration.ps1 -Module Identity -Name <MigrationName>`.
 
 The database credentials in `docker-compose.yml` and `appsettings.Development.json` are for the **local development container only**. Other environments use environment variables, for example `ConnectionStrings__HmisDatabase` and `Jwt__SigningKey`.
 

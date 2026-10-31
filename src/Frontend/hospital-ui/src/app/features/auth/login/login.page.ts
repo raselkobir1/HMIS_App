@@ -34,6 +34,8 @@ export class LoginPage {
 
   protected readonly loading = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
+  protected readonly infoMessage =
+    this.route.snapshot.queryParamMap.get('reason') === 'idle' ? 'You were signed out after 30 minutes of inactivity.' : null;
   protected readonly hidePassword = signal(true);
 
   protected readonly form = inject(NonNullableFormBuilder).group({
@@ -51,9 +53,9 @@ export class LoginPage {
     this.errorMessage.set(null);
 
     this.auth.login(this.form.getRawValue()).subscribe({
-      next: () => {
+      next: (user) => {
         const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') ?? '/dashboard';
-        void this.router.navigateByUrl(returnUrl);
+        void this.router.navigateByUrl(user.mustChangePassword ? '/change-password' : returnUrl);
       },
       error: (error: HttpErrorResponse) => {
         this.loading.set(false);

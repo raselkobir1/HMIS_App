@@ -30,21 +30,29 @@ See ARCHITECTURE.md §6.2. Responses are never 200 with `success: false`.
 ## Endpoint catalogue
 *(Filled in per module.)*
 
-### Identity (planned)
+### Identity (implemented)
 | Method | Route | Permission |
 |---|---|---|
 | POST | `/api/v1/auth/login` | anonymous |
-| POST | `/api/v1/auth/refresh` | anonymous (refresh token) |
-| POST | `/api/v1/auth/logout` | authenticated |
+| POST | `/api/v1/auth/refresh` | anonymous (refresh token from HttpOnly cookie) |
+| POST | `/api/v1/auth/logout` | anonymous (revokes the session in the refresh cookie) |
 | POST | `/api/v1/auth/change-password` | authenticated |
 | GET | `/api/v1/auth/me` | authenticated (profile + effective permissions) |
 | GET/POST | `/api/v1/users` | Identity.Users.View / Manage |
 | GET/PUT | `/api/v1/users/{id}` | Identity.Users.View / Manage |
 | PATCH | `/api/v1/users/{id}/status` | Identity.Users.Manage |
 | POST | `/api/v1/users/{id}/reset-password` | Identity.Users.Manage |
+| POST | `/api/v1/users/{id}/unlock` | Identity.Users.Manage |
 | PUT | `/api/v1/users/{id}/roles` | Identity.Roles.Manage |
+| PUT | `/api/v1/users/{id}/permissions` | Identity.Roles.Manage (direct grants) |
 | GET/POST | `/api/v1/roles` | Identity.Roles.View / Manage |
 | GET/PUT/DELETE | `/api/v1/roles/{id}` | Identity.Roles.View / Manage |
 | PUT | `/api/v1/roles/{id}/permissions` | Identity.Roles.Manage |
 | GET | `/api/v1/permissions` | Identity.Roles.View |
 | GET | `/api/v1/login-history` | Identity.LoginHistory.View |
+
+**Identity notes**
+- Login and change-password responses include `accessToken`, `accessTokenExpiresAt` and `user` (with roles and effective permissions). The refresh token is never in a response body.
+- `POST /auth/login` and `POST /auth/change-password` are rate limited per IP (`RateLimiting:AuthPermitPerMinute`, 10 by default).
+- Users with `mustChangePassword = true` have **no** effective permissions until they change their password.
+- Error codes: `INVALID_CREDENTIALS`, `ACCOUNT_LOCKED`, `ACCOUNT_INACTIVE`, `INVALID_REFRESH_TOKEN` (401); `USERNAME_TAKEN`, `EMAIL_TAKEN`, `ROLE_NAME_TAKEN`, `ROLE_IN_USE`, `CONCURRENCY_CONFLICT` (409); `INVALID_CURRENT_PASSWORD`, `PASSWORD_SAME_AS_CURRENT`, `CANNOT_CHANGE_OWN_ACCOUNT`, `LAST_SUPER_ADMINISTRATOR`, `SUPER_ADMINISTRATOR_REQUIRED`, `SUPER_ADMINISTRATOR_PERMISSIONS_REQUIRED`, `ROLE_SYSTEM_DELETE`, `ROLE_NOT_FOUND`, `PERMISSION_NOT_FOUND` (422).

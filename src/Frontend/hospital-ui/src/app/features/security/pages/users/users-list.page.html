@@ -1,0 +1,136 @@
+<app-page-header title="Users" subtitle="Accounts, roles and access">
+  <button mat-flat-button type="button" *hasPermission="permissions.usersManage" (click)="create()">
+    <mat-icon>person_add</mat-icon>
+    New user
+  </button>
+</app-page-header>
+
+<section class="filters">
+  <mat-form-field class="search">
+    <mat-label>Search</mat-label>
+    <input matInput [formControl]="search" placeholder="Username, name or email" />
+    <mat-icon matSuffix>search</mat-icon>
+  </mat-form-field>
+
+  <mat-form-field>
+    <mat-label>Status</mat-label>
+    <mat-select [formControl]="status">
+      <mat-option value="all">All</mat-option>
+      <mat-option value="active">Active</mat-option>
+      <mat-option value="inactive">Inactive</mat-option>
+    </mat-select>
+  </mat-form-field>
+</section>
+
+<div class="table-card">
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+
+  @if (loadError(); as error) {
+    <div class="state error" role="alert">
+      <mat-icon>error</mat-icon>
+      <span>{{ error }}</span>
+      <button mat-button type="button" (click)="reload()">Retry</button>
+    </div>
+  } @else {
+    <div class="table-scroll">
+      <table mat-table [dataSource]="page()?.items ?? []" matSort (matSortChange)="onSort($event)">
+        <ng-container matColumnDef="userName">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Username</th>
+          <td mat-cell *matCellDef="let user">{{ user.userName }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="fullName">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Full name</th>
+          <td mat-cell *matCellDef="let user">
+            <div>{{ user.fullName }}</div>
+            @if (user.email) {
+              <div class="secondary">{{ user.email }}</div>
+            }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="roles">
+          <th mat-header-cell *matHeaderCellDef>Roles</th>
+          <td mat-cell *matCellDef="let user">
+            <mat-chip-set>
+              @for (role of user.roles; track role) {
+                <mat-chip>{{ role }}</mat-chip>
+              } @empty {
+                <span class="secondary">No roles</span>
+              }
+            </mat-chip-set>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <td mat-cell *matCellDef="let user">
+            @if (!user.isActive) {
+              <span class="badge muted">Inactive</span>
+            } @else if (user.isLockedOut) {
+              <span class="badge warn">Locked</span>
+            } @else {
+              <span class="badge ok">Active</span>
+            }
+            @if (user.mustChangePassword) {
+              <span class="badge info" matTooltip="Must change password at next sign-in">Password change</span>
+            }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="lastLoginAt">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Last sign-in</th>
+          <td mat-cell *matCellDef="let user">{{ user.lastLoginAt ? (user.lastLoginAt | date: 'dd MMM yyyy, h:mm a') : '—' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef class="actions-col"></th>
+          <td mat-cell *matCellDef="let user" class="actions-col">
+            <button mat-icon-button type="button" [matMenuTriggerFor]="menu" [attr.aria-label]="'Actions for ' + user.userName">
+              <mat-icon>more_vert</mat-icon>
+            </button>
+            <mat-menu #menu="matMenu" xPosition="before">
+              <button mat-menu-item type="button" *hasPermission="permissions.usersManage" (click)="edit(user)">
+                <mat-icon>edit</mat-icon><span>Edit</span>
+              </button>
+              <button mat-menu-item type="button" *hasPermission="permissions.rolesManage" (click)="manageAccess(user)">
+                <mat-icon>admin_panel_settings</mat-icon><span>Roles &amp; permissions</span>
+              </button>
+              @if (user.id !== currentUserId) {
+                <button mat-menu-item type="button" *hasPermission="permissions.usersManage" (click)="resetPassword(user)">
+                  <mat-icon>lock_reset</mat-icon><span>Reset password</span>
+                </button>
+                @if (user.isLockedOut) {
+                  <button mat-menu-item type="button" *hasPermission="permissions.usersManage" (click)="unlock(user)">
+                    <mat-icon>lock_open</mat-icon><span>Unlock</span>
+                  </button>
+                }
+                <button mat-menu-item type="button" *hasPermission="permissions.usersManage" (click)="toggleStatus(user)">
+                  <mat-icon>{{ user.isActive ? 'block' : 'check_circle' }}</mat-icon>
+                  <span>{{ user.isActive ? 'Deactivate' : 'Activate' }}</span>
+                </button>
+              }
+            </mat-menu>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columns; sticky: true"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns"></tr>
+        <tr class="mat-row" *matNoDataRow>
+          <td class="state" [attr.colspan]="columns.length">{{ loading() ? 'Loading…' : 'No users match the current filters.' }}</td>
+        </tr>
+      </table>
+    </div>
+
+    <mat-paginator
+      [length]="page()?.totalCount ?? 0"
+      [pageIndex]="(query().pageNumber ?? 1) - 1"
+      [pageSize]="query().pageSize"
+      [pageSizeOptions]="[10, 20, 50, 100]"
+      (page)="onPage($event)"
+      aria-label="Users pages"
+    />
+  }
+</div>

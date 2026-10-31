@@ -54,6 +54,10 @@
         <span class="user-name">{{ user()?.fullName ?? 'User' }}</span>
       </button>
       <mat-menu #userMenu="matMenu" xPosition="before">
+        <a mat-menu-item routerLink="/change-password">
+          <mat-icon>password</mat-icon>
+          <span>Change password</span>
+        </a>
         <button mat-menu-item type="button" (click)="logout()">
           <mat-icon>logout</mat-icon>
           <span>Logout</span>

@@ -10,6 +10,9 @@
 
   <mat-card-content>
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      @if (infoMessage) {
+        <div class="info-banner" role="status">{{ infoMessage }}</div>
+      }
       @if (errorMessage(); as message) {
         <div class="error-banner" role="alert">
           <mat-icon>error</mat-icon>

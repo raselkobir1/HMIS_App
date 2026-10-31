@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 
-import { authGuard, guestGuard } from './core/guards/auth.guard';
+import { authGuard, guestGuard, passwordChangeGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   {
@@ -19,6 +19,7 @@ export const routes: Routes = [
   {
     path: '',
     canActivate: [authGuard],
+    canActivateChild: [passwordChangeGuard],
     loadComponent: () => import('./layouts/admin-layout/admin-layout').then((m) => m.AdminLayout),
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
@@ -27,8 +28,13 @@ export const routes: Routes = [
         title: 'Dashboard · HMIS',
         loadComponent: () => import('./features/dashboard/dashboard.page').then((m) => m.DashboardPage),
       },
-      // Feature modules are added here as lazy routes when approved, e.g.
-      // { path: 'patients', canActivate: [permissionGuard('Patient.View')], loadChildren: () => import('./features/patient/patient.routes') }
+      {
+        path: 'change-password',
+        title: 'Change Password · HMIS',
+        loadComponent: () =>
+          import('./features/auth/change-password/change-password.page').then((m) => m.ChangePasswordPage),
+      },
+      { path: 'security', loadChildren: () => import('./features/security/security.routes') },
     ],
   },
   { path: '**', redirectTo: '' },

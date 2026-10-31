@@ -12,4 +12,14 @@ export interface NavItem {
  */
 export const NAVIGATION: NavItem[] = [
   { label: 'Dashboard', icon: 'dashboard', route: '/dashboard', permissions: [] },
+  {
+    label: 'Security',
+    icon: 'shield_person',
+    permissions: [],
+    children: [
+      { label: 'Users', icon: 'group', route: '/security/users', permissions: ['Identity.Users.View'] },
+      { label: 'Roles & Permissions', icon: 'admin_panel_settings', route: '/security/roles', permissions: ['Identity.Roles.View'] },
+      { label: 'Login History', icon: 'history', route: '/security/login-history', permissions: ['Identity.LoginHistory.View'] },
+    ],
+  },
 ];

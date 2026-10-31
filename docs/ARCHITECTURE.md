@@ -18,7 +18,7 @@
 | D6 | Local database | PostgreSQL 17 in **Docker** (`docker-compose.yml`) | PostgreSQL is not installed locally. |
 | D7 | Identifiers | `Guid` (UUID v7 via `Guid.CreateVersion7()`) generated in the application | Time-ordered UUIDs give better index locality. |
 | D8 | Error flow | Managers **throw typed exceptions** for failures; global middleware maps them to HTTP status + `ApiResponse` | Avoids per-controller try/catch (TAD §15). |
-| D9 | Identity store | ASP.NET Core Identity (Guid keys) in the `auth` schema + custom Permission tables | TAD §13. |
+| D9 | Identity store | Own `User`/`Role`/`Permission` entities in the `auth` schema, using ASP.NET Core Identity's **PasswordHasher (PBKDF2)**. The full `UserManager` stack is not used. | TAD §13. *Amended during Identity build:* keeps the Domain free of framework types and keeps Identity on Controller → Manager → Repository. |
 | D11 | Local ports | PostgreSQL `5434`, API `7001/5001`, UI `4300` | 5432/5433/4200 are used by other local projects. |
 | D10 | Deferred infrastructure | Redis, Hangfire, Outbox are **not** built in Stage 1 | Built when a module actually needs them (TAD §19, §18). |
 
@@ -198,7 +198,8 @@ Every response carries `TraceId`. Controllers inherit `ApiControllerBase` and us
 
 ## 7. Security
 
-- **Authentication:** ASP.NET Core Identity (`AppUser`, `AppRole` with Guid keys) in the `auth` schema. Short-lived **JWT access token (15 min)** plus a **rotating refresh token (7 days)**. The refresh token is stored hashed, and reusing an old token revokes the whole token family.
+- **Authentication:** `User`/`Role` entities in the `auth` schema, with passwords hashed by ASP.NET Core Identity's PBKDF2 hasher. Short-lived **JWT access token (15 min)** plus a **rotating refresh token (7 days)**. The refresh token is stored as a SHA-256 hash and sent only as an `HttpOnly; Secure; SameSite=Strict` cookie scoped to `/api/v1/auth`. Reusing an old token revokes the whole token family.
+- **Same-origin UI:** the Angular dev server proxies `/api` to the API (`proxy.conf.json`). In production a reverse proxy does the same, so the strict cookie works.
 - **Authorization:** permission strings such as `Patient.View`.
   - Each module declares its permissions in an `IPermissionDefinitionProvider` (Presentation layer). On startup, Identity syncs these into `auth.Permissions`.
   - Endpoints use `[HasPermission(PatientPermissions.View)]`. A dynamic policy provider plus an authorization handler checks the user's effective permissions, which are the union of their roles' permissions plus direct user permissions.
