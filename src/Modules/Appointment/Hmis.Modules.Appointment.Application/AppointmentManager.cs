@@ -3,6 +3,7 @@ using Hmis.BuildingBlocks.Application.Exceptions;
 using Hmis.BuildingBlocks.Application.Pagination;
 using Hmis.BuildingBlocks.Contracts.Administration;
 using Hmis.BuildingBlocks.Contracts.Appointment;
+using Hmis.BuildingBlocks.Contracts.Billing;
 using Hmis.BuildingBlocks.Contracts.HR;
 using Hmis.BuildingBlocks.Contracts.Identity;
 using Hmis.BuildingBlocks.Contracts.Patient;
@@ -20,6 +21,7 @@ public sealed class AppointmentManager(
     IDoctorLookup doctorLookup,
     IUserEmployeeLookup userEmployeeLookup,
     INumberSequenceService numberSequences,
+    IChargeService charges,
     ICurrentUser currentUser,
     IDateTimeProvider dateTime) : IAppointmentManager, IOpdEncounterService
 {
@@ -80,17 +82,16 @@ public sealed class AppointmentManager(
             var serial = await ReserveSerialAsync(schedule, request.AppointmentDate, request.PatientId, null, ct);
             var booked = AppointmentEntity.Book(number, request.PatientId, request.DoctorId, schedule.Id, request.AppointmentDate,
                 serial, schedule.EstimatedTimeFor(serial), request.VisitType, request.Source, fee, request.Notes);
-
-            // A walk-in is already at the counter, so they join the queue immediately.
-            if (request.Source == AppointmentSource.WalkIn)
-            {
-                booked.CheckIn(today, dateTime.UtcNow);
-            }
-
             await appointments.AddAsync(booked, ct);
             await unitOfWork.SaveChangesAsync(ct);
             return booked;
         }, cancellationToken);
+
+        // A walk-in is already at the counter, so they join the queue immediately (and are billed like any check-in).
+        if (request.Source == AppointmentSource.WalkIn)
+        {
+            await CheckInAndBillAsync(appointment, cancellationToken);
+        }
 
         return await ToDtoAsync(appointment, cancellationToken);
     }
@@ -119,11 +120,31 @@ public sealed class AppointmentManager(
     public Task<AppointmentDto> ConfirmAsync(Guid id, CancellationToken cancellationToken) =>
         ChangeAsync(id, a => a.Confirm(), cancellationToken);
 
-    public Task<AppointmentDto> CheckInAsync(Guid id, CancellationToken cancellationToken) =>
-        ChangeAsync(id, a => a.CheckIn(dateTime.LocalToday, dateTime.UtcNow), cancellationToken);
+    public async Task<AppointmentDto> CheckInAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var appointment = await GetAsync(id, cancellationToken);
+        await CheckInAndBillAsync(appointment, cancellationToken);
+        return await ToDtoAsync(appointment, cancellationToken);
+    }
 
-    public Task<AppointmentDto> CancelAsync(Guid id, AppointmentCancelDto request, CancellationToken cancellationToken) =>
-        ChangeAsync(id, a => a.Cancel(request.Reason, dateTime.UtcNow), cancellationToken);
+    /// <summary>
+    /// Cancels the appointment and its OPD bill. Billing keeps a bill that was already paid, for the cashier to refund.
+    /// The bill is cancelled before the appointment is saved; both steps are safe to repeat.
+    /// </summary>
+    public async Task<AppointmentDto> CancelAsync(Guid id, AppointmentCancelDto request, CancellationToken cancellationToken)
+    {
+        var appointment = await GetAsync(id, cancellationToken);
+        var wasCheckedIn = appointment.Status == AppointmentStatus.Waiting;
+        appointment.Cancel(request.Reason, dateTime.UtcNow);
+        if (wasCheckedIn)
+        {
+            await charges.CancelAsync(ChargeSources.OpdAppointment, appointment.Id,
+                $"Appointment {appointment.AppointmentNumber} cancelled: {appointment.CancellationReason}", cancellationToken);
+        }
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return await ToDtoAsync(appointment, cancellationToken);
+    }
 
     public Task<AppointmentDto> MarkNoShowAsync(Guid id, CancellationToken cancellationToken) =>
         ChangeAsync(id, a => a.MarkNoShow(dateTime.LocalToday), cancellationToken);
@@ -252,6 +273,30 @@ public sealed class AppointmentManager(
         new(a.Id, a.AppointmentNumber, a.PatientId, a.DoctorId, a.AppointmentDate, a.SerialNumber, a.VisitType.ToString(), a.Status.ToString());
 
     // ---------- helpers ----------
+
+    /// <summary>
+    /// Checks the patient in and posts the consultation fee to Billing (Q-BILL-2). The charge is posted before the
+    /// check-in is saved: posting is idempotent, so if either step fails the patient is simply not checked in yet and
+    /// the receptionist can retry. Payment is never required before the consultation.
+    /// </summary>
+    private async Task CheckInAndBillAsync(AppointmentEntity appointment, CancellationToken cancellationToken)
+    {
+        appointment.CheckIn(dateTime.LocalToday, dateTime.UtcNow);
+        if (appointment.Fee > 0)
+        {
+            var doctor = await doctorLookup.GetAsync(appointment.DoctorId, cancellationToken);
+            var visit = appointment.VisitType == VisitType.New ? "new patient" : "follow-up";
+            await charges.PostAsync(new ChargeRequest(
+                ChargeSources.OpdAppointment,
+                appointment.Id,
+                appointment.AppointmentNumber,
+                appointment.PatientId,
+                [new ChargeLine($"Consultation fee — {doctor?.FullName ?? "Doctor"} ({visit})", ChargeCategories.Consultation, 1, appointment.Fee)]),
+                cancellationToken);
+        }
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+    }
 
     private async Task<AppointmentDto> ChangeAsync(Guid id, Action<AppointmentEntity> change, CancellationToken cancellationToken)
     {

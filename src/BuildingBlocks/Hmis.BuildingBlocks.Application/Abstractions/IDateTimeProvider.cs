@@ -9,4 +9,7 @@ public interface IDateTimeProvider
 
     /// <summary>Current wall-clock date and time in the hospital's timezone (Asia/Dhaka).</summary>
     DateTime LocalNow { get; }
+
+    /// <summary>The UTC instant at which a hospital-local date begins (for "from date / to date" filters on UTC timestamps).</summary>
+    DateTime StartOfLocalDayUtc(DateOnly date);
 }

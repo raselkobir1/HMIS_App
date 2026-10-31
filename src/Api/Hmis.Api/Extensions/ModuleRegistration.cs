@@ -2,6 +2,7 @@ using System.Reflection;
 using Hmis.Modules.Administration.Infrastructure;
 using Hmis.Modules.Appointment.Infrastructure;
 using Hmis.Modules.Audit.Infrastructure;
+using Hmis.Modules.Billing.Infrastructure;
 using Hmis.Modules.Clinical.Infrastructure;
 using Hmis.Modules.HR.Infrastructure;
 using Hmis.Modules.Patient.Infrastructure;
@@ -24,7 +25,8 @@ public static class ModuleRegistration
         typeof(Hmis.Modules.HR.Presentation.HrPresentationMarker).Assembly,
         typeof(Hmis.Modules.Patient.Presentation.PatientPresentationMarker).Assembly,
         typeof(Hmis.Modules.Appointment.Presentation.AppointmentPresentationMarker).Assembly,
-        typeof(Hmis.Modules.Clinical.Presentation.ClinicalPresentationMarker).Assembly
+        typeof(Hmis.Modules.Clinical.Presentation.ClinicalPresentationMarker).Assembly,
+        typeof(Hmis.Modules.Billing.Presentation.BillingPresentationMarker).Assembly
     ];
 
     /// <summary>Application assemblies containing FluentValidation validators and Mapster IRegister configs.</summary>
@@ -37,7 +39,8 @@ public static class ModuleRegistration
         typeof(Hmis.Modules.HR.Application.HrApplicationMarker).Assembly,
         typeof(Hmis.Modules.Patient.Application.PatientApplicationMarker).Assembly,
         typeof(Hmis.Modules.Appointment.Application.AppointmentApplicationMarker).Assembly,
-        typeof(Hmis.Modules.Clinical.Application.ClinicalApplicationMarker).Assembly
+        typeof(Hmis.Modules.Clinical.Application.ClinicalApplicationMarker).Assembly,
+        typeof(Hmis.Modules.Billing.Application.BillingApplicationMarker).Assembly
     ];
 
     public static IServiceCollection AddHmisModules(this IServiceCollection services, IConfiguration configuration)
@@ -49,6 +52,7 @@ public static class ModuleRegistration
         services.AddPatientModule(configuration);
         services.AddAppointmentModule(configuration);
         services.AddClinicalModule(configuration);
+        services.AddBillingModule(configuration);
         return services;
     }
 
