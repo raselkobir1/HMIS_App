@@ -1,0 +1,126 @@
+<app-page-header title="Employees" subtitle="Doctors, nurses and staff">
+  <button mat-flat-button type="button" *hasPermission="permissions.employeesManage" (click)="create()">
+    <mat-icon>person_add</mat-icon>
+    New employee
+  </button>
+</app-page-header>
+
+<section class="filters">
+  <mat-form-field class="search">
+    <mat-label>Search</mat-label>
+    <input matInput [formControl]="search" placeholder="Name, code or mobile" />
+    <mat-icon matSuffix>search</mat-icon>
+  </mat-form-field>
+  <mat-form-field>
+    <mat-label>Department</mat-label>
+    <mat-select [formControl]="department">
+      <mat-option value="">All</mat-option>
+      @for (d of departments(); track d.id) {
+        <mat-option [value]="d.id">{{ d.name }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+  <mat-form-field>
+    <mat-label>Status</mat-label>
+    <mat-select [formControl]="status">
+      <mat-option value="">All</mat-option>
+      @for (s of statuses; track s.value) {
+        <mat-option [value]="s.value">{{ s.label }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+  <mat-form-field>
+    <mat-label>Employment type</mat-label>
+    <mat-select [formControl]="type">
+      <mat-option value="">All</mat-option>
+      @for (t of types; track t) {
+        <mat-option [value]="t">{{ t }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+</section>
+
+<div class="table-card">
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+  @if (loadError(); as error) {
+    <div class="state error" role="alert">
+      <mat-icon>error</mat-icon><span>{{ error }}</span>
+      <button mat-button type="button" (click)="reload()">Retry</button>
+    </div>
+  } @else {
+    <div class="table-scroll">
+      <table mat-table [dataSource]="page()?.items ?? []" matSort (matSortChange)="onSort($event)">
+        <ng-container matColumnDef="employeeCode">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Code</th>
+          <td mat-cell *matCellDef="let e">{{ e.employeeCode }}</td>
+        </ng-container>
+        <ng-container matColumnDef="fullName">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Name</th>
+          <td mat-cell *matCellDef="let e">
+            <div>{{ e.fullName }}</div>
+            <div class="secondary">{{ e.mobileNumber }}</div>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="department">
+          <th mat-header-cell *matHeaderCellDef>Department / Designation</th>
+          <td mat-cell *matCellDef="let e">
+            <div>{{ e.departmentName ?? '—' }}</div>
+            <div class="secondary">{{ e.designationName ?? '—' }}</div>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="employmentType">
+          <th mat-header-cell *matHeaderCellDef>Type</th>
+          <td mat-cell *matCellDef="let e">{{ e.employmentType }}</td>
+        </ng-container>
+        <ng-container matColumnDef="joiningDate">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Joined</th>
+          <td mat-cell *matCellDef="let e">{{ e.joiningDate | date: 'dd MMM yyyy' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <td mat-cell *matCellDef="let e">
+            <span
+              class="badge"
+              [class.ok]="e.status === 'Active'"
+              [class.info]="e.status === 'OnLeave'"
+              [class.muted]="e.status === 'Resigned' || e.status === 'Terminated'"
+              >{{ statusLabel(e.status) }}</span
+            >
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef class="actions-col"></th>
+          <td mat-cell *matCellDef="let e" class="actions-col">
+            <ng-container *hasPermission="permissions.employeesManage">
+              <button mat-icon-button type="button" [matMenuTriggerFor]="menu" [attr.aria-label]="'Actions for ' + e.fullName">
+                <mat-icon>more_vert</mat-icon>
+              </button>
+              <mat-menu #menu="matMenu" xPosition="before">
+                <button mat-menu-item type="button" (click)="edit(e)"><mat-icon>edit</mat-icon><span>Edit</span></button>
+                <button mat-menu-item type="button" (click)="changeStatus(e)">
+                  <mat-icon>work_history</mat-icon><span>Change status</span>
+                </button>
+              </mat-menu>
+            </ng-container>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columns; sticky: true"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns"></tr>
+        <tr class="mat-row" *matNoDataRow>
+          <td class="state" [attr.colspan]="columns.length">{{ loading() ? 'Loading…' : 'No employees match the current filters.' }}</td>
+        </tr>
+      </table>
+    </div>
+    <mat-paginator
+      [length]="page()?.totalCount ?? 0"
+      [pageIndex]="query().pageNumber - 1"
+      [pageSize]="query().pageSize"
+      [pageSizeOptions]="[10, 20, 50, 100]"
+      (page)="onPage($event)"
+      aria-label="Employee pages"
+    />
+  }
+</div>

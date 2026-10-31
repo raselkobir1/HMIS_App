@@ -6,7 +6,11 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 
+import { AuthService } from '../../../../core/auth/auth.service';
 import { NotificationService } from '../../../../core/services/notification.service';
+import { EmployeePicker } from '../../../hr/components/employee-picker';
+import { HrApiService } from '../../../hr/hr-api.service';
+import { HrPermissions } from '../../../hr/hr.models';
 import { applyServerErrors } from '../../../../shared/utilities/server-errors';
 import { RoleListItem, UserDetail } from '../../models/security.models';
 import { SecurityApiService } from '../../services/security-api.service';
@@ -17,7 +21,16 @@ export type UserFormDialogData = { mode: 'create' } | { mode: 'edit'; user: User
 
 @Component({
   selector: 'app-user-form-dialog',
-  imports: [ReactiveFormsModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatButtonModule, FieldError],
+  imports: [
+    ReactiveFormsModule,
+    MatDialogModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    MatButtonModule,
+    FieldError,
+    EmployeePicker,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <h2 mat-dialog-title>{{ isEdit ? 'Edit user' : 'New user' }}</h2>
@@ -54,6 +67,12 @@ export type UserFormDialogData = { mode: 'create' } | { mode: 'edit'; user: User
           <mat-error><app-field-error [control]="form.controls.phoneNumber" /></mat-error>
         </mat-form-field>
 
+        @if (canLinkEmployee) {
+          <div class="span-all">
+            <app-employee-picker [(employeeId)]="employeeId" [initialLabel]="employeeLabel()" />
+          </div>
+        }
+
         @if (!isEdit) {
           <mat-form-field>
             <mat-label>Temporary password</mat-label>
@@ -80,6 +99,11 @@ export type UserFormDialogData = { mode: 'create' } | { mode: 'edit'; user: User
     </form>
   `,
   styleUrl: '../../../../shared/styles/dialog.scss',
+  styles: `
+    .span-all {
+      grid-column: 1 / -1;
+    }
+  `,
 })
 export class UserFormDialog {
   private readonly data = inject<UserFormDialogData>(MAT_DIALOG_DATA);
@@ -91,6 +115,12 @@ export class UserFormDialog {
   protected readonly saving = signal(false);
   protected readonly bannerError = signal<string | null>(null);
   protected readonly roles = signal<RoleListItem[]>([]);
+
+  /** Linking needs HR.Employees.View to search employees; without it the existing link is kept unchanged. */
+  protected readonly canLinkEmployee = inject(AuthService).hasPermission(HrPermissions.employeesView);
+  protected readonly employeeId = signal<string | null>(this.data.mode === 'edit' ? this.data.user.employeeId : null);
+  protected readonly employeeLabel = signal<string | null>(null);
+  private readonly hrApi = inject(HrApiService);
 
   protected readonly form = inject(NonNullableFormBuilder).group({
     userName: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(50), Validators.pattern(/^[A-Za-z0-9._-]+$/)]],
@@ -110,6 +140,9 @@ export class UserFormDialog {
         email: user.email ?? '',
         phoneNumber: user.phoneNumber ?? '',
       });
+      if (user.employeeId && this.canLinkEmployee) {
+        this.hrApi.get(user.employeeId).subscribe((e) => this.employeeLabel.set(`${e.employeeCode} · ${e.fullName}`));
+      }
     } else {
       this.api.searchRoles().subscribe((page) => this.roles.set(page.items));
     }
@@ -131,7 +164,7 @@ export class UserFormDialog {
             fullName: value.fullName,
             email: value.email || null,
             phoneNumber: value.phoneNumber || null,
-            employeeId: this.data.user.employeeId,
+            employeeId: this.employeeId(),
             rowVersion: this.data.user.rowVersion,
           })
         : this.api.createUser({
@@ -141,6 +174,7 @@ export class UserFormDialog {
             phoneNumber: value.phoneNumber || null,
             password: value.password,
             roleIds: value.roleIds,
+            employeeId: this.employeeId(),
           });
 
     request$.subscribe({

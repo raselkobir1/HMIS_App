@@ -106,6 +106,12 @@ Identity, Administration and Audit are used by **every** module, through `ICurre
 | Allergies, medical history | Module 02 (Patient), Clinical | **Patient** owns allergies and baseline medical history in Phase 1. Clinical owns diagnoses and prescriptions. | BRD lists them under Patient Features, and they are needed before Clinical exists. |
 | Operation theatres (rooms) | Module 01, Module 11 | **OT** owns them. | Same reason as beds. |
 
+### As built: one-way dependencies through extension points
+- **HR → Administration:** `IDepartmentLookup`, `IDesignationLookup` (including batch `GetManyAsync`, so names are resolved without cross-schema joins), and `INumberSequenceService` for `EMPLOYEE_CODE`.
+- **Administration ← HR (no reverse dependency):** Administration declares `IDepartmentUsageGuard`. HR implements it to block deactivating a department that has current employees. Administration calls every registered guard without knowing which modules exist.
+- **Identity → HR:** `IEmployeeLookup`, so a login can be linked only to a current employee. One login per employee, enforced by a unique filtered index on `auth.Users.EmployeeId`.
+- Modules declare their own number sequences through `INumberSequenceDefinitionProvider`; Administration creates any missing ones at startup.
+
 ## 4. Phase 1 Implementation Scope
 
 As described in BRD Phase 0 and Phase 1, and the TAD's Stage 1 and Stage 2. **Each item still needs approval before it starts.**

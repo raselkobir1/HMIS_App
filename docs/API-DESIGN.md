@@ -86,3 +86,17 @@ The audit log is read-only through the API. Results are always sorted by most re
 Error codes: `DEPARTMENT_CODE_TAKEN`, `DEPARTMENT_NAME_TAKEN`, `DESIGNATION_NAME_TAKEN` (409); `DEPARTMENT_DEPTH`, `DEPARTMENT_HAS_SUB_DEPARTMENTS`, `DEPARTMENT_HAS_ACTIVE_SUB_DEPARTMENTS`, `DEPARTMENT_PARENT_INACTIVE`, `DEPARTMENT_NOT_FOUND`, `LOGO_INVALID`, `SEQUENCE_RESET_NEEDS_YEAR`, `SEQUENCE_CANNOT_DECREASE`, `SEQUENCE_PAD_LENGTH` (422).
 
 Cross-module contracts (`BuildingBlocks.Contracts.Administration`): `IDepartmentLookup`, `IDesignationLookup`, `IHospitalSettingsProvider`, `INumberSequenceService` (`NextAsync("PATIENT_MRN")`), `INumberSequenceDefinitionProvider`.
+
+### HR (implemented)
+| Method | Route | Permission |
+|---|---|---|
+| GET | `/api/v1/employees?search&departmentId&designationId&status&employmentType&sortBy&pageNumber&pageSize` | HR.Employees.View |
+| GET | `/api/v1/employees/lookup?search&take` (current employees, for pickers) | HR.Employees.View |
+| GET | `/api/v1/employees/{id}` | HR.Employees.View |
+| POST | `/api/v1/employees` (code generated) | HR.Employees.Manage |
+| PUT | `/api/v1/employees/{id}` | HR.Employees.Manage |
+| PATCH | `/api/v1/employees/{id}/status` (`status`, `exitDate`) | HR.Employees.Manage |
+
+Error codes: `EMPLOYEE_DEPARTMENT_INVALID`, `EMPLOYEE_DESIGNATION_INVALID`, `EMPLOYEE_DOB_AFTER_JOINING`, `EMPLOYEE_JOINING_AFTER_EXIT`, `EMPLOYEE_EXIT_DATE_REQUIRED`, `EMPLOYEE_EXIT_BEFORE_JOINING` (422); `DEPARTMENT_IN_USE` (422, from Administration). Identity: `EMPLOYEE_INVALID` (422), `EMPLOYEE_ALREADY_LINKED` (409).
+
+**Validation responses (all modules):** when a request body cannot be read (bad JSON, unknown enum value), the API returns 400 with `"The value is not valid."` on the affected field. It never returns parser text, CLR type names or byte positions.

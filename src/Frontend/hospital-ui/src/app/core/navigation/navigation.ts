@@ -13,6 +13,12 @@ export interface NavItem {
 export const NAVIGATION: NavItem[] = [
   { label: 'Dashboard', icon: 'dashboard', route: '/dashboard', permissions: [] },
   {
+    label: 'HR',
+    icon: 'groups',
+    permissions: [],
+    children: [{ label: 'Employees', icon: 'badge', route: '/hr/employees', permissions: ['HR.Employees.View'] }],
+  },
+  {
     label: 'Administration',
     icon: 'apartment',
     permissions: [],

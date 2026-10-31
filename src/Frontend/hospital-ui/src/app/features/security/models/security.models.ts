@@ -56,6 +56,7 @@ export interface UserCreateRequest {
   phoneNumber: string | null;
   password: string;
   roleIds: string[];
+  employeeId: string | null;
 }
 
 export interface UserUpdateRequest {

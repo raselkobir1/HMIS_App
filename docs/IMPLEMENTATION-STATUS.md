@@ -8,8 +8,8 @@ Statuses: Not Started · Analysis Completed · Design Completed · Backend Compl
 | Foundation (Stage 1) | Approved | 401/403/validation envelope verified during the Identity step |
 | Identity | Approved | |
 | Audit | Approved | |
-| Administration | Testing Completed | Backend + frontend; 42 API + 20 browser checks; awaiting approval |
-| HR (basic) | Analysis Completed | SRS §4 |
+| Administration | Approved | |
+| HR (basic) | Testing Completed | Backend + frontend; 30 API + 14 browser checks; awaiting approval |
 | Patient | Analysis Completed | SRS §5; Q-PAT-1..12 blocking |
 | Appointment, Clinical, OPD | Not Started | |
 | Billing | Not Started | |
@@ -66,3 +66,16 @@ Statuses: Not Started · Analysis Completed · Design Completed · Backend Compl
 | API script (42 checks) | **42/42 pass**: anonymous branding/logo; profile update, 409 and 400 validation; logo upload, content-type sniffing (disguised file rejected), 1 MB limit, replace, remove; settings; department uniqueness (code and case-insensitive name), two-level hierarchy, activation rules, lookup, filters, 409; designations; sequence rules (yearly reset needs year, pad length, forward-only counter, 404); **50 concurrent allocations gave 50 unique consecutive numbers**; role permissions (Receptionist, HR Manager, Hospital Administrator); audit records for department, profile, logo and counter changes |
 | Browser walkthrough (Edge headless) | **20 checks across two runs, all behaviours pass**: branding on login and sidebar; profile save; logo upload appears immediately; create/duplicate/deactivate department; create designation; settings save; live number-format preview; format save; mobile layout; Receptionist sees read-only profile, no create buttons, no Settings; Settings URL blocked. One check failed only on timing and was confirmed visually (table showed the new `PT…` number). |
 | Not yet exercised end-to-end | `INumberSequenceService.NextAsync` from C#. Its SQL was verified under concurrency; the Patient module will be its first caller. Department deactivation does not yet check employees (HR module not built). |
+
+### HR (basic) — 2026-10-31
+Tested in an **isolated environment** (database `hmis_test`, API on 7101, UI on 4301), because the developer's own API session was running against the main `hmis` database.
+
+| Check | Result |
+|---|---|
+| Build (`dotnet build`, `ng build`) | Pass, 0 warnings |
+| Migrations `InitialHr`, Identity `UniqueEmployeeLink` | Applied to `hmis` and `hmis_test` |
+| API script (30 checks) | **30/30 pass**: generated EMP codes; **20 concurrent registrations gave unique codes** (first real call of `INumberSequenceService` from C#); names resolved via contracts; validation and business rules (DOB/joining/exit dates, inactive or unknown department); search, filters, paging, sorting; 409 concurrency; status rules; lookup returns current employees only; login linking (one login per employee, current employees only); role permissions; audit records |
+| Department guard | Deactivating a department with current employees is blocked with the HR reason |
+| Browser walkthrough (14 checks) | 12 passed. The 2 remaining failed only because the test read the table before it reloaded; the database confirmed the edit and the Resigned status. Dates entered in Asia/Dhaka are stored exactly (no day shift). |
+| Regression: Identity / Audit / Administration scripts | 38/40, 22/22, 40/42. All 5 failures were outdated expectations (more modules now add permissions and sequences) or a test query against the wrong database; no product regressions |
+| Issue found and fixed | 400 responses for unreadable request bodies exposed CLR type names and JSON positions, and added a redundant "request field is required" error. Now sanitized for all modules. |

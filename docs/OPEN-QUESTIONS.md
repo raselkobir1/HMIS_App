@@ -17,6 +17,8 @@ Answers are recorded here and then copied into the relevant document.
 | Q-SEC-3 | Session timeout | UI auto-logout after 30 min inactivity; refresh token 7 days | 2026-10-31 |
 | Q-SEC-4 | Login identifier | Username or email | 2026-10-31 |
 | Q-ADM-2 | Financial year | July–June (editable in Settings) | 2026-10-31 |
+| Q-HR-1 | Employee code | Auto-generated `EMP000001` (EMPLOYEE_CODE sequence, format editable) — default used, not explicitly confirmed | 2026-10-31 |
+| Q-HR-2 | Employment types | Permanent, Contract, Visiting, Intern — default used, not explicitly confirmed | 2026-10-31 |
 | Q-HOSP-4 | Departments to seed | Standard list of 14 (editable); hospital can adjust in the app | 2026-10-31 |
 
 ## Hospital discovery (BRD §13) — affects module activation and phase order
@@ -69,3 +71,10 @@ Answers are recorded here and then copied into the relevant document.
 |---|---|---|
 | Q-UI-1 | Bangla UI translation: needed in which phase? | English first, i18n-ready; Bangla before UAT |
 | Q-UI-2 | Brand colours / logo for the theme | Neutral Material theme until provided |
+
+## HR
+
+| ID | Question | Current behaviour | Blocking for |
+|---|---|---|---|
+| Q-HR-3 | When an employee resigns or is terminated, should their linked login account be deactivated automatically? | Not automatic; an administrator deactivates the login separately. | No |
+| Q-HR-4 | Should a mobile number be unique among current employees? | Not enforced. | No |

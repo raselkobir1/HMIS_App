@@ -210,6 +210,7 @@ erDiagram
     }
 ```
 
+**As built:** adds `ExitDate` (required when the status is Resigned/Terminated, on or after joining). `EmployeeCode` is unique and generated from the `EMPLOYEE_CODE` sequence. Gender, EmploymentType and Status are stored as strings. Indexes: `(DepartmentId, Status)`, `DesignationId`, `MobileNumber`, `FullName`. `auth.Users.EmployeeId` has a unique filtered index (one login per employee).  
 Attendance, leave, payroll, documents and the doctor profile are added in later phases.
 
 ---

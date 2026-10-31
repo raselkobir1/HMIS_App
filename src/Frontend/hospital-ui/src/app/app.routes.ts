@@ -36,6 +36,7 @@ export const routes: Routes = [
           import('./features/auth/change-password/change-password.page').then((m) => m.ChangePasswordPage),
       },
       { path: 'administration', loadChildren: () => import('./features/administration/administration.routes') },
+      { path: 'hr', loadChildren: () => import('./features/hr/hr.routes') },
       { path: 'security', loadChildren: () => import('./features/security/security.routes') },
       {
         path: 'audit-log',

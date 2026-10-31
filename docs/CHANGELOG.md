@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-31 — HR module (basic employees)
+- `hr` schema: Employees with generated codes (`EMP000001`), employment type and status (with exit date).
+- Employees screen: search, filters, register/edit dialog with date pickers, status dialog.
+- Login accounts can be linked to a current employee from the user form (employee picker); one login per employee.
+- Administration blocks deactivating a department with current employees through the new `IDepartmentUsageGuard` extension point (no reverse module dependency).
+- Batch department/designation lookups for name resolution without cross-schema joins.
+- Fix: validation errors for unreadable request bodies no longer leak internal type names or JSON positions.
+- `scripts/migrate.ps1` builds once and then applies each module migration without rebuilding.
+
 ## 2026-10-31 — Administration module
 - `admin` schema: HospitalProfile (with logo), SystemSettings, Departments (two levels), Designations, NumberSequences.
 - Public branding endpoint; hospital name and logo shown on the login page and in the app shell.
