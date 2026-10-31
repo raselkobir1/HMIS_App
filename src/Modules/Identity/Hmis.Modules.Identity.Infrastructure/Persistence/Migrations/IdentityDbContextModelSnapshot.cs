@@ -291,7 +291,9 @@ namespace Hmis.Modules.Identity.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("EmployeeId");
+                    b.HasIndex("EmployeeId")
+                        .IsUnique()
+                        .HasFilter("\"EmployeeId\" IS NOT NULL");
 
                     b.HasIndex("NormalizedEmail")
                         .IsUnique()

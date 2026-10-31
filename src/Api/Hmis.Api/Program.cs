@@ -86,6 +86,8 @@ try
         {
             options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
             options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.Never;
+            // Never echo JSON parser exception text (type names, positions) back to clients.
+            options.AllowInputFormatterExceptionMessages = false;
         });
     foreach (var assembly in ModuleRegistration.PresentationAssemblies)
     {

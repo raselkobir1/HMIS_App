@@ -21,6 +21,8 @@ public interface IUserRepository : IRepository<User>, IConcurrencyRepository<Use
 
     Task<bool> EmailExistsAsync(string normalizedEmail, Guid? excludeUserId, CancellationToken cancellationToken);
 
+    Task<bool> EmployeeLinkedAsync(Guid employeeId, Guid? excludeUserId, CancellationToken cancellationToken);
+
     Task<PagedResponse<UserListItemDto>> SearchAsync(UserListQuery query, DateTime utcNow, CancellationToken cancellationToken);
 
     Task<UserDetailDto?> GetDetailAsync(Guid id, DateTime utcNow, CancellationToken cancellationToken);

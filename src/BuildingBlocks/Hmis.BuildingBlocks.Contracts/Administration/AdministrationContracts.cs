@@ -16,11 +16,25 @@ public sealed record HospitalSettingsSummary(
 public interface IDepartmentLookup
 {
     Task<DepartmentSummary?> GetAsync(Guid id, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<DepartmentSummary>> GetManyAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
 }
 
 public interface IDesignationLookup
 {
     Task<DesignationSummary?> GetAsync(Guid id, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<DesignationSummary>> GetManyAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
+}
+
+/// <summary>
+/// Extension point implemented by modules that reference departments (e.g. HR). Administration asks every guard
+/// before deactivating a department, without depending on those modules (keeps module dependencies one-way).
+/// </summary>
+public interface IDepartmentUsageGuard
+{
+    /// <summary>A user-facing reason the department cannot be deactivated, or null if it can.</summary>
+    Task<string?> GetDeactivationBlockerAsync(Guid departmentId, CancellationToken cancellationToken);
 }
 
 public interface IHospitalSettingsProvider

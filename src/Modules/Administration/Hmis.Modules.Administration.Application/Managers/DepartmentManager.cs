@@ -1,12 +1,16 @@
 using Hmis.BuildingBlocks.Application.Exceptions;
 using Hmis.BuildingBlocks.Application.Pagination;
+using Hmis.BuildingBlocks.Contracts.Administration;
 using Hmis.Modules.Administration.Application.DTOs;
 using Hmis.Modules.Administration.Application.Interfaces;
 using Hmis.Modules.Administration.Domain.Entities;
 
 namespace Hmis.Modules.Administration.Application.Managers;
 
-public sealed class DepartmentManager(IDepartmentRepository repository, IAdministrationUnitOfWork unitOfWork) : IDepartmentManager
+public sealed class DepartmentManager(
+    IDepartmentRepository repository,
+    IAdministrationUnitOfWork unitOfWork,
+    IEnumerable<IDepartmentUsageGuard> usageGuards) : IDepartmentManager
 {
     public Task<PagedResponse<DepartmentDto>> SearchAsync(DepartmentListQuery query, CancellationToken cancellationToken) =>
         repository.SearchAsync(query, cancellationToken);
@@ -70,7 +74,15 @@ public sealed class DepartmentManager(IDepartmentRepository repository, IAdminis
                     "Deactivate its active sub-departments first.");
             }
 
-            // When the HR module exists, this must also block departments with active employees (via IEmployeeLookup).
+            // Modules that reference departments (e.g. HR employees) can veto deactivation.
+            foreach (var guard in usageGuards)
+            {
+                if (await guard.GetDeactivationBlockerAsync(id, cancellationToken) is { } reason)
+                {
+                    throw new BusinessException(AdministrationErrorCodes.DepartmentInUse, reason);
+                }
+            }
+
             department.Deactivate();
         }
 

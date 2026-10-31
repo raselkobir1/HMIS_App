@@ -23,7 +23,8 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(x => x.PhoneNumber).HasMaxLength(20);
         builder.Property(x => x.PasswordHash).HasMaxLength(500).IsRequired();
         builder.Property(x => x.SecurityStamp).HasMaxLength(64).IsRequired();
-        builder.HasIndex(x => x.EmployeeId);
+        // One login account per employee (EmployeeId references hr.Employees by id only).
+        builder.HasIndex(x => x.EmployeeId).IsUnique().HasFilter("\"EmployeeId\" IS NOT NULL");
 
         builder.HasMany(x => x.Roles).WithOne().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
         builder.HasMany(x => x.Permissions).WithOne().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);

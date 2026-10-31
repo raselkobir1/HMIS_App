@@ -19,4 +19,6 @@ public static class IdentityErrorCodes
     public const string SuperAdministratorPermissionsRequired = "SUPER_ADMINISTRATOR_PERMISSIONS_REQUIRED";
     public const string SystemRoleDelete = "ROLE_SYSTEM_DELETE";
     public const string RoleInUse = "ROLE_IN_USE";
+    public const string EmployeeInvalid = "EMPLOYEE_INVALID";
+    public const string EmployeeAlreadyLinked = "EMPLOYEE_ALREADY_LINKED";
 }

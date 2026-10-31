@@ -28,6 +28,9 @@ public sealed class UserRepository(IdentityDbContext context)
     public Task<bool> EmailExistsAsync(string normalizedEmail, Guid? excludeUserId, CancellationToken cancellationToken) =>
         Set.AnyAsync(u => u.NormalizedEmail == normalizedEmail && u.Id != excludeUserId, cancellationToken);
 
+    public Task<bool> EmployeeLinkedAsync(Guid employeeId, Guid? excludeUserId, CancellationToken cancellationToken) =>
+        Set.AnyAsync(u => u.EmployeeId == employeeId && u.Id != excludeUserId, cancellationToken);
+
     public async Task<PagedResponse<UserListItemDto>> SearchAsync(UserListQuery query, DateTime utcNow, CancellationToken cancellationToken)
     {
         var users = Set.AsNoTracking();

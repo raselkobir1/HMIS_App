@@ -19,12 +19,20 @@ public sealed class FluentValidationFilter(IServiceProvider serviceProvider) : I
 
         if (!context.ModelState.IsValid)
         {
-            errors.AddRange(context.ModelState
-                .Where(entry => entry.Value is { Errors.Count: > 0 })
-                .SelectMany(entry => entry.Value!.Errors.Select(error => new ApiError(
-                    ErrorCodes.ValidationError,
-                    string.IsNullOrWhiteSpace(error.ErrorMessage) ? "The value is invalid." : error.ErrorMessage,
-                    ToCamelCase(entry.Key)))));
+            var entries = context.ModelState.Where(entry => entry.Value is { Errors.Count: > 0 }).ToList();
+
+            // A malformed body also yields a generic "<parameter> field is required" entry; drop it when a
+            // field-specific error explains the problem.
+            var parameterNames = context.ActionDescriptor.Parameters.Select(p => p.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            if (entries.Any(entry => !parameterNames.Contains(entry.Key)))
+            {
+                entries.RemoveAll(entry => parameterNames.Contains(entry.Key));
+            }
+
+            errors.AddRange(entries.SelectMany(entry => entry.Value!.Errors.Select(error => new ApiError(
+                ErrorCodes.ValidationError,
+                ToClientMessage(error.ErrorMessage),
+                ToCamelCase(entry.Key)))));
         }
         else
         {
@@ -63,6 +71,16 @@ public sealed class FluentValidationFilter(IServiceProvider serviceProvider) : I
 
         await next();
     }
+
+    /// <summary>
+    /// Model-binding messages can describe internals (CLR type names, JSON byte positions); clients get a neutral message.
+    /// Input-formatter exception text is already disabled in Program.cs; this also covers converter messages.
+    /// </summary>
+    private static string ToClientMessage(string? message) =>
+        string.IsNullOrWhiteSpace(message) || message.Contains("could not be converted", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("Path: $", StringComparison.Ordinal)
+            ? "The value is not valid."
+            : message;
 
     private static string? ToCamelCase(string? path)
     {

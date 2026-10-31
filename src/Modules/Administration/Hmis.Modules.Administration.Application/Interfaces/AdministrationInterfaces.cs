@@ -36,6 +36,8 @@ public interface IDepartmentRepository : IRepository<Department>, IConcurrencyRe
 
     Task<bool> HasActiveChildrenAsync(Guid id, CancellationToken cancellationToken);
 
+    Task<IReadOnlyList<Department>> GetByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
+
     Task<bool> HasChildrenAsync(Guid id, CancellationToken cancellationToken);
 
     Task<PagedResponse<DepartmentDto>> SearchAsync(DepartmentListQuery query, CancellationToken cancellationToken);
@@ -52,6 +54,8 @@ public interface IDesignationRepository : IRepository<Designation>, IConcurrency
     Task<bool> NameExistsAsync(string normalizedName, Guid? excludeId, CancellationToken cancellationToken);
 
     Task<PagedResponse<DesignationDto>> SearchAsync(DesignationListQuery query, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<Designation>> GetByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
 
     Task<IReadOnlyList<DesignationLookupItemDto>> GetActiveLookupAsync(CancellationToken cancellationToken);
 }

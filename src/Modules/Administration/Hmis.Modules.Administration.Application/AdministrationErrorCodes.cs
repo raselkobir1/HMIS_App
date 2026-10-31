@@ -12,5 +12,6 @@ public static class AdministrationErrorCodes
     public const string DepartmentHasChildren = "DEPARTMENT_HAS_SUB_DEPARTMENTS";
     public const string DepartmentHasActiveChildren = "DEPARTMENT_HAS_ACTIVE_SUB_DEPARTMENTS";
     public const string DepartmentParentInactive = "DEPARTMENT_PARENT_INACTIVE";
+    public const string DepartmentInUse = "DEPARTMENT_IN_USE";
     public const string DesignationNameTaken = "DESIGNATION_NAME_TAKEN";
 }

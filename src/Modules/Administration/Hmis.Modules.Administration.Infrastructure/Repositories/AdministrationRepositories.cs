@@ -41,6 +41,9 @@ public sealed class DepartmentRepository(AdministrationDbContext context)
     public Task<bool> HasChildrenAsync(Guid id, CancellationToken cancellationToken) =>
         Set.AnyAsync(d => d.ParentDepartmentId == id, cancellationToken);
 
+    public async Task<IReadOnlyList<Department>> GetByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken) =>
+        await Set.AsNoTracking().Where(d => ids.Contains(d.Id)).ToListAsync(cancellationToken);
+
     public async Task<PagedResponse<DepartmentDto>> SearchAsync(DepartmentListQuery query, CancellationToken cancellationToken)
     {
         var departments = Set.AsNoTracking();
@@ -110,6 +113,9 @@ public sealed class DesignationRepository(AdministrationDbContext context)
 
     public Task<bool> NameExistsAsync(string normalizedName, Guid? excludeId, CancellationToken cancellationToken) =>
         Set.AnyAsync(d => d.NormalizedName == normalizedName && d.Id != excludeId, cancellationToken);
+
+    public async Task<IReadOnlyList<Designation>> GetByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken) =>
+        await Set.AsNoTracking().Where(d => ids.Contains(d.Id)).ToListAsync(cancellationToken);
 
     public async Task<PagedResponse<DesignationDto>> SearchAsync(DesignationListQuery query, CancellationToken cancellationToken)
     {

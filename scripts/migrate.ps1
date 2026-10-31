@@ -14,12 +14,17 @@ $env:ASPNETCORE_ENVIRONMENT = if ($env:ASPNETCORE_ENVIRONMENT) { $env:ASPNETCORE
 $modules = @(
     @{ Project = 'src/Modules/Identity/Hmis.Modules.Identity.Infrastructure'; Context = 'IdentityDbContext' },
     @{ Project = 'src/Modules/Audit/Hmis.Modules.Audit.Infrastructure'; Context = 'AuditDbContext' },
-    @{ Project = 'src/Modules/Administration/Hmis.Modules.Administration.Infrastructure'; Context = 'AdministrationDbContext' }
+    @{ Project = 'src/Modules/Administration/Hmis.Modules.Administration.Infrastructure'; Context = 'AdministrationDbContext' },
+    @{ Project = 'src/Modules/HR/Hmis.Modules.HR.Infrastructure'; Context = 'HrDbContext' }
 )
+
+# Build once; each module migration then runs without rebuilding (avoids repeated, conflicting builds).
+dotnet build $startup -v q
+if ($LASTEXITCODE -ne 0) { throw 'Build failed' }
 
 foreach ($m in $modules) {
     Write-Host "Migrating $($m.Context)..." -ForegroundColor Cyan
-    dotnet ef database update --project (Join-Path $root $m.Project) --startup-project $startup --context $m.Context
+    dotnet ef database update --no-build --project (Join-Path $root $m.Project) --startup-project $startup --context $m.Context
     if ($LASTEXITCODE -ne 0) { throw "Migration failed for $($m.Context)" }
 }
 Write-Host 'All migrations applied.' -ForegroundColor Green

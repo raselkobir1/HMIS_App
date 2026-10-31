@@ -2,6 +2,7 @@ using Hmis.BuildingBlocks.Application.Abstractions;
 using Hmis.BuildingBlocks.Application.Auditing;
 using Hmis.BuildingBlocks.Application.Exceptions;
 using Hmis.BuildingBlocks.Application.Pagination;
+using Hmis.BuildingBlocks.Contracts.HR;
 using Hmis.Modules.Identity.Application.DTOs.Requests;
 using Hmis.Modules.Identity.Application.DTOs.Responses;
 using Hmis.Modules.Identity.Application.Interfaces.Managers;
@@ -22,7 +23,8 @@ public sealed class UserManager(
     SuperAdministratorGuard superAdminGuard,
     ICurrentUser currentUser,
     IDateTimeProvider dateTime,
-    IAuditService auditService) : IUserManager
+    IAuditService auditService,
+    IEmployeeLookup employeeLookup) : IUserManager
 {
     private const string Module = "Identity";
 
@@ -37,6 +39,7 @@ public sealed class UserManager(
     {
         await EnsureUserNameAvailableAsync(request.UserName, cancellationToken);
         await EnsureEmailAvailableAsync(request.Email, null, cancellationToken);
+        await EnsureEmployeeLinkableAsync(request.EmployeeId, null, cancellationToken);
         var roles = await ValidateRoleChangeAsync([], request.RoleIds, cancellationToken);
 
         var user = User.Create(request.UserName, request.FullName, request.Email, request.PhoneNumber, request.EmployeeId,
@@ -56,6 +59,10 @@ public sealed class UserManager(
         var user = await GetUserAsync(id, cancellationToken);
         userRepository.SetExpectedRowVersion(user, request.RowVersion);
         await EnsureEmailAvailableAsync(request.Email, id, cancellationToken);
+        if (request.EmployeeId != user.EmployeeId)
+        {
+            await EnsureEmployeeLinkableAsync(request.EmployeeId, id, cancellationToken);
+        }
 
         user.UpdateProfile(request.FullName, request.Email, request.PhoneNumber, request.EmployeeId);
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -206,6 +213,25 @@ public sealed class UserManager(
             await userRepository.EmailExistsAsync(User.Normalize(email), excludeUserId, cancellationToken))
         {
             throw new ConflictException($"Email '{email}' is already in use.", IdentityErrorCodes.EmailTaken);
+        }
+    }
+
+    /// <summary>A login can be linked only to a current employee who has no other login account.</summary>
+    private async Task EnsureEmployeeLinkableAsync(Guid? employeeId, Guid? excludeUserId, CancellationToken cancellationToken)
+    {
+        if (employeeId is null)
+        {
+            return;
+        }
+
+        if (await employeeLookup.GetAsync(employeeId.Value, cancellationToken) is not { IsCurrent: true })
+        {
+            throw new BusinessException(IdentityErrorCodes.EmployeeInvalid, "Select a current employee.", "employeeId");
+        }
+
+        if (await userRepository.EmployeeLinkedAsync(employeeId.Value, excludeUserId, cancellationToken))
+        {
+            throw new ConflictException("This employee is already linked to another login account.", IdentityErrorCodes.EmployeeAlreadyLinked);
         }
     }
 
