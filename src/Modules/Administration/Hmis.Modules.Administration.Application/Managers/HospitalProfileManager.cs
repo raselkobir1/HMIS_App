@@ -41,7 +41,7 @@ public sealed class HospitalProfileManager(
         await content.CopyToAsync(buffer, cancellationToken);
 
         // Decide the type from the file's own bytes, never from its name or the client's Content-Type.
-        var (contentType, extension) = DetectImageType(buffer.GetBuffer().AsSpan(0, (int)buffer.Length))
+        var (contentType, extension) = FileSignatures.DetectImage(buffer.GetBuffer().AsSpan(0, (int)buffer.Length))
             ?? throw new BusinessException(AdministrationErrorCodes.LogoInvalid, "The logo must be a PNG, JPEG or WebP image.", "file");
 
         var profile = await GetProfileAsync(cancellationToken);
@@ -111,25 +111,6 @@ public sealed class HospitalProfileManager(
         new(p.Name, p.NameBangla, p.ShortName, p.Address, p.Phone, p.Email, p.Website, p.RegistrationNumber,
             p.LicenseNumber, p.TaxId, p.OpeningHours, p.LogoPath is not null, p.RowVersion);
 
-    private static (string ContentType, string Extension)? DetectImageType(ReadOnlySpan<byte> bytes)
-    {
-        if (bytes.Length >= 8 && bytes[..8].SequenceEqual(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A }))
-        {
-            return ("image/png", "png");
-        }
-
-        if (bytes.Length >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF)
-        {
-            return ("image/jpeg", "jpg");
-        }
-
-        if (bytes.Length >= 12 && bytes[..4].SequenceEqual("RIFF"u8) && bytes[8..12].SequenceEqual("WEBP"u8))
-        {
-            return ("image/webp", "webp");
-        }
-
-        return null;
-    }
 }
 
 public sealed class SystemSettingsManager(ISystemSettingsRepository repository, IAdministrationUnitOfWork unitOfWork)
