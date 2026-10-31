@@ -38,7 +38,7 @@ try
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
     builder.Services.AddScoped<IRequestContext, HttpRequestContext>();
-    builder.Services.AddBuildingBlocksInfrastructure();
+    builder.Services.AddBuildingBlocksInfrastructure(builder.Configuration);
 
     builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
     builder.Services.AddProblemDetails();

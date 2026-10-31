@@ -13,7 +13,8 @@ $env:ASPNETCORE_ENVIRONMENT = if ($env:ASPNETCORE_ENVIRONMENT) { $env:ASPNETCORE
 # Order matters: add new modules here as they are built.
 $modules = @(
     @{ Project = 'src/Modules/Identity/Hmis.Modules.Identity.Infrastructure'; Context = 'IdentityDbContext' },
-    @{ Project = 'src/Modules/Audit/Hmis.Modules.Audit.Infrastructure'; Context = 'AuditDbContext' }
+    @{ Project = 'src/Modules/Audit/Hmis.Modules.Audit.Infrastructure'; Context = 'AuditDbContext' },
+    @{ Project = 'src/Modules/Administration/Hmis.Modules.Administration.Infrastructure'; Context = 'AdministrationDbContext' }
 )
 
 foreach ($m in $modules) {

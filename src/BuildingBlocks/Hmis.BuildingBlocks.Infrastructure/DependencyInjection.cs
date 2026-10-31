@@ -1,4 +1,6 @@
 using Hmis.BuildingBlocks.Application.Abstractions;
+using Hmis.BuildingBlocks.Application.Files;
+using Hmis.BuildingBlocks.Infrastructure.Files;
 using Hmis.BuildingBlocks.Infrastructure.Auditing;
 using Hmis.BuildingBlocks.Infrastructure.Persistence;
 using Hmis.BuildingBlocks.Infrastructure.Persistence.Interceptors;
@@ -13,9 +15,11 @@ public static class DependencyInjection
 {
     public const string ConnectionStringName = "HmisDatabase";
 
-    public static IServiceCollection AddBuildingBlocksInfrastructure(this IServiceCollection services)
+    public static IServiceCollection AddBuildingBlocksInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
+        services.Configure<FileStorageOptions>(configuration.GetSection(FileStorageOptions.SectionName));
+        services.AddSingleton<IFileStorageService, LocalFileStorageService>();
         services.AddScoped<AuditableEntityInterceptor>();
         services.AddScoped<PendingAuditEvents>();
         services.AddScoped<AuditRecordFactory>();

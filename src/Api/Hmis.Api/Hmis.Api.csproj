@@ -23,6 +23,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\BuildingBlocks\Hmis.BuildingBlocks.Infrastructure\Hmis.BuildingBlocks.Infrastructure.csproj" />
     <ProjectReference Include="..\..\BuildingBlocks\Hmis.BuildingBlocks.Presentation\Hmis.BuildingBlocks.Presentation.csproj" />
+    <ProjectReference Include="..\..\Modules\Administration\Hmis.Modules.Administration.Infrastructure\Hmis.Modules.Administration.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Administration\Hmis.Modules.Administration.Presentation\Hmis.Modules.Administration.Presentation.csproj" />
     <ProjectReference Include="..\..\Modules\Audit\Hmis.Modules.Audit.Infrastructure\Hmis.Modules.Audit.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\Audit\Hmis.Modules.Audit.Presentation\Hmis.Modules.Audit.Presentation.csproj" />
     <ProjectReference Include="..\..\Modules\Identity\Hmis.Modules.Identity.Infrastructure\Hmis.Modules.Identity.Infrastructure.csproj" />
