@@ -202,3 +202,25 @@ All under `/api/v1/billing`. Money is `numeric(18,2)`; amounts accept at most tw
 Error codes (422 unless noted): `INVOICE_FINALIZED`, `INVOICE_NOT_FINALIZED`, `INVOICE_CANCELLED`, `INVOICE_EMPTY`, `INVOICE_LINE_UNKNOWN`, `INVOICE_LINE_INVALID`, `INVOICE_HAS_PAYMENTS`, `INVOICE_REFUND_PENDING`, `INVOICE_NOTHING_TO_REFUND`, `INVOICE_PATIENT_MISMATCH`, `PAYMENT_EXCEEDS_DUE`, `PAYMENT_AMOUNT_INVALID`, `PAYMENT_METHOD_INVALID`, `PAYMENT_REFERENCE_REQUIRED`, `PAYMENT_ADVANCE_INSUFFICIENT`, `DISCOUNT_INVALID`, `DISCOUNT_PENDING`, `DISCOUNT_EXCEEDS_DUE`, `DISCOUNT_DECIDED`, `REFUND_EXCEEDS_ADVANCE`, `REFUND_NOT_APPROVED`, `REFUND_DECIDED`, `BILLING_PATIENT_UNAVAILABLE`, `BILLING_SERVICE_UNAVAILABLE`; `SERVICE_CODE_EXISTS`, `PAYMENT_DUPLICATE_REQUEST`, `CONCURRENCY_CONFLICT` (409).
 
 Appointment check-in (and walk-in booking) now posts the consultation fee to Billing; cancelling a checked-in appointment cancels its unpaid bill.
+
+### IPD (implemented, Phase 4 step 1)
+All under `/api/v1/ipd`.
+
+| Method | Route | Permission |
+|---|---|---|
+| GET / POST / PUT / PATCH | `/bed-categories`, `/bed-categories/{id}`, `/bed-categories/{id}/active` | View / Setup.Manage |
+| GET / POST / PUT / PATCH | `/wards`, `/wards/{id}`, `/wards/{id}/active` | View / Setup.Manage |
+| GET / POST / PUT / PATCH | `/beds?wardId&assignableOnly`, `/beds/{id}`, `/beds/{id}/active` | View / Setup.Manage |
+| PATCH | `/beds/{id}/status` (`Available`, `CleaningRequired`, `UnderMaintenance`, `Reserved`; note) | Beds.Housekeeping |
+| GET | `/bed-board` | View |
+| GET | `/admissions` (paged; current by default, `status`, `wardId`, `doctorId`, `patientId`, `search`), `/admissions/{id}` | View |
+| POST | `/admissions` (patient, attending doctor, bed, source, reason, emergency contact) | Admit |
+| POST | `/admissions/{id}/transfer`, `/admissions/{id}/doctor` (`rowVersion`) | Admit |
+| POST | `/admissions/{id}/charges/sync` | View |
+| PUT / POST | `/admissions/{id}/discharge-order`, `/admissions/{id}/discharge-order/cancel` | Discharge.Order |
+| POST | `/admissions/{id}/final-bill`, `/admissions/{id}/release` (`overrideReason` needs Discharge.Override) | Discharge.Complete |
+| GET | `/admissions/{id}/discharge-summary` (clinical access; audited) | View + clinical |
+
+Error codes: `IPD_ALREADY_ADMITTED`, `WARD_CODE_EXISTS`, `BED_NUMBER_EXISTS` (409); `IPD_PATIENT_UNAVAILABLE`, `IPD_DOCTOR_UNAVAILABLE`, `IPD_NOT_A_DOCTOR`, `IPD_BED_INVALID`, `IPD_CATEGORY_INVALID`, `IPD_WARD_INVALID`, `BED_UNAVAILABLE`, `BED_OCCUPIED`, `WARD_OCCUPIED`, `ADMISSION_INVALID_STATUS`, `ADMISSION_TRANSFER_INVALID`, `DISCHARGE_NOT_ORDERED`, `DISCHARGE_FOLLOW_UP_DATE`, `IPD_BILL_NOT_SETTLED` (422).
+
+Billing additions: `IChargeService.AddToRunningBillAsync / FinalizeRunningBillAsync / GetBillAsync`, `IPatientBalanceLookup`; invoice DTO `isRunningBill`, line `isPosted`; `INVOICE_RUNNING_BILL`, `INVOICE_LINE_LOCKED`, `INVOICE_NO_RUNNING_BILL`.

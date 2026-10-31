@@ -125,3 +125,17 @@ Detailed permission codes for each later module will be added here when that mod
 | `Billing.Reports.View` | Accountant / Cashier, Hospital Administrator, Hospital Owner | Collection report for all cashiers; without it a user sees only their own collection |
 
 `Patient.View` now also defaults to Accountant / Cashier (the cash counter must find patients). Defaults apply when a permission is first created; existing databases grant it on the Roles screen.
+
+## IPD permissions (implemented, Phase 4 step 1)
+
+| Permission | Default roles | Notes |
+|---|---|---|
+| `Ipd.View` | Hospital Administrator, Receptionist, Doctor, Nurse, Accountant / Cashier | Bed board, admissions, bill status |
+| `Ipd.Setup.Manage` | Hospital Administrator | Bed categories (rates, deposits), wards, beds |
+| `Ipd.Beds.Housekeeping` | Hospital Administrator, Nurse | Cleaned, under maintenance, reserved |
+| `Ipd.Admit` | Receptionist | Admit, transfer bed, change attending doctor |
+| `Ipd.Discharge.Order` | Doctor | **Explicit grant.** Login must be linked to a doctor profile. Writes the discharge summary |
+| `Ipd.Discharge.Complete` | Receptionist, Accountant / Cashier, Hospital Administrator | Prepare the final bill, release a settled patient |
+| `Ipd.Discharge.Override` | Hospital Administrator | Release with amount due (reason required) |
+
+Diagnoses and the discharge summary are shown only to users with `Clinical.View` or `Ipd.Discharge.Order`; opening the printable summary is audited.

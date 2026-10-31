@@ -43,6 +43,17 @@ export const NAVIGATION: NavItem[] = [
     children: [{ label: 'OPD Vitals', icon: 'monitor_heart', route: '/opd/vitals', permissions: ['Clinical.Vitals.Record'] }],
   },
   {
+    label: 'IPD',
+    icon: 'hotel',
+    permissions: [],
+    children: [
+      { label: 'Bed Board', icon: 'bed', route: '/ipd/beds', permissions: ['Ipd.View'] },
+      { label: 'Admissions', icon: 'assignment_ind', route: '/ipd/admissions', permissions: ['Ipd.View'] },
+      { label: 'Admit Patient', icon: 'add_box', route: '/ipd/admit', permissions: ['Ipd.Admit'] },
+      { label: 'Ward & Bed Setup', icon: 'domain', route: '/ipd/setup', permissions: ['Ipd.Setup.Manage'] },
+    ],
+  },
+  {
     label: 'Billing',
     icon: 'receipt_long',
     permissions: [],

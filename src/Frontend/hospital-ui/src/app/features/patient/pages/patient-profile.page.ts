@@ -21,6 +21,7 @@ import { apiErrorMessage } from '../../../shared/utilities/server-errors';
 import { PatientAppointmentsPanel } from '../../appointment/components/patient-appointments-panel';
 import { AppointmentPermissions } from '../../appointment/appointment.models';
 import { BillingPermissions } from '../../billing/billing.models';
+import { IpdPermissions } from '../../ipd/ipd.models';
 import { ClinicalPermissions } from '../../clinical/clinical.models';
 import { PatientVisitsPanel } from '../../clinical/components/patient-visits-panel';
 import { DocumentsPanel } from '../components/documents-panel';
@@ -69,6 +70,7 @@ export class PatientProfilePage implements OnInit {
     book: this.auth.hasPermission(AppointmentPermissions.book),
     visitsView: this.auth.hasPermission(ClinicalPermissions.view),
     billingView: this.auth.hasPermission(BillingPermissions.view),
+    admit: this.auth.hasPermission(IpdPermissions.admit),
   };
 
   protected readonly patient = signal<Patient | null>(null);

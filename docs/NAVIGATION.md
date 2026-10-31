@@ -90,3 +90,8 @@ User menu: My Profile · Change Password · Logout
 - Billing: Invoices (Billing.View) · New Invoice (Billing.Invoice.Manage) · Approvals (Discount.Approve, Refund.Approve or Refund.Request) · Collections (Billing.View) · Price List (Billing.View; editing needs Services.Manage).
 - Screens: `/billing/invoices/{id}` (actions by status and permission), `/billing/invoices/{id}/edit` (drafts), `/billing/patients/{patientId}` (account), `/billing/invoices/{id}/print` and `/billing/receipts/{paymentId}/print` (A5).
 - Patient profile: "Billing" button (Billing.View) opens the patient's account. Not yet done: cashier closing (planned with Finance).
+
+## Implemented menu (Phase 4 step 1)
+- IPD: Bed Board (Ipd.View) · Admissions (Ipd.View) · Admit Patient (Ipd.Admit) · Ward & Bed Setup (Ipd.Setup.Manage).
+- Screens: `/ipd/admissions/{id}` (stay, bill and deposit, discharge summary, actions by status), `/ipd/admissions/{id}/summary` (A4 print).
+- Patient profile: "Admit" button (Ipd.Admit). Billing invoice page marks IPD running bills; their bed lines are read-only.

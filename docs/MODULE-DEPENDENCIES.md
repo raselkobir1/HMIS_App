@@ -134,3 +134,6 @@ As described in BRD Phase 0 and Phase 1, and the TAD's Stage 1 and Stage 2. **Ea
 ## Implemented (Phase 3)
 - Billing → Patient (`IPatientLookup`), Identity (`IUserEmployeeLookup` names, `IPermissionChecker`), Administration (`INumberSequenceService`: INVOICE, RECEIPT, REFUND), Audit.
 - Appointment → Billing (`IChargeService`: post the OPD fee at check-in, cancel the unpaid bill when a checked-in appointment is cancelled). Billing does not depend on Appointment.
+
+## Implemented (Phase 4 step 1)
+- IPD → Patient (`IPatientLookup`), HR (`IDoctorLookup`), Administration (`IDepartmentLookup`, `INumberSequenceService`: ADMISSION), Identity (`IUserEmployeeLookup`, `IPermissionChecker`), Billing (`IChargeService` running bills, `IPatientBalanceLookup`), Audit. Billing does not depend on IPD.

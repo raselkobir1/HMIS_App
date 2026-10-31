@@ -21,6 +21,8 @@ import { TakaPipe } from '../components/taka.pipe';
 
 interface EditLine {
   key: string;
+  /** Posted by the ward (e.g. bed rent): shown, never edited or sent back. */
+  locked: boolean;
   id: string | null;
   serviceId: string;
   code: string;
@@ -100,14 +102,18 @@ interface EditLine {
               <div class="line" role="row">
                 <span role="cell">
                   {{ l.name }}
-                  <span class="secondary">{{ l.code }} · {{ l.category }}</span>
+                  <span class="secondary">{{ l.locked ? 'Posted by the ward' : l.code + ' · ' + l.category }}</span>
                 </span>
                 <span role="cell" class="num">
-                  <input class="cell-input" type="number" min="1" max="1000" [ngModel]="l.quantity"
-                         (ngModelChange)="setQuantity(i, $event)" [attr.aria-label]="'Quantity of ' + l.name" />
+                  @if (l.locked) {
+                    {{ l.quantity }}
+                  } @else {
+                    <input class="cell-input" type="number" min="1" max="1000" [ngModel]="l.quantity"
+                           (ngModelChange)="setQuantity(i, $event)" [attr.aria-label]="'Quantity of ' + l.name" />
+                  }
                 </span>
                 <span role="cell" class="num">
-                  @if (l.isPriceEditable) {
+                  @if (l.isPriceEditable && !l.locked) {
                     <input class="cell-input price" type="number" min="0" step="0.01" [ngModel]="l.unitPrice"
                            (ngModelChange)="setPrice(i, $event)" [attr.aria-label]="'Price of ' + l.name" />
                   } @else {
@@ -116,7 +122,9 @@ interface EditLine {
                 </span>
                 <span role="cell" class="num">{{ l.quantity * l.unitPrice | taka }}</span>
                 <span role="cell">
-                  <button mat-icon-button type="button" (click)="remove(i)" [attr.aria-label]="'Remove ' + l.name"><mat-icon>delete</mat-icon></button>
+                  @if (!l.locked) {
+                    <button mat-icon-button type="button" (click)="remove(i)" [attr.aria-label]="'Remove ' + l.name"><mat-icon>delete</mat-icon></button>
+                  }
                 </span>
               </div>
             } @empty {
@@ -138,9 +146,11 @@ interface EditLine {
         </mat-card-content>
         <mat-card-actions align="end">
           <button mat-stroked-button type="button" [disabled]="!canSave()" (click)="save(false)">Save draft</button>
-          <button mat-flat-button type="button" [disabled]="!canSave() || subtotal() <= 0" (click)="save(true)">
-            <mat-icon>lock</mat-icon> Save & finalize
-          </button>
+          @if (!draft()?.isRunningBill) {
+            <button mat-flat-button type="button" [disabled]="!canSave() || subtotal() <= 0" (click)="save(true)">
+              <mat-icon>lock</mat-icon> Save & finalize
+            </button>
+          }
         </mat-card-actions>
       </mat-card>
     }
@@ -252,6 +262,7 @@ export class InvoiceEditorPage implements OnInit {
       ...lines,
       {
         key: crypto.randomUUID(),
+        locked: false,
         id: null,
         serviceId: s.id,
         code: s.code,
@@ -278,7 +289,7 @@ export class InvoiceEditorPage implements OnInit {
   }
 
   protected save(finalize: boolean): void {
-    const lines: InvoiceLineInput[] = this.lines().map((l) => ({
+    const lines: InvoiceLineInput[] = this.lines().filter((l) => !l.locked).map((l) => ({
       id: l.id,
       serviceId: l.serviceId,
       quantity: l.quantity,
@@ -330,12 +341,13 @@ export class InvoiceEditorPage implements OnInit {
       this.lines.set(
         invoice.lines.map((l) => ({
           key: l.id,
+          locked: l.isPosted,
           id: l.id,
-          serviceId: l.serviceId!,
+          serviceId: l.serviceId ?? '',
           code: l.serviceCode ?? '',
           name: l.description,
           category: l.category,
-          isPriceEditable: editable.has(l.serviceId!),
+          isPriceEditable: !!l.serviceId && editable.has(l.serviceId),
           quantity: l.quantity,
           unitPrice: l.unitPrice,
         })),

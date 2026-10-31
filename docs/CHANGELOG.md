@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-31 — IPD step 1: beds, admission, discharge (Phase 4)
+- New IPD module (`ipd` schema): bed categories with daily rent and suggested deposit, wards, beds, bed board with housekeeping statuses.
+- Admission with bed allocation (no double booking), bed transfer with history, attending doctor change.
+- Bed rent by the noon rule posted daily to a running IPD bill; deposits are taken as advance.
+- Doctor's discharge order with discharge summary (A4 print, Bangla advice); final bill fixes the discharge time.
+- Release requires a settled bill, or an administrator's "discharge with due" with a reason.
+- Billing: running bills with read-only posted charges; the cashier can add services to them.
+
 ## 2026-10-31 — Billing & Payments (Phase 3)
 - New Billing module (`billing` schema): price list, invoices, discounts, payments, advance deposits and refunds.
 - OPD consultation fee billed automatically at check-in; cancelling a checked-in appointment cancels its unpaid bill.

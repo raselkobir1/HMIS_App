@@ -74,15 +74,20 @@ export const REFUND_STATUS_LABELS: Record<RefundStatus, string> = {
   Paid: 'Paid out',
 };
 export const REFUND_TYPE_LABELS: Record<RefundType, string> = { AdvanceReturn: 'Advance return', InvoiceCancellation: 'Cancel & refund' };
-export const SOURCE_LABELS: Record<string, string> = { OpdAppointment: 'OPD consultation' };
+export const SOURCE_LABELS: Record<string, string> = { OpdAppointment: 'OPD consultation', IpdAdmission: 'IPD stay' };
 
 /** Badge class and label for an invoice in lists. */
-export function invoiceBadge(i: { status: InvoiceStatus; paymentStatus: PaymentStatus; cancellationRequested: boolean }): {
+export function invoiceBadge(i: {
+  status: InvoiceStatus;
+  paymentStatus: PaymentStatus;
+  cancellationRequested: boolean;
+  sourceType: string | null;
+}): {
   label: string;
   css: string;
 } {
   if (i.status === 'Cancelled') return { label: 'Cancelled', css: 'badge muted' };
-  if (i.status === 'Draft') return { label: 'Draft', css: 'badge info' };
+  if (i.status === 'Draft') return i.sourceType ? { label: 'Running', css: 'badge info' } : { label: 'Draft', css: 'badge info' };
   if (i.cancellationRequested) return { label: 'Refund pending', css: 'badge warn' };
   return i.paymentStatus === 'Paid'
     ? { label: 'Paid', css: 'badge ok' }
@@ -133,6 +138,8 @@ export interface InvoiceLine {
   quantity: number;
   unitPrice: number;
   lineTotal: number;
+  /** Posted by another module (e.g. daily bed rent); never edited at the cash counter. */
+  isPosted: boolean;
 }
 
 export interface InvoiceLineInput {
@@ -230,6 +237,8 @@ export interface Invoice {
   refundedAmount: number;
   dueAmount: number;
   cancellationRequested: boolean;
+  /** A draft still collecting charges for an IPD stay; it is finalized from the ward at discharge. */
+  isRunningBill: boolean;
   finalizedAt: string | null;
   cancelledAt: string | null;
   cancellationReason: string | null;

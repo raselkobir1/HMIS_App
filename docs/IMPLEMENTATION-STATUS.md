@@ -14,7 +14,8 @@ Statuses: Not Started · Analysis Completed · Design Completed · Backend Compl
 | Doctor profiles + Appointment & Queue (Phase 2, step 1) | Approved | |
 | Clinical + OPD consultation (Phase 2, step 2) | Approved | |
 | Billing & Payments (Phase 3) | Approved | |
-| IPD, Bed, Nursing | Not Started | |
+| IPD step 1: beds, admission, transfer, bed charges, discharge (Phase 4) | Testing Completed | Backend + frontend; 55 API + 23 browser checks; Billing 85/85 regression; awaiting approval |
+| IPD step 2: nursing and progress notes (Phase 4) | Not Started | After step 1 approval |
 | Laboratory, Radiology | Not Started | |
 | Pharmacy, Inventory, Procurement | Not Started | |
 | HR (full), Asset | Not Started | |
@@ -127,3 +128,14 @@ Isolated environment (database `hmis_test`, API 7101, UI 4301); the developer's 
 | Regression on fresh databases: Appointment / Clinical API scripts | 44/44, 45/45 |
 | Browser: cashier menu, new invoice (patient picker, services, quantity, editable price, save & finalize), advance and bKash payments, receipt print, discount needing approval, patient account, collections; administrator approves discount and refund, adds a service; cancel & refund, payout, invoice cancelled and advance released, invoice print; phone width; receptionist has no billing access | 26/26 |
 | Fixes found during testing | Cashier role could not search patients (Patient.View added to its defaults); reason/note dialog did a native form submit that reloaded the page (approvals did nothing); cancelling an already-cancelled invoice reported a permission error instead of "already cancelled"; receipt wording for payments from advance; appointment list offered a page size above the API maximum |
+
+### IPD step 1 — 2026-10-31
+Isolated environment (database `hmis_test`, API 7101, UI 4301); the developer's `hmis` database was only migrated.
+
+| Check | Result |
+|---|---|
+| `dotnet build` / `ng build` | Pass, 0 warnings |
+| API script: setup permissions and validation (categories, wards, beds, duplicates, inactive category); bed board counts; admission (number, bed occupied, admission day on a running bill, suggested deposit); already admitted; occupied/maintenance bed refused; two admissions into one bed at once (one wins); housekeeping rules (occupied bed not changeable, not deactivatable, ward with patients not closable); transfer (stale row version, history, old bed needs cleaning); doctor change; noon-rule bed days over 3+ days and re-posting adds nothing; running bill (cashier cannot finalize, posted lines locked, services can be added, not counted as outstanding); deposit shown as advance; discharge order rights (receptionist, super admin, doctor), follow-up date, clinical summary hidden from non-clinical users, printable summary for doctors, cancel order; final bill (finalized, discharge time fixed, not twice); release blocked with due, cashier cannot override, settled release frees the bed; administrator discharge with due keeps the due on the account; lists; audit | 55/55 |
+| Regression: Billing API script on a fresh database | 85/85 |
+| Browser: administrator adds a bed; bed board (rates, occupant); admit from the board (bed preselected, deposit, phone validation); transfer; doctor orders discharge and prints the summary (Bangla, BMDC); receptionist cannot see the summary, prepares the final bill, cannot discharge with due; cashier settles; receptionist discharges; nurse marks the cabin cleaned; running bill read-only lines at the cash counter; Admit on the patient profile; phone width | 23/23 |
+| Fixes found during testing | Bed-charge job disposed its service scope synchronously (error after every run; now async); discharge summary showed the order time as the discharge time before the final bill |

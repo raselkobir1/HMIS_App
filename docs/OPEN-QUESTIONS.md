@@ -45,6 +45,12 @@ Answers are recorded here and then copied into the relevant document.
 | Q-BILL-6 | VAT | None on medical services — default used | 2026-10-31 |
 | Q-BILL-7 | Receipt | Printable A5 money receipt and A5 invoice — default used | 2026-10-31 |
 | Q-BILL-8 | Who collects at reception | Billing permissions go to Accountant / Cashier by default; a hospital where reception collects grants Billing.View + Billing.Payment.Collect to the Receptionist role — default used | 2026-10-31 |
+| Q-IPD-1 | Bed rent | Per calendar day, noon rule: admission day always counts; a later day counts once 12:00 noon passes in hospital; the discharge day is free if the patient leaves before noon. Admission day priced at the first bed, later days at the bed held at noon — confirmed | 2026-10-31 |
+| Q-IPD-2 | Admission deposit | Suggested per bed category, shown as a warning, never blocks admission; taken as an advance deposit and applied at settlement — confirmed | 2026-10-31 |
+| Q-IPD-3 | Discharge with an unpaid bill | Doctor's discharge order never blocked; release needs a settled bill or a Hospital Administrator's "discharge with due" with a reason; the due stays on the account — confirmed | 2026-10-31 |
+| Q-IPD-4 | Phase 4 split | Step 1: beds, admission, transfer, bed charges, deposit, discharge; Step 2: nursing (medication orders, MAR, vitals, intake/output, notes, handover) and doctor progress notes — confirmed | 2026-10-31 |
+| Q-IPD-5 | Building/floor register | Free text on the ward until a building register is needed — default used | 2026-10-31 |
+| Q-IPD-6 | Changing a bed's rate | Applies to bed days not yet posted; days already on the bill keep their price — default used | 2026-10-31 |
 | Q-HOSP-4 | Departments to seed | Standard list of 14 (editable); hospital can adjust in the app | 2026-10-31 |
 
 ## Hospital discovery (BRD §13) — affects module activation and phase order

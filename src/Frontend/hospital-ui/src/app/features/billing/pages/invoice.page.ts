@@ -52,9 +52,13 @@ import { TakaPipe } from '../components/taka.pipe';
         <div class="actions">
           @if (inv.status === 'Draft') {
             @if (can.manage) {
-              <a mat-stroked-button [routerLink]="['/billing/invoices', inv.id, 'edit']"><mat-icon>edit</mat-icon> Edit</a>
-              <button mat-flat-button type="button" [disabled]="busy()" (click)="finalize(inv)"><mat-icon>lock</mat-icon> Finalize</button>
-              <button mat-button type="button" (click)="cancel(inv)">Discard</button>
+              <a mat-stroked-button [routerLink]="['/billing/invoices', inv.id, 'edit']">
+                <mat-icon>{{ inv.isRunningBill ? 'add' : 'edit' }}</mat-icon> {{ inv.isRunningBill ? 'Add services' : 'Edit' }}
+              </a>
+              @if (!inv.isRunningBill) {
+                <button mat-flat-button type="button" [disabled]="busy()" (click)="finalize(inv)"><mat-icon>lock</mat-icon> Finalize</button>
+                <button mat-button type="button" (click)="cancel(inv)">Discard</button>
+              }
             }
           } @else {
             @if (payable()) {
@@ -82,6 +86,12 @@ import { TakaPipe } from '../components/taka.pipe';
           <mat-icon>check_circle</mat-icon>
           Received {{ r.payment.amount | taka }} — receipt {{ r.payment.receiptNumber }}
           <a mat-button [routerLink]="['/billing/receipts', r.payment.id, 'print']"><mat-icon>print</mat-icon> Print receipt</a>
+        </div>
+      }
+      @if (inv.isRunningBill) {
+        <div class="banner info" role="status">
+          <mat-icon>hotel</mat-icon>
+          Running bill for an IPD stay. Bed rent is added daily; the bill is finalized from the ward at discharge. Deposits are taken as advance.
         </div>
       }
       @if (inv.cancellationRequested) {
@@ -242,6 +252,7 @@ import { TakaPipe } from '../components/taka.pipe';
     .banner { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 8px; }
     .banner.error, .banner.warn { background: var(--mat-sys-error-container); color: var(--mat-sys-on-error-container); }
     .banner.ok { background: var(--mat-sys-primary-container); color: var(--mat-sys-on-primary-container); }
+    .banner.info { background: var(--mat-sys-tertiary-container); color: var(--mat-sys-on-tertiary-container); }
     .banner.muted-banner { background: var(--mat-sys-surface-container); color: var(--mat-sys-on-surface-variant); }
     .layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 12px; align-items: start; }
     mat-card-content { padding-top: 8px; }

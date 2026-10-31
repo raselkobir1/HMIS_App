@@ -54,6 +54,9 @@
       @if (can.book && p.status === 'Active') {
         <a mat-stroked-button routerLink="/appointments/book" [queryParams]="{ patientId: p.id }"><mat-icon>event</mat-icon> Book appointment</a>
       }
+      @if (can.admit && p.status === 'Active') {
+        <a mat-stroked-button routerLink="/ipd/admit" [queryParams]="{ patientId: p.id }"><mat-icon>hotel</mat-icon> Admit</a>
+      }
       @if (can.billingView) {
         <a mat-stroked-button [routerLink]="['/billing/patients', p.id]"><mat-icon>receipt_long</mat-icon> Billing</a>
       }

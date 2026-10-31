@@ -323,3 +323,9 @@ Patient visits, admission history, billing and lab history are **not** stored in
 - `Refunds`: unique `RefundNumber` (REFUND sequence, RFD), `Type` (AdvanceReturn/InvoiceCancellation), `Amount`, `Reason`, `Status` (Requested/Approved/Rejected/Paid), decision and payout details.
 - Advance balance = deposits − advance applied to invoices that are not cancelled − advance returns not rejected (computed, not stored).
 - Triggers: DELETE/TRUNCATE refused on Invoices, InvoiceDiscounts, Payments, Refunds; UPDATE also refused on Payments. All tables `[Audited]`; no cross-schema foreign keys.
+
+## `ipd` schema (Phase 4 step 1)
+- `BedCategories` (name, `DailyRate`, `SuggestedDeposit`), `Wards` (unique `Code`, type, optional department, building, floor), `Beds` (unique `WardId`+`BedNumber`, room, category, `Status`, note).
+- `Admissions`: unique `AdmissionNumber` (ADMISSION sequence, ADM), patient, attending doctor, department, source, reason, emergency contact, `AdmittedAt`, `Status` (Admitted/DischargeOrdered/FinalBilled/Discharged), discharge order and summary fields, `DischargedAt` (bill cut-off), `ReleasedAt`, release override (due, reason, by), `Revision`. Unique filtered index: one non-discharged admission per patient.
+- `BedAssignments`: admission, bed, `StartedAt`, `EndedAt`, reason; unique filtered index on `BedId` where `EndedAt IS NULL` (no double booking).
+- `billing.InvoiceLines.ChargeKey` (unique per invoice when set) for posted charges such as `BED:2026-10-31`.
