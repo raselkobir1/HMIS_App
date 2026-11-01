@@ -10,12 +10,12 @@ Statuses: Not Started · Analysis Completed · Design Completed · Backend Compl
 | Audit | Approved | |
 | Administration | Approved | |
 | HR (basic) | Approved | |
-| Patient | Testing Completed | Backend + frontend; 56 API + 18 browser checks; awaiting approval |
+| Patient | Approved | Backend + frontend; 56 API + 18 browser checks |
 | Doctor profiles + Appointment & Queue (Phase 2, step 1) | Approved | |
 | Clinical + OPD consultation (Phase 2, step 2) | Approved | |
 | Billing & Payments (Phase 3) | Approved | |
 | IPD step 1: beds, admission, transfer, bed charges, discharge (Phase 4) | Approved | Backend + frontend; 55 API + 23 browser checks; Billing 85/85 regression |
-| IPD step 2: progress notes, medication orders, MAR, vitals, intake/output, nursing notes, handover, roster (Phase 4) | Testing Completed | Clinical additions + new Nursing module, backend + frontend; 106 API + 28 browser checks; IPD 55/55 and Clinical 45/45 regression; awaiting approval |
+| IPD step 2: progress notes, medication orders, MAR, vitals, intake/output, nursing notes, handover, roster (Phase 4) | Approved | Clinical additions + new Nursing module, backend + frontend; 106 API + 28 browser checks; IPD 55/55 and Clinical 45/45 regression |
 | Laboratory, Radiology | Not Started | |
 | Pharmacy, Inventory, Procurement | Not Started | |
 | HR (full), Asset | Not Started | |
