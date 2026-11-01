@@ -18,7 +18,27 @@ Documentation index: [`docs/README.md`](docs/README.md). Start with [`docs/ARCHI
 
 These ports avoid 5432, 5433 and 4200, which other local projects already use. To change the database port, set `HMIS_DB_PORT` and update the connection string.
 
-## First-time setup
+## Run everything in Docker
+No .NET SDK or Node.js is needed for this.
+```powershell
+copy .env.example .env          # then set HMIS_JWT_SIGNING_KEY and HMIS_SEED_ADMIN_PASSWORD
+docker compose up -d --build
+```
+This starts PostgreSQL, applies all migrations (`migrator` container, exits when done), then starts the API and the UI.
+
+| Service | URL |
+|---|---|
+| UI (nginx; proxies `/api` to the API) | http://localhost:4380 |
+| API (direct) | http://localhost:5380/health |
+
+- Sign in at http://localhost:4380 as `superadmin` with the seed password.
+- After pulling new code, run `docker compose up -d --build` again. New migrations are applied automatically.
+- Logs: `docker compose logs -f api`.
+- Stop: `docker compose down`. Data is kept in the `hmis-pgdata` volume.
+- The Docker stack and the Visual Studio setup below share the same database.
+- Open the UI on `localhost`, not a LAN IP address. The sign-in cookie is marked Secure, and browsers only accept it over plain HTTP on `localhost`.
+
+## First-time setup (Visual Studio / ng serve)
 ```powershell
 # 1. Database
 docker compose up -d postgres
@@ -57,7 +77,7 @@ src/
 ├── Modules/<Module>/            4 projects per module (Domain, Application, Infrastructure, Presentation)
 └── Frontend/hospital-ui         Angular app
 docs/                            BRD, architecture, ERD, permissions, status
-docker/                          Container init scripts
+docker/                          Dockerfiles (api, ui), nginx config, database init scripts
 ```
 
 ## Status

@@ -1,5 +1,12 @@
-# Local development infrastructure. Credentials below are for the local dev container only.
+# HMIS full stack: `docker compose up -d --build` starts the database, applies migrations, then runs the API and the UI.
+# For Visual Studio / ng serve development, start only the database: `docker compose up -d postgres`.
+# Secrets come from .env (never committed; copy .env.example). Database credentials are for the local container only.
 name: hmis
+
+x-api-env: &api-env
+  ConnectionStrings__HmisDatabase: Host=postgres;Port=5432;Database=hmis;Username=${HMIS_DB_USER:-hmis};Password=${HMIS_DB_PASSWORD:-hmis_dev_password}
+  Jwt__SigningKey: ${HMIS_JWT_SIGNING_KEY:-}
+  Identity__SeedAdmin__Password: ${HMIS_SEED_ADMIN_PASSWORD:-}
 
 services:
   postgres:
@@ -22,6 +29,55 @@ services:
       timeout: 5s
       retries: 5
 
+  migrator:
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+      target: migrator
+    image: hmis-migrator
+    container_name: hmis-migrator
+    environment:
+      <<: *api-env
+      ASPNETCORE_ENVIRONMENT: Production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+      target: api
+    image: hmis-api
+    container_name: hmis-api
+    restart: unless-stopped
+    environment:
+      <<: *api-env
+      ASPNETCORE_ENVIRONMENT: ${HMIS_API_ENVIRONMENT:-Production}
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+    ports:
+      - "${HMIS_API_PORT:-5380}:8080"
+    volumes:
+      - hmis-api-logs:/app/logs
+      - hmis-storage:/app/storage
+      - hmis-dpkeys:/home/app/.aspnet/DataProtection-Keys
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+
+  ui:
+    build:
+      context: .
+      dockerfile: docker/ui/Dockerfile
+    image: hmis-ui
+    container_name: hmis-ui
+    restart: unless-stopped
+    ports:
+      - "${HMIS_UI_PORT:-4380}:80"
+    depends_on:
+      - api
+
   pgadmin:
     image: dpage/pgadmin4:9
     container_name: hmis-pgadmin
@@ -36,3 +92,6 @@ services:
 
 volumes:
   hmis-pgdata:
+  hmis-api-logs:
+  hmis-storage:
+  hmis-dpkeys:
