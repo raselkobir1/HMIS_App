@@ -85,6 +85,47 @@ namespace Hmis.Modules.Billing.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Hmis.Modules.Billing.Domain.Entities.BillingSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DisabledPaymentMethods")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<decimal>("DiscountApprovalPercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ModifiedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("BillingSettings", "billing", t =>
+                        {
+                            t.HasCheckConstraint("CK_BillingSettings_Discount", "\"DiscountApprovalPercent\" >= 0 AND \"DiscountApprovalPercent\" <= 100");
+                        });
+                });
+
             modelBuilder.Entity("Hmis.Modules.Billing.Domain.Entities.Invoice", b =>
                 {
                     b.Property<Guid>("Id")

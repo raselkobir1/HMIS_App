@@ -13,6 +13,12 @@ public interface IPatientRepository : IRepository<PatientEntity>, IConcurrencyRe
 
     Task<IReadOnlyList<PatientEntity>> GetByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
 
+    /// <summary>Patients registered since the instant, and all patients with status Active.</summary>
+    Task<(int RegisteredSince, int Active)> CountAsync(DateTime sinceUtc, CancellationToken cancellationToken);
+
+    /// <summary>Untracked: records merged directly into any of the given patients.</summary>
+    Task<IReadOnlyList<PatientEntity>> GetMergedIntoAsync(IReadOnlyCollection<Guid> survivorIds, CancellationToken cancellationToken);
+
     Task<bool> IdentificationExistsAsync(IdentificationType type, string normalizedNumber, Guid? excludePatientId, CancellationToken cancellationToken);
 
     /// <summary>Single search box: MR number (prefix), mobile, name (fuzzy, indexed) or exact identification number.</summary>
@@ -58,6 +64,8 @@ public interface IPatientMergeRequestRepository : IRepository<PatientMergeReques
 
 public interface IPatientManager
 {
+    Task<PatientCountsDto> GetCountsAsync(CancellationToken cancellationToken);
+
     Task<PagedResponse<PatientListItemDto>> SearchAsync(PatientSearchQuery query, CancellationToken cancellationToken);
 
     Task<IReadOnlyList<DuplicateCandidateDto>> FindDuplicatesAsync(DuplicateCheckQuery query, CancellationToken cancellationToken);

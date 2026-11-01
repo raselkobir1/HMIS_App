@@ -40,6 +40,7 @@ public static class DependencyInjection
         services.AddScoped<SuperAdministratorGuard>();
         services.AddScoped<IPermissionChecker, PermissionChecker>();
         services.AddScoped<Hmis.BuildingBlocks.Contracts.Identity.IUserEmployeeLookup, UserEmployeeLookup>();
+        services.AddScoped<Hmis.BuildingBlocks.Contracts.Identity.IUserDirectory, UserDirectory>();
         services.AddSingleton<IPermissionDefinitionProvider, IdentityPermissionDefinitionProvider>();
         services.AddScoped<IStartupTask, IdentitySeedTask>();
 

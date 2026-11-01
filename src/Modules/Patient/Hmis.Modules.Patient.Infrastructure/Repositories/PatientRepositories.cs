@@ -42,6 +42,16 @@ public sealed class PatientRepository(PatientDbContext context)
     public async Task<IReadOnlyList<PatientEntity>> GetByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken) =>
         await Set.AsNoTracking().Where(p => ids.Contains(p.Id)).ToListAsync(cancellationToken);
 
+    public async Task<(int RegisteredSince, int Active)> CountAsync(DateTime sinceUtc, CancellationToken cancellationToken) =>
+        (await Set.CountAsync(p => p.CreatedAt >= sinceUtc, cancellationToken),
+            await Set.CountAsync(p => p.Status == PatientStatus.Active, cancellationToken));
+
+    public async Task<IReadOnlyList<PatientEntity>> GetMergedIntoAsync(IReadOnlyCollection<Guid> survivorIds, CancellationToken cancellationToken) =>
+        await Set.AsNoTracking()
+            .Where(p => p.MergedIntoPatientId != null && survivorIds.Contains(p.MergedIntoPatientId.Value))
+            .OrderBy(p => p.MRNumber)
+            .ToListAsync(cancellationToken);
+
     public Task<bool> IdentificationExistsAsync(
         IdentificationType type, string normalizedNumber, Guid? excludePatientId, CancellationToken cancellationToken) =>
         Set.AnyAsync(p => p.IdentificationType == type && p.IdentificationNumber == normalizedNumber && p.Id != excludePatientId,

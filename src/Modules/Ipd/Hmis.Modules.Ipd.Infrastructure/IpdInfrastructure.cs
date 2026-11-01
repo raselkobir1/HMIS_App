@@ -217,7 +217,11 @@ public sealed class AdmissionRepository(IpdDbContext context)
             list = list.Where(a => a.AttendingDoctorId == query.DoctorId.Value);
         }
 
-        if (query.PatientId.HasValue)
+        if (query.PatientIds is { Count: > 0 } patientIds)
+        {
+            list = list.Where(a => patientIds.Contains(a.PatientId));
+        }
+        else if (query.PatientId.HasValue)
         {
             list = list.Where(a => a.PatientId == query.PatientId.Value);
         }
@@ -317,6 +321,7 @@ public static class DependencyInjection
         services.AddScoped<IBedSetupManager, BedSetupManager>();
         services.AddScoped<IAdmissionManager, AdmissionManager>();
         services.AddScoped<IInpatientLookup, InpatientLookup>();
+        services.AddScoped<Hmis.BuildingBlocks.Contracts.Patient.IPatientMergeGuard, AdmissionMergeGuard>();
         services.AddHostedService<BedChargeJob>();
         services.AddSingleton<IPermissionDefinitionProvider, IpdPermissionDefinitionProvider>();
         services.AddSingleton<INumberSequenceDefinitionProvider, IpdNumberSequences>();

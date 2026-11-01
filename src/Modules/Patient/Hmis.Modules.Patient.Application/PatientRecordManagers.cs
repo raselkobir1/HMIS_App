@@ -236,7 +236,8 @@ public sealed class PatientMergeManager(
     IPatientMergeRequestRepository requests,
     IPatientUnitOfWork unitOfWork,
     IDateTimeProvider dateTime,
-    ICurrentUser currentUser) : IPatientMergeManager
+    ICurrentUser currentUser,
+    IEnumerable<IPatientMergeGuard> guards) : IPatientMergeManager
 {
     public async Task<PagedResponse<MergeRequestDto>> SearchAsync(MergeRequestQuery query, CancellationToken cancellationToken)
     {
@@ -273,12 +274,13 @@ public sealed class PatientMergeManager(
         var source = await GetPatientAsync(mergeRequest.SourcePatientId, cancellationToken);
         var target = await GetPatientAsync(mergeRequest.TargetPatientId, cancellationToken);
         EnsureMergeable(source, target);
+        await EnsureNothingOpenAsync(source, cancellationToken);
 
         // Request approval and the patient status change are saved together (one context, one transaction).
         source.MarkMergedInto(target.Id);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        // When Appointment/OPD/IPD/Billing exist, they will re-point their records via a PatientMerged event.
+        // Nothing is re-pointed (Q-PAT-14): the duplicate has no open work, and its history is shown with the surviving record.
         return ToDto(mergeRequest, new() { [source.Id] = source, [target.Id] = target });
     }
 
@@ -303,6 +305,22 @@ public sealed class PatientMergeManager(
         if (target.Status != PatientStatus.Active)
         {
             throw new BusinessException(PatientErrorCodes.MergeInvalid, "The surviving record must be active.");
+        }
+    }
+
+    /// <summary>Open admissions, upcoming appointments, dues and deposits must be resolved on the duplicate first.</summary>
+    private async Task EnsureNothingOpenAsync(PatientEntity source, CancellationToken cancellationToken)
+    {
+        var blockers = new List<string>();
+        foreach (var guard in guards)
+        {
+            blockers.AddRange(await guard.GetMergeBlockersAsync(source.Id, cancellationToken));
+        }
+
+        if (blockers.Count > 0)
+        {
+            throw new BusinessException(PatientErrorCodes.MergeBlocked,
+                $"Resolve these on {source.MRNumber} before merging: {string.Join("; ", blockers)}.");
         }
     }
 

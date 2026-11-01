@@ -1,9 +1,12 @@
+using Hmis.BuildingBlocks.Application.Abstractions;
 using Hmis.BuildingBlocks.Application.Exceptions;
 using Hmis.BuildingBlocks.Application.Files;
 using Hmis.BuildingBlocks.Application.Pagination;
 using Hmis.BuildingBlocks.Contracts.Administration;
+using Hmis.BuildingBlocks.Contracts.Billing;
 using Hmis.BuildingBlocks.Contracts.Patient;
 using Hmis.Modules.Patient.Domain.Entities;
+using Microsoft.Extensions.Logging;
 using PatientEntity = Hmis.Modules.Patient.Domain.Entities.Patient;
 
 namespace Hmis.Modules.Patient.Application;
@@ -12,7 +15,11 @@ public sealed class PatientManager(
     IPatientRepository repository,
     IPatientUnitOfWork unitOfWork,
     INumberSequenceService numberSequences,
-    IFileStorageService fileStorage) : IPatientManager, IPatientLookup
+    IFileStorageService fileStorage,
+    IServicePriceLookup prices,
+    IChargeService charges,
+    IDateTimeProvider dateTime,
+    ILogger<PatientManager> logger) : IPatientManager
 {
     public const string MrnSequenceKey = "PATIENT_MRN";
     public const long MaxPhotoBytes = 2 * 1024 * 1024;
@@ -21,6 +28,12 @@ public sealed class PatientManager(
         (await repository.SearchAsync(query, cancellationToken)).Map(p => new PatientListItemDto(
             p.Id, p.MRNumber, p.FullName, p.Gender, p.DateOfBirth, p.IsDateOfBirthEstimated, p.MobileNumber,
             p.PresentAddress.District, p.Status));
+
+    public async Task<PatientCountsDto> GetCountsAsync(CancellationToken cancellationToken)
+    {
+        var (today, active) = await repository.CountAsync(dateTime.StartOfLocalDayUtc(dateTime.LocalToday), cancellationToken);
+        return new PatientCountsDto(today, active);
+    }
 
     public async Task<IReadOnlyList<DuplicateCandidateDto>> FindDuplicatesAsync(DuplicateCheckQuery query, CancellationToken cancellationToken)
     {
@@ -59,7 +72,7 @@ public sealed class PatientManager(
 
         await repository.AddAsync(patient, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
-        return await ToDtoAsync(patient, cancellationToken);
+        return await ToDtoAsync(patient, cancellationToken) with { RegistrationBill = await BillRegistrationAsync(patient, cancellationToken) };
     }
 
     public async Task<PatientDto> UpdateAsync(Guid id, PatientUpdateDto request, CancellationToken cancellationToken)
@@ -155,22 +168,29 @@ public sealed class PatientManager(
         return stream is null ? null : new DocumentContent(stream, patient.PhotoContentType, $"{patient.MRNumber}-photo");
     }
 
-    // ---------- IPatientLookup (contract for other modules) ----------
+    /// <summary>
+    /// Bills the price-list registration fee (service REG) once per patient when it is active and priced. Billing never blocks
+    /// registration: a failure is logged and the cashier can add the fee by hand.
+    /// </summary>
+    private async Task<RegistrationBillDto?> BillRegistrationAsync(PatientEntity patient, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (await prices.GetActiveAsync(StandardServiceCodes.Registration, cancellationToken) is not { Price: > 0 } fee)
+            {
+                return null;
+            }
 
-    async Task<PatientSummary?> IPatientLookup.GetAsync(Guid patientId, CancellationToken cancellationToken) =>
-        ToSummary(await repository.GetByIdAsync(patientId, cancellationToken));
-
-    async Task<PatientSummary?> IPatientLookup.GetByMRNumberAsync(string mrNumber, CancellationToken cancellationToken) =>
-        ToSummary(await repository.GetByMRNumberAsync(mrNumber.Trim().ToUpperInvariant(), cancellationToken));
-
-    async Task<IReadOnlyList<PatientSummary>> IPatientLookup.GetManyAsync(IReadOnlyCollection<Guid> patientIds, CancellationToken cancellationToken) =>
-        (await repository.GetByIdsAsync(patientIds, cancellationToken)).Select(p => ToSummary(p)!).ToList();
-
-    private static PatientSummary? ToSummary(PatientEntity? p) =>
-        p is null
-            ? null
-            : new PatientSummary(p.Id, p.MRNumber, p.FullName, p.Gender.ToString(), p.DateOfBirth, p.MobileNumber,
-                p.Status.ToString(), p.MergedIntoPatientId);
+            var bill = await charges.PostAsync(new ChargeRequest(ChargeSources.PatientRegistration, patient.Id, patient.MRNumber, patient.Id,
+                [new ChargeLine(fee.Name, fee.Category, 1, fee.Price)]), cancellationToken);
+            return new RegistrationBillDto(bill.InvoiceId, bill.InvoiceNumber, bill.NetAmount);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Registration fee for {MRNumber} could not be billed", patient.MRNumber);
+            return null;
+        }
+    }
 
     // ---------- helpers ----------
 
@@ -212,11 +232,14 @@ public sealed class PatientManager(
             mergedIntoMrn = (await repository.GetByIdAsync(survivorId, cancellationToken))?.MRNumber;
         }
 
+        var merged = await PatientContractServices.CollectMergedAsync(repository, p.Id, cancellationToken);
+
         return new PatientDto(
             p.Id, p.MRNumber, p.FullName, p.FullNameBangla, p.Gender, p.DateOfBirth, p.IsDateOfBirthEstimated, p.BloodGroup,
             p.MobileNumber, p.Email, FromAddress(p.PresentAddress), FromAddress(p.PermanentAddress), p.IdentificationType,
             p.IdentificationNumber, p.GuardianName, p.GuardianRelation,
             p.EmergencyContacts.Select(c => new EmergencyContactDto { Name = c.Name, Relation = c.Relation, MobileNumber = c.MobileNumber }).ToList(),
-            p.PhotoPath is not null, p.Status, p.MergedIntoPatientId, mergedIntoMrn, p.CreatedAt, p.RowVersion);
+            p.PhotoPath is not null, p.Status, p.MergedIntoPatientId, mergedIntoMrn, p.DeceasedAt,
+            merged.Select(m => new MergedRecordDto(m.Id, m.MRNumber)).ToList(), p.CreatedAt, p.RowVersion);
     }
 }

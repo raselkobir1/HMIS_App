@@ -2,12 +2,14 @@ using Hmis.BuildingBlocks.Application.Abstractions;
 using Hmis.BuildingBlocks.Application.Auditing;
 using Hmis.BuildingBlocks.Application.Exceptions;
 using Hmis.BuildingBlocks.Contracts.Appointment;
+using Hmis.BuildingBlocks.Contracts.Billing;
 using Hmis.BuildingBlocks.Contracts.Clinical;
 using Hmis.BuildingBlocks.Contracts.HR;
 using Hmis.BuildingBlocks.Contracts.Identity;
 using Hmis.BuildingBlocks.Contracts.Ipd;
 using Hmis.BuildingBlocks.Contracts.Patient;
 using Hmis.Modules.Clinical.Domain.Entities;
+using Microsoft.Extensions.Logging;
 
 namespace Hmis.Modules.Clinical.Application;
 
@@ -30,7 +32,9 @@ public sealed class InpatientClinicalManager(
     IUserEmployeeLookup userLookup,
     ICurrentUser currentUser,
     IAuditService auditService,
-    IDateTimeProvider dateTime) : IInpatientClinicalManager, IMedicationOrderLookup
+    IDateTimeProvider dateTime,
+    IChargeService charges,
+    ILogger<InpatientClinicalManager> logger) : IInpatientClinicalManager, IMedicationOrderLookup
 {
     private static readonly TimeSpan MaxBackdatedStart = TimeSpan.FromHours(1);
     private static readonly TimeSpan MaxFutureStart = TimeSpan.FromDays(7);
@@ -78,7 +82,38 @@ public sealed class InpatientClinicalManager(
             new ProgressNoteValues(request.Kind, request.Subjective, request.Objective, request.Assessment, request.Plan));
         await notes.AddAsync(note, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        if (request.Kind is ProgressNoteKind.WardRound or ProgressNoteKind.ConsultantReview)
+        {
+            await PostVisitFeeSafelyAsync(stay, doctorId, cancellationToken);
+        }
+
         return ToDto(note, await GetDoctorNamesAsync([doctorId], cancellationToken));
+    }
+
+    /// <summary>
+    /// The doctor's inpatient visit fee (HR doctor profile), once per doctor per hospital day on the stay's running bill.
+    /// Skipped when the fee is 0 or the final bill is already prepared; a failure is logged and never undoes the note.
+    /// </summary>
+    private async Task PostVisitFeeSafelyAsync(InpatientStay stay, Guid doctorId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (await doctorLookup.GetAsync(doctorId, cancellationToken) is not { InpatientVisitFee: > 0 } doctor
+                || await charges.GetBillAsync(ChargeSources.IpdAdmission, stay.AdmissionId, cancellationToken) is { Status: not "Draft" })
+            {
+                return;
+            }
+
+            var day = dateTime.LocalToday;
+            await charges.AddToRunningBillAsync(new RunningChargeRequest(ChargeSources.IpdAdmission, stay.AdmissionId, stay.AdmissionNumber,
+                stay.PatientId,
+                [new RunningChargeLine($"VISIT:{doctorId:N}:{day:yyyy-MM-dd}", $"Doctor visit {day:dd MMM yyyy} — {doctor.FullName}",
+                    ChargeCategories.Consultation, 1, doctor.InpatientVisitFee)]), cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Visit fee for admission {AdmissionNumber} could not be posted", stay.AdmissionNumber);
+        }
     }
 
     public async Task<ProgressNoteDto> MarkProgressNoteInErrorAsync(Guid noteId, EnteredInErrorDto request, CancellationToken cancellationToken)

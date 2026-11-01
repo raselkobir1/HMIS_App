@@ -42,6 +42,10 @@ namespace Hmis.Modules.HR.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
+                    b.Property<decimal>("InpatientVisitFee")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
                     b.Property<bool>("IsAcceptingAppointments")
                         .HasColumnType("boolean");
 

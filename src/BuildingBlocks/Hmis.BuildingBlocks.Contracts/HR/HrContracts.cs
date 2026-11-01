@@ -28,6 +28,7 @@ public sealed record DoctorSummary(
     string RegistrationNumber,
     decimal NewPatientFee,
     decimal FollowUpFee,
+    decimal InpatientVisitFee,
     bool IsAcceptingAppointments,
     bool IsCurrent);
 

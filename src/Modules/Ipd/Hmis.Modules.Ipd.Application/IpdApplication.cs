@@ -208,6 +208,9 @@ public sealed class AdmissionListQuery : PaginationRequest
     public Guid? WardId { get; set; }
     public Guid? DoctorId { get; set; }
     public Guid? PatientId { get; set; }
+
+    /// <summary>Set by the manager: the patient plus duplicate records merged into it (overrides PatientId).</summary>
+    public IReadOnlyList<Guid>? PatientIds { get; set; }
 }
 
 public sealed record AdmissionSummaryDto(

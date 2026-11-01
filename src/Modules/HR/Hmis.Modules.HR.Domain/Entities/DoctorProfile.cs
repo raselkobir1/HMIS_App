@@ -22,23 +22,27 @@ public sealed class DoctorProfile : AuditableEntity, IAggregateRoot, IHasConcurr
 
     public decimal NewPatientFee { get; private set; }
     public decimal FollowUpFee { get; private set; }
+
+    /// <summary>Charged to an inpatient's running bill once per day when this doctor signs a ward-round or consultant-review note.</summary>
+    public decimal InpatientVisitFee { get; private set; }
+
     public bool IsAcceptingAppointments { get; private set; } = true;
     public uint RowVersion { get; private set; }
 
     public static DoctorProfile Create(
         Guid employeeId, string specialization, string qualifications, string registrationNumber,
-        decimal newPatientFee, decimal followUpFee)
+        decimal newPatientFee, decimal followUpFee, decimal inpatientVisitFee)
     {
         var profile = new DoctorProfile { EmployeeId = employeeId };
-        profile.Update(specialization, qualifications, registrationNumber, newPatientFee, followUpFee, true);
+        profile.Update(specialization, qualifications, registrationNumber, newPatientFee, followUpFee, inpatientVisitFee, true);
         return profile;
     }
 
     public void Update(
         string specialization, string qualifications, string registrationNumber,
-        decimal newPatientFee, decimal followUpFee, bool isAcceptingAppointments)
+        decimal newPatientFee, decimal followUpFee, decimal inpatientVisitFee, bool isAcceptingAppointments)
     {
-        if (newPatientFee < 0 || followUpFee < 0)
+        if (newPatientFee < 0 || followUpFee < 0 || inpatientVisitFee < 0)
         {
             throw new DomainException("DOCTOR_FEE_NEGATIVE", "Fees cannot be negative.");
         }
@@ -48,6 +52,7 @@ public sealed class DoctorProfile : AuditableEntity, IAggregateRoot, IHasConcurr
         RegistrationNumber = NormalizeRegistration(registrationNumber);
         NewPatientFee = decimal.Round(newPatientFee, 2);
         FollowUpFee = decimal.Round(followUpFee, 2);
+        InpatientVisitFee = decimal.Round(inpatientVisitFee, 2);
         IsAcceptingAppointments = isAcceptingAppointments;
     }
 

@@ -22,6 +22,7 @@ public static class BillingPermissions
     public const string RefundRequest = "Billing.Refund.Request";
     public const string RefundApprove = "Billing.Refund.Approve";
     public const string ReportsView = "Billing.Reports.View";
+    public const string SettingsManage = "Billing.Settings.Manage";
 }
 
 public sealed class BillingPermissionDefinitionProvider : IPermissionDefinitionProvider
@@ -36,10 +37,12 @@ public sealed class BillingPermissionDefinitionProvider : IPermissionDefinitionP
         new(BillingPermissions.PaymentCollect, BillingPermissions.Module, "Receive payments and advance deposits, apply advance",
             [SystemRoles.Accountant]),
         new(BillingPermissions.DiscountApply, BillingPermissions.Module,
-            $"Give discounts up to {BillingPolicy.DiscountApprovalPercent}% (larger ones need approval)", [SystemRoles.Accountant]),
+            "Give discounts within the approval limit set in Billing settings (larger ones need approval)", [SystemRoles.Accountant]),
         new(BillingPermissions.DiscountApprove, BillingPermissions.Module, "Approve or reject discounts above the limit",
             [SystemRoles.HospitalAdministrator]),
         new(BillingPermissions.RefundRequest, BillingPermissions.Module, "Request refunds and pay out approved refunds", [SystemRoles.Accountant]),
+        new(BillingPermissions.SettingsManage, BillingPermissions.Module, "Set the discount approval limit and the payment methods in use",
+            [SystemRoles.HospitalAdministrator]),
         new(BillingPermissions.RefundApprove, BillingPermissions.Module, "Approve or reject refunds", [SystemRoles.HospitalAdministrator]),
         new(BillingPermissions.ReportsView, BillingPermissions.Module, "View collection reports for all cashiers",
             [SystemRoles.Accountant, SystemRoles.HospitalAdministrator, SystemRoles.HospitalOwner])
@@ -63,6 +66,7 @@ public static class BillingErrorCodes
     public const string PatientUnavailable = "BILLING_PATIENT_UNAVAILABLE";
     public const string ServiceUnavailable = "BILLING_SERVICE_UNAVAILABLE";
     public const string ServiceCodeExists = "SERVICE_CODE_EXISTS";
+    public const string MethodDisabled = "PAYMENT_METHOD_DISABLED";
     public const string InvoicePatientMismatch = "INVOICE_PATIENT_MISMATCH";
     public const string AdvanceInsufficient = "PAYMENT_ADVANCE_INSUFFICIENT";
     public const string DuplicateRequest = "PAYMENT_DUPLICATE_REQUEST";

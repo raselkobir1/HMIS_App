@@ -74,6 +74,13 @@ public sealed class AppointmentsController(IAppointmentManager manager) : ApiCon
     public async Task<IActionResult> Availability([FromQuery] AvailabilityQuery query, CancellationToken cancellationToken) =>
         OkResponse(await manager.GetAvailabilityAsync(query, cancellationToken));
 
+    /// <summary>Appointments of a day by status (defaults to today).</summary>
+    [HttpGet("summary")]
+    [HasPermission(AppointmentPermissions.View)]
+    [ProducesResponseType<ApiResponse<AppointmentDaySummaryDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> Summary([FromQuery] DateOnly? date, CancellationToken cancellationToken) =>
+        OkResponse(await manager.GetDaySummaryAsync(date, cancellationToken));
+
     [HttpGet]
     [HasPermission(AppointmentPermissions.View)]
     [ProducesResponseType<ApiResponse<PagedResponse<AppointmentDto>>>(StatusCodes.Status200OK)]

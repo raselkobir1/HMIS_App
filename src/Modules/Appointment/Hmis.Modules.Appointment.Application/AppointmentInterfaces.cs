@@ -55,6 +55,9 @@ public interface IAppointmentRepository : IRepository<AppointmentEntity>, IConcu
     /// <summary>True when the doctor has any non-cancelled appointment with the patient (clinical access rule).</summary>
     Task<bool> HasRelationshipAsync(Guid doctorId, Guid patientId, CancellationToken cancellationToken);
 
+    /// <summary>Appointments today or later that are not finished (scheduled, confirmed, waiting, in consultation).</summary>
+    Task<int> CountOpenForPatientAsync(Guid patientId, DateOnly fromDate, CancellationToken cancellationToken);
+
     /// <summary>Appointments not yet seen (Scheduled/Confirmed/Waiting) that a leave would affect.</summary>
     Task<int> CountPendingAsync(Guid doctorId, DateOnly date, Guid? scheduleId, CancellationToken cancellationToken);
 }
@@ -78,6 +81,8 @@ public interface IScheduleManager
 
 public interface IAppointmentManager
 {
+    Task<AppointmentDaySummaryDto> GetDaySummaryAsync(DateOnly? date, CancellationToken cancellationToken);
+
     Task<IReadOnlyList<SessionAvailabilityDto>> GetAvailabilityAsync(AvailabilityQuery query, CancellationToken cancellationToken);
 
     Task<PagedResponse<AppointmentDto>> SearchAsync(AppointmentListQuery query, CancellationToken cancellationToken);

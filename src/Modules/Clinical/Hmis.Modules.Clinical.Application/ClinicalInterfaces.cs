@@ -13,8 +13,8 @@ public interface IConsultationRepository : IRepository<Consultation>, IConcurren
     /// <summary>Loads the encounter's consultation with all its lines (tracked).</summary>
     Task<Consultation?> GetByEncounterAsync(EncounterType encounterType, Guid encounterId, CancellationToken cancellationToken);
 
-    /// <summary>A patient's consultations, newest first, with diagnoses and prescription lines (read-only).</summary>
-    Task<IReadOnlyList<Consultation>> GetForPatientAsync(Guid patientId, int take, CancellationToken cancellationToken);
+    /// <summary>Consultations of the given patient records, newest first, with diagnoses and prescription lines (read-only).</summary>
+    Task<IReadOnlyList<Consultation>> GetForPatientAsync(IReadOnlyCollection<Guid> patientIds, int take, CancellationToken cancellationToken);
 }
 
 public interface IVitalSignRepository : IRepository<VitalSign>

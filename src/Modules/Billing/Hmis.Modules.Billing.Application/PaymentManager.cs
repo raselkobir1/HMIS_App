@@ -1,6 +1,7 @@
 using Hmis.BuildingBlocks.Application.Abstractions;
 using Hmis.BuildingBlocks.Application.Exceptions;
 using Hmis.BuildingBlocks.Application.Security;
+using Hmis.BuildingBlocks.Contracts.Notifications;
 using Hmis.BuildingBlocks.Contracts.Administration;
 using Hmis.BuildingBlocks.Contracts.Billing;
 using Hmis.BuildingBlocks.Contracts.Patient;
@@ -22,7 +23,9 @@ public sealed class PaymentManager(
     INumberSequenceService numberSequences,
     IPermissionChecker permissions,
     ICurrentUser currentUser,
-    IDateTimeProvider dateTime) : IPaymentManager, IPatientBalanceLookup
+    IDateTimeProvider dateTime,
+    IBillingSettingsRepository settings,
+    INotificationService notifications) : IPaymentManager, IPatientBalanceLookup
 {
     async Task<PatientBalance> IPatientBalanceLookup.GetAsync(Guid patientId, CancellationToken cancellationToken) =>
         new(await invoices.GetOutstandingAsync(patientId, cancellationToken), await payments.GetAdvanceBalanceAsync(patientId, cancellationToken));
@@ -44,6 +47,7 @@ public sealed class PaymentManager(
             throw new BusinessException(BillingErrorCodes.PatientUnavailable, "Advance deposits need an active patient record.", "patientId");
         }
 
+        await EnsureMethodEnabledAsync(request.Method, cancellationToken);
         var number = await numberSequences.NextAsync(BillingNumberSequences.Receipt, cancellationToken);
         var (payment, replayed) = await unitOfWork.ExecuteInTransactionAsync(async ct =>
         {
@@ -129,6 +133,13 @@ public sealed class PaymentManager(
             return requested;
         }, cancellationToken);
 
+        if (refund.Status == RefundStatus.Requested)
+        {
+            await notifications.NotifyPermissionAsync(BillingPermissions.RefundApprove, new NotificationMessage(NotificationTypes.RefundApproval,
+                $"Refund waiting for approval · {refund.RefundNumber}", $"{refund.Amount:0.00} — {refund.Reason}", "/billing/approvals"),
+                cancellationToken);
+        }
+
         return await dtos.RefundAsync(refund, cancellationToken);
     }
 
@@ -150,8 +161,10 @@ public sealed class PaymentManager(
         }, cancellationToken);
 
     /// <summary>The cashier hands the money back. A cancellation refund also cancels its invoice.</summary>
-    public Task<RefundDto> PayRefundAsync(Guid id, RefundPayDto request, CancellationToken cancellationToken) =>
-        ChangeRefundAsync(id, async (refund, userId, ct) =>
+    public async Task<RefundDto> PayRefundAsync(Guid id, RefundPayDto request, CancellationToken cancellationToken)
+    {
+        await EnsureMethodEnabledAsync(request.Method, cancellationToken);
+        return await ChangeRefundAsync(id, async (refund, userId, ct) =>
         {
             refund.MarkPaid(userId, request.Method, request.Reference, dateTime.UtcNow);
             if (refund.InvoiceId is { } invoiceId)
@@ -160,15 +173,36 @@ public sealed class PaymentManager(
                     .CompleteCancellationRefund(refund.Amount, $"Cancelled with refund {refund.RefundNumber}: {refund.Reason}", dateTime.UtcNow);
             }
         }, cancellationToken);
+    }
+
+    private async Task EnsureMethodEnabledAsync(PaymentMethod method, CancellationToken cancellationToken)
+    {
+        if (!(await BillingSettingsManager.CurrentAsync(settings, cancellationToken)).IsEnabled(method))
+        {
+            throw new BusinessException(BillingErrorCodes.MethodDisabled, $"{method} is not accepted at this hospital. Choose another method.", "method");
+        }
+    }
 
     // ---------- Account & approvals ----------
 
     public async Task<PatientAccountDto> GetAccountAsync(Guid patientId, CancellationToken cancellationToken)
     {
         var patient = await patientLookup.GetAsync(patientId, cancellationToken) ?? throw new NotFoundException("Patient", patientId);
-        var invoiceList = await invoices.GetForPatientAsync(patientId, BillingPolicy.AccountListLimit, cancellationToken);
-        var paymentList = await payments.GetForPatientAsync(patientId, BillingPolicy.AccountListLimit, cancellationToken);
-        var refundList = await refunds.GetForPatientAsync(patientId, BillingPolicy.AccountListLimit, cancellationToken);
+
+        // History of duplicate records merged into this patient is listed too (their balances were settled before the merge).
+        var invoiceList = new List<Invoice>();
+        var paymentList = new List<Payment>();
+        var refundList = new List<Refund>();
+        foreach (var id in await patientLookup.GetWithMergedAsync(patientId, cancellationToken))
+        {
+            invoiceList.AddRange(await invoices.GetForPatientAsync(id, BillingPolicy.AccountListLimit, cancellationToken));
+            paymentList.AddRange(await payments.GetForPatientAsync(id, BillingPolicy.AccountListLimit, cancellationToken));
+            refundList.AddRange(await refunds.GetForPatientAsync(id, BillingPolicy.AccountListLimit, cancellationToken));
+        }
+
+        invoiceList = invoiceList.OrderByDescending(i => i.CreatedAt).Take(BillingPolicy.AccountListLimit).ToList();
+        paymentList = paymentList.OrderByDescending(p => p.ReceivedAt).Take(BillingPolicy.AccountListLimit).ToList();
+        refundList = refundList.OrderByDescending(r => r.CreatedAt).Take(BillingPolicy.AccountListLimit).ToList();
 
         return new PatientAccountDto(
             BillingDtoFactory.Brief(patient)!,

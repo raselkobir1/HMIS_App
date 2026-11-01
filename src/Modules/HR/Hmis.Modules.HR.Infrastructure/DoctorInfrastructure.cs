@@ -21,6 +21,7 @@ public sealed class DoctorProfileConfiguration : IEntityTypeConfiguration<Doctor
         builder.HasIndex(x => x.RegistrationNumber).IsUnique();
         builder.Property(x => x.NewPatientFee).HasPrecision(18, 2);
         builder.Property(x => x.FollowUpFee).HasPrecision(18, 2);
+        builder.Property(x => x.InpatientVisitFee).HasPrecision(18, 2);
     }
 }
 

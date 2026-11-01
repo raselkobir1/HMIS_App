@@ -172,7 +172,15 @@ public sealed class AppointmentListQuery : PaginationRequest
     public Guid? DoctorId { get; set; }
     public Guid? PatientId { get; set; }
     public AppointmentStatus? Status { get; set; }
+
+    /// <summary>Set by the manager: the patient plus duplicate records merged into it (overrides PatientId).</summary>
+    public IReadOnlyList<Guid>? PatientIds { get; set; }
 }
+
+public sealed record StatusCountDto(AppointmentStatus Status, int Count);
+
+/// <summary>Appointments of one day by status (dashboard).</summary>
+public sealed record AppointmentDaySummaryDto(DateOnly Date, int Total, IReadOnlyList<StatusCountDto> ByStatus);
 
 public sealed record AppointmentDto(
     Guid Id,

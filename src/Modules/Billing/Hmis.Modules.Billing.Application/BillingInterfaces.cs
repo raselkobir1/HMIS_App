@@ -12,6 +12,9 @@ public interface IBillableServiceRepository : IRepository<BillableService>, ICon
 
     Task<bool> CodeExistsAsync(string code, CancellationToken cancellationToken);
 
+    /// <summary>Untracked.</summary>
+    Task<BillableService?> GetByCodeAsync(string code, CancellationToken cancellationToken);
+
     Task<IReadOnlyList<BillableService>> GetByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
 }
 
@@ -43,6 +46,8 @@ public interface IInvoiceRepository : IRepository<Invoice>, IConcurrencyReposito
 
     /// <summary>Total due on the patient's finalized invoices.</summary>
     Task<decimal> GetOutstandingAsync(Guid patientId, CancellationToken cancellationToken);
+
+    Task<bool> HasDraftAsync(Guid patientId, CancellationToken cancellationToken);
 
     /// <summary>Invoices (with discounts) that have a discount waiting for approval.</summary>
     Task<IReadOnlyList<Invoice>> GetWithPendingDiscountsAsync(CancellationToken cancellationToken);

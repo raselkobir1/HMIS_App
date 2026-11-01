@@ -210,7 +210,11 @@ public sealed class AppointmentRepository(AppointmentDbContext context)
             list = list.Where(a => a.DoctorId == query.DoctorId.Value);
         }
 
-        if (query.PatientId.HasValue)
+        if (query.PatientIds is { Count: > 0 } patientIds)
+        {
+            list = list.Where(a => patientIds.Contains(a.PatientId));
+        }
+        else if (query.PatientId.HasValue)
         {
             list = list.Where(a => a.PatientId == query.PatientId.Value);
         }
@@ -258,6 +262,10 @@ public sealed class AppointmentRepository(AppointmentDbContext context)
             : new FutureUsage(perDay.Sum(d => d.Count), perDay.Max(d => d.Count), perDay.Max(d => d.Date));
     }
 
+    public Task<int> CountOpenForPatientAsync(Guid patientId, DateOnly fromDate, CancellationToken cancellationToken) =>
+        Set.CountAsync(a => a.PatientId == patientId && a.AppointmentDate >= fromDate &&
+                            (Pending.Contains(a.Status) || a.Status == AppointmentStatus.InConsultation), cancellationToken);
+
     public Task<bool> HasRelationshipAsync(Guid doctorId, Guid patientId, CancellationToken cancellationToken) =>
         Set.AnyAsync(a => a.DoctorId == doctorId && a.PatientId == patientId && a.Status != AppointmentStatus.Cancelled, cancellationToken);
 
@@ -279,6 +287,7 @@ public static class DependencyInjection
         services.AddScoped<AppointmentManager>();
         services.AddScoped<IAppointmentManager>(sp => sp.GetRequiredService<AppointmentManager>());
         services.AddScoped<IOpdEncounterService>(sp => sp.GetRequiredService<AppointmentManager>());
+        services.AddScoped<Hmis.BuildingBlocks.Contracts.Patient.IPatientMergeGuard, AppointmentMergeGuard>();
         services.AddSingleton<IPermissionDefinitionProvider, AppointmentPermissionDefinitionProvider>();
         return services;
     }

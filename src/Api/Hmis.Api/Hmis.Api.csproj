@@ -37,6 +37,8 @@
     <ProjectReference Include="..\..\Modules\Clinical\Hmis.Modules.Clinical.Presentation\Hmis.Modules.Clinical.Presentation.csproj" />
     <ProjectReference Include="..\..\Modules\Nursing\Hmis.Modules.Nursing.Infrastructure\Hmis.Modules.Nursing.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\Nursing\Hmis.Modules.Nursing.Presentation\Hmis.Modules.Nursing.Presentation.csproj" />
+    <ProjectReference Include="..\..\Modules\Notifications\Hmis.Modules.Notifications.Infrastructure\Hmis.Modules.Notifications.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Notifications\Hmis.Modules.Notifications.Presentation\Hmis.Modules.Notifications.Presentation.csproj" />
     <ProjectReference Include="..\..\Modules\Billing\Hmis.Modules.Billing.Infrastructure\Hmis.Modules.Billing.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\Billing\Hmis.Modules.Billing.Presentation\Hmis.Modules.Billing.Presentation.csproj" />
     <ProjectReference Include="..\..\Modules\Ipd\Hmis.Modules.Ipd.Infrastructure\Hmis.Modules.Ipd.Infrastructure.csproj" />

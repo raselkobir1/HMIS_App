@@ -194,3 +194,22 @@ public sealed class BillingOverviewController(IPaymentManager manager) : ApiCont
     public async Task<IActionResult> GetCollections([FromQuery] CollectionQuery query, CancellationToken cancellationToken) =>
         OkResponse(await manager.GetCollectionReportAsync(query, cancellationToken));
 }
+
+/// <summary>Discount approval limit and payment methods in use (read by every billing screen).</summary>
+[Route("api/v{version:apiVersion}/billing/settings")]
+public sealed class BillingSettingsController(IBillingSettingsManager manager) : ApiControllerBase
+{
+    [HttpGet]
+    [HasPermission(BillingPermissions.View)]
+    [ProducesResponseType<ApiResponse<BillingSettingsDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> Get(CancellationToken cancellationToken) =>
+        OkResponse(await manager.GetAsync(cancellationToken));
+
+    [HttpPut]
+    [HasPermission(BillingPermissions.SettingsManage)]
+    [ProducesResponseType<ApiResponse<BillingSettingsDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiResponse>(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ApiResponse>(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> Update([FromBody] BillingSettingsUpdateDto request, CancellationToken cancellationToken) =>
+        OkResponse(await manager.UpdateAsync(request, cancellationToken), "Billing settings saved.");
+}

@@ -56,6 +56,7 @@ public static class PatientErrorCodes
     public const string DocumentInvalid = "PATIENT_DOCUMENT_INVALID";
     public const string MergePending = "PATIENT_MERGE_ALREADY_PENDING";
     public const string MergeInvalid = "PATIENT_MERGE_INVALID";
+    public const string MergeBlocked = "PATIENT_MERGE_BLOCKED";
 }
 
 // ---------- Patient DTOs ----------
@@ -129,8 +130,22 @@ public sealed record PatientDto(
     PatientStatus Status,
     Guid? MergedIntoPatientId,
     string? MergedIntoMRNumber,
+    DateTime? DeceasedAt,
+    // Duplicate records merged into this patient (their history is shown with this record).
+    IReadOnlyList<MergedRecordDto> MergedRecords,
     DateTime CreatedAt,
-    uint RowVersion);
+    uint RowVersion)
+{
+    /// <summary>Set only in the registration response when a registration fee was billed.</summary>
+    public RegistrationBillDto? RegistrationBill { get; init; }
+}
+
+public sealed record MergedRecordDto(Guid Id, string MRNumber);
+
+/// <summary>Dashboard counts.</summary>
+public sealed record PatientCountsDto(int RegisteredToday, int ActivePatients);
+
+public sealed record RegistrationBillDto(Guid InvoiceId, string InvoiceNumber, decimal Amount);
 
 public sealed record PatientListItemDto(
     Guid Id,

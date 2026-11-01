@@ -206,12 +206,12 @@ public sealed class ConsultationRepository(ClinicalDbContext context)
     public Task<Consultation?> GetByEncounterAsync(EncounterType encounterType, Guid encounterId, CancellationToken cancellationToken) =>
         WithLines(Set).FirstOrDefaultAsync(c => c.EncounterType == encounterType && c.EncounterId == encounterId, cancellationToken);
 
-    public async Task<IReadOnlyList<Consultation>> GetForPatientAsync(Guid patientId, int take, CancellationToken cancellationToken) =>
+    public async Task<IReadOnlyList<Consultation>> GetForPatientAsync(IReadOnlyCollection<Guid> patientIds, int take, CancellationToken cancellationToken) =>
         await Set.AsNoTracking()
             .Include(c => c.Diagnoses)
             .Include(c => c.Prescription)
             .AsSplitQuery()
-            .Where(c => c.PatientId == patientId)
+            .Where(c => patientIds.Contains(c.PatientId))
             .OrderByDescending(c => c.EncounterDate).ThenByDescending(c => c.CreatedAt)
             .Take(take)
             .ToListAsync(cancellationToken);

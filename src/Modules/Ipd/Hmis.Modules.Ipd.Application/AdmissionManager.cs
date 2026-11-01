@@ -7,6 +7,7 @@ using Hmis.BuildingBlocks.Contracts.Administration;
 using Hmis.BuildingBlocks.Contracts.Billing;
 using Hmis.BuildingBlocks.Contracts.HR;
 using Hmis.BuildingBlocks.Contracts.Identity;
+using Hmis.BuildingBlocks.Contracts.Notifications;
 using Hmis.BuildingBlocks.Contracts.Patient;
 using Hmis.Modules.Ipd.Domain.Entities;
 using Microsoft.Extensions.Logging;
@@ -36,12 +37,16 @@ public sealed class AdmissionManager(
     IAuditService auditService,
     ICurrentUser currentUser,
     IDateTimeProvider dateTime,
-    ILogger<AdmissionManager> logger) : IAdmissionManager
+    ILogger<AdmissionManager> logger,
+    IServicePriceLookup prices,
+    IPatientStatusService patientStatus,
+    INotificationService notifications) : IAdmissionManager
 {
     // ---------- Queries ----------
 
     public async Task<PagedResponse<AdmissionSummaryDto>> SearchAsync(AdmissionListQuery query, CancellationToken cancellationToken)
     {
+        query.PatientIds = query.PatientId is { } patientId ? await patientLookup.GetWithMergedAsync(patientId, cancellationToken) : null;
         var page = await admissions.SearchAsync(query, cancellationToken);
         var context = await LoadContextAsync(page.Items, cancellationToken);
         return page.Map(a => ToSummary(a, context));
@@ -91,7 +96,12 @@ public sealed class AdmissionManager(
         if (patient is not { Status: "Active" })
         {
             throw new BusinessException(IpdErrorCodes.PatientUnavailable,
-                patient?.Status == "Merged" ? "This patient record was merged into another record. Admit the surviving record." : "Select an active patient.",
+                patient?.Status switch
+                {
+                    "Merged" => "This patient record was merged into another record. Admit the surviving record.",
+                    "Deceased" => "This patient is recorded as deceased.",
+                    _ => "Select an active patient."
+                },
                 "patientId");
         }
 
@@ -114,8 +124,13 @@ public sealed class AdmissionManager(
         await admissions.AddAsync(admission, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
+        await PostAdmissionFeeSafelyAsync(admission, cancellationToken);
         await PostChargesSafelyAsync(admission, cancellationToken);
-        return await ToDtoAsync(admission, cancellationToken);
+        var dto = await ToDtoAsync(admission, cancellationToken);
+        await notifications.NotifyEmployeeAsync(admission.AttendingDoctorId, new NotificationMessage(NotificationTypes.PatientAdmitted,
+            $"Patient admitted under you · {dto.Summary.WardName} bed {dto.Summary.BedNumber}",
+            $"{dto.Summary.PatientName} ({dto.Summary.PatientMRNumber}) — {admission.Reason}", $"/ipd/admissions/{admission.Id}"), cancellationToken);
+        return dto;
     }
 
     public async Task<AdmissionDto> TransferAsync(Guid id, TransferDto request, CancellationToken cancellationToken)
@@ -168,10 +183,19 @@ public sealed class AdmissionManager(
         }
 
         var doctorId = await GetSignedInDoctorIdAsync(cancellationToken);
+        var firstOrder = admission.Status == AdmissionStatus.Admitted;
         admission.OrderDischarge(doctorId, new DischargeValues(request.Type, request.FinalDiagnosis, request.HospitalCourse,
             request.DischargeMedications, request.Advice, request.FollowUpDate), dateTime.UtcNow);
         await unitOfWork.SaveChangesAsync(cancellationToken);
-        return await ToDtoAsync(admission, cancellationToken);
+        var dto = await ToDtoAsync(admission, cancellationToken);
+        if (firstOrder)
+        {
+            await notifications.NotifyPermissionAsync(IpdPermissions.DischargeComplete, new NotificationMessage(NotificationTypes.DischargeOrdered,
+                $"Discharge ordered · {dto.Summary.WardName} bed {dto.Summary.BedNumber}",
+                $"{dto.Summary.PatientName} ({dto.Summary.PatientMRNumber}): prepare the final bill.", $"/ipd/admissions/{admission.Id}"), cancellationToken);
+        }
+
+        return dto;
     }
 
     public async Task<AdmissionDto> CancelDischargeOrderAsync(Guid id, AdmissionRowVersionDto request, CancellationToken cancellationToken)
@@ -204,7 +228,15 @@ public sealed class AdmissionManager(
         await charges.FinalizeRunningBillAsync(ChargeSources.IpdAdmission, admission.Id, cancellationToken);
         admission.MarkFinalBilled(dischargedAt);
         await unitOfWork.SaveChangesAsync(cancellationToken);
-        return await ToDtoAsync(admission, cancellationToken);
+        var dto = await ToDtoAsync(admission, cancellationToken);
+        if (dto.Bill is { DueAmount: > 0 } bill)
+        {
+            await notifications.NotifyPermissionAsync(BillingCollectPermission, new NotificationMessage(NotificationTypes.FinalBillReady,
+                $"Final bill ready · {bill.InvoiceNumber}", $"{dto.Summary.PatientName} ({dto.Summary.PatientMRNumber}): {bill.DueAmount:0.00} due before discharge.",
+                $"/billing/invoices/{bill.InvoiceId}"), cancellationToken);
+        }
+
+        return dto;
     }
 
     /// <summary>The patient leaves and the bed is freed: the bill must be settled, or an administrator records why not.</summary>
@@ -237,10 +269,57 @@ public sealed class AdmissionManager(
             ?? throw new BusinessException(IpdErrorCodes.BedInvalid, "The patient has no current bed.");
         admission.Release(bed, dateTime.UtcNow, due, overrideReason is null ? null : userId, overrideReason);
         await unitOfWork.SaveChangesAsync(cancellationToken);
-        return await ToDtoAsync(admission, cancellationToken);
+
+        if (admission.DischargeType == DischargeType.Death)
+        {
+            await MarkDeceasedSafelyAsync(admission, cancellationToken);
+        }
+
+        var dto = await ToDtoAsync(admission, cancellationToken);
+        await notifications.NotifyEmployeeAsync(admission.AttendingDoctorId, new NotificationMessage(NotificationTypes.PatientDischarged,
+            $"Patient discharged · {admission.AdmissionNumber}", $"{dto.Summary.PatientName} ({dto.Summary.PatientMRNumber}) has left the ward.",
+            $"/ipd/admissions/{admission.Id}"), cancellationToken);
+        return dto;
     }
 
     // ---------- helpers ----------
+
+    /// <summary>Owned by Billing; holders collect payments (final-bill notification).</summary>
+    private const string BillingCollectPermission = "Billing.Payment.Collect";
+
+    /// <summary>
+    /// The price-list admission charge (service ADM), posted once at admission when active and priced. Not posted by the
+    /// periodic job, so pricing it later never bills stays that began before. A failure is logged; the cashier can add it.
+    /// </summary>
+    private async Task PostAdmissionFeeSafelyAsync(Admission admission, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (await prices.GetActiveAsync(StandardServiceCodes.Admission, cancellationToken) is { Price: > 0 } fee)
+            {
+                await charges.AddToRunningBillAsync(new RunningChargeRequest(ChargeSources.IpdAdmission, admission.Id, admission.AdmissionNumber,
+                    admission.PatientId, [new RunningChargeLine("ADMISSION", fee.Name, fee.Category, 1, fee.Price)]), cancellationToken);
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Admission charge for {AdmissionNumber} could not be posted", admission.AdmissionNumber);
+        }
+    }
+
+    /// <summary>A death discharge records the patient as deceased; a failure is logged and staff can correct the record.</summary>
+    private async Task MarkDeceasedSafelyAsync(Admission admission, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await patientStatus.MarkDeceasedAsync(admission.PatientId, admission.DischargedAt ?? admission.ReleasedAt ?? dateTime.UtcNow,
+                $"IPD discharge {admission.AdmissionNumber}", cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogError(ex, "Patient of admission {AdmissionNumber} could not be marked deceased", admission.AdmissionNumber);
+        }
+    }
 
     /// <summary>Posting failures never undo the clinical action; the periodic job posts the missing days later.</summary>
     private async Task PostChargesSafelyAsync(Admission admission, CancellationToken cancellationToken)

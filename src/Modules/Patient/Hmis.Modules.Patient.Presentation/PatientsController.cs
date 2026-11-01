@@ -29,6 +29,13 @@ public sealed class PatientsController(
 {
     // ---------- Registration & demographics ----------
 
+    /// <summary>Registered today and active patients (dashboard).</summary>
+    [HttpGet("counts")]
+    [HasPermission(PatientPermissions.View)]
+    [ProducesResponseType<ApiResponse<PatientCountsDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> Counts(CancellationToken cancellationToken) =>
+        OkResponse(await patients.GetCountsAsync(cancellationToken));
+
     /// <summary>Search by MR number, mobile, name or identification number.</summary>
     [HttpGet]
     [HasPermission(PatientPermissions.View)]

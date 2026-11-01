@@ -1,7 +1,9 @@
+using Hmis.BuildingBlocks.Application.Abstractions;
 using Hmis.BuildingBlocks.Application.Pagination;
 using Hmis.BuildingBlocks.Application.Security;
 using Hmis.BuildingBlocks.Contracts.Administration;
 using Hmis.BuildingBlocks.Contracts.Billing;
+using Hmis.BuildingBlocks.Contracts.Patient;
 using Hmis.BuildingBlocks.Infrastructure;
 using Hmis.BuildingBlocks.Infrastructure.Persistence;
 using Hmis.Modules.Billing.Application;
@@ -26,6 +28,7 @@ public sealed class BillingDbContext(DbContextOptions<BillingDbContext> options)
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Refund> Refunds => Set<Refund>();
+    public DbSet<BillingSettings> Settings => Set<BillingSettings>();
 }
 
 public sealed class BillingUnitOfWork(BillingDbContext context)
@@ -170,6 +173,25 @@ public sealed class RefundConfiguration : IEntityTypeConfiguration<Refund>
     }
 }
 
+public sealed class BillingSettingsConfiguration : IEntityTypeConfiguration<BillingSettings>
+{
+    public void Configure(EntityTypeBuilder<BillingSettings> builder)
+    {
+        builder.ToTable("BillingSettings", t => t.HasCheckConstraint("CK_BillingSettings_Discount",
+            "\"DiscountApprovalPercent\" >= 0 AND \"DiscountApprovalPercent\" <= 100"));
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.DiscountApprovalPercent).HasPrecision(5, 2);
+        builder.Property(x => x.DisabledPaymentMethods).HasMaxLength(200).IsRequired();
+        builder.Ignore(x => x.Disabled);
+    }
+}
+
+public sealed class BillingSettingsRepository(BillingDbContext context)
+    : BaseRepository<BillingSettings, BillingDbContext>(context), IBillingSettingsRepository
+{
+    public Task<BillingSettings?> GetAsync(CancellationToken cancellationToken) => Set.FirstOrDefaultAsync(cancellationToken);
+}
+
 public sealed class BillableServiceRepository(BillingDbContext context)
     : BaseRepository<BillableService, BillingDbContext>(context), IBillableServiceRepository
 {
@@ -199,6 +221,9 @@ public sealed class BillableServiceRepository(BillingDbContext context)
 
     public Task<bool> CodeExistsAsync(string code, CancellationToken cancellationToken) =>
         Set.AnyAsync(s => s.Code == code, cancellationToken);
+
+    public Task<BillableService?> GetByCodeAsync(string code, CancellationToken cancellationToken) =>
+        Set.AsNoTracking().FirstOrDefaultAsync(s => s.Code == code, cancellationToken);
 
     public async Task<IReadOnlyList<BillableService>> GetByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken) =>
         await Set.AsNoTracking().Where(s => ids.Contains(s.Id)).ToListAsync(cancellationToken);
@@ -273,6 +298,9 @@ public sealed class InvoiceRepository(BillingDbContext context)
 
     public Task<decimal> GetOutstandingAsync(Guid patientId, CancellationToken cancellationToken) =>
         Set.Where(i => i.PatientId == patientId && i.Status == InvoiceStatus.Finalized).SumAsync(i => i.NetAmount - i.PaidAmount, cancellationToken);
+
+    public Task<bool> HasDraftAsync(Guid patientId, CancellationToken cancellationToken) =>
+        Set.AnyAsync(i => i.PatientId == patientId && i.Status == InvoiceStatus.Draft, cancellationToken);
 
     public async Task<IReadOnlyList<Invoice>> GetWithPendingDiscountsAsync(CancellationToken cancellationToken) =>
         await Set.AsNoTracking().Include(i => i.Discounts)
@@ -353,6 +381,12 @@ public static class DependencyInjection
         services.AddScoped<IInvoiceRepository, InvoiceRepository>();
         services.AddScoped<IPaymentRepository, PaymentRepository>();
         services.AddScoped<IRefundRepository, RefundRepository>();
+        services.AddScoped<IBillingSettingsRepository, BillingSettingsRepository>();
+        services.AddScoped<IBillingSettingsManager, BillingSettingsManager>();
+        services.AddScoped<BillingContractServices>();
+        services.AddScoped<IServicePriceLookup>(sp => sp.GetRequiredService<BillingContractServices>());
+        services.AddScoped<IPatientMergeGuard>(sp => sp.GetRequiredService<BillingContractServices>());
+        services.AddScoped<IStartupTask, BillingSeedTask>();
         services.AddScoped<BillingDtoFactory>();
         services.AddScoped<IServiceCatalogManager, ServiceCatalogManager>();
         services.AddScoped<InvoiceManager>();

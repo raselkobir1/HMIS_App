@@ -1,6 +1,7 @@
 using Hmis.BuildingBlocks.Application.Abstractions;
 using Hmis.BuildingBlocks.Application.Exceptions;
 using Hmis.BuildingBlocks.Application.Pagination;
+using Hmis.BuildingBlocks.Contracts.Notifications;
 using Hmis.BuildingBlocks.Contracts.Administration;
 using Hmis.BuildingBlocks.Contracts.Appointment;
 using Hmis.BuildingBlocks.Contracts.Billing;
@@ -23,7 +24,8 @@ public sealed class AppointmentManager(
     INumberSequenceService numberSequences,
     IChargeService charges,
     ICurrentUser currentUser,
-    IDateTimeProvider dateTime) : IAppointmentManager, IOpdEncounterService
+    IDateTimeProvider dateTime,
+    INotificationService notifications) : IAppointmentManager, IOpdEncounterService
 {
     // ---------- Availability ----------
 
@@ -51,9 +53,19 @@ public sealed class AppointmentManager(
 
     public async Task<PagedResponse<AppointmentDto>> SearchAsync(AppointmentListQuery query, CancellationToken cancellationToken)
     {
+        // A patient's history includes duplicate records merged into it.
+        query.PatientIds = query.PatientId is { } patientId ? await patientLookup.GetWithMergedAsync(patientId, cancellationToken) : null;
         var page = await appointments.SearchAsync(query, cancellationToken);
         var context = await LoadContextAsync(page.Items, cancellationToken);
         return page.Map(a => ToDto(a, context));
+    }
+
+    public async Task<AppointmentDaySummaryDto> GetDaySummaryAsync(DateOnly? date, CancellationToken cancellationToken)
+    {
+        var day = date ?? dateTime.LocalToday;
+        var list = await appointments.GetForDateAsync(day, null, cancellationToken);
+        return new AppointmentDaySummaryDto(day, list.Count,
+            Enum.GetValues<AppointmentStatus>().Select(s => new StatusCountDto(s, list.Count(a => a.Status == s))).ToList());
     }
 
     public async Task<AppointmentDto> GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
@@ -93,7 +105,11 @@ public sealed class AppointmentManager(
             await CheckInAndBillAsync(appointment, cancellationToken);
         }
 
-        return await ToDtoAsync(appointment, cancellationToken);
+        var dto = await ToDtoAsync(appointment, cancellationToken);
+        await notifications.NotifyEmployeeAsync(appointment.DoctorId, new NotificationMessage(NotificationTypes.AppointmentBooked,
+            $"New appointment · serial {dto.SerialNumber}", $"{dto.PatientName} ({dto.PatientMRNumber}) on {dto.AppointmentDate:d MMM yyyy}",
+            "/appointments/my-queue"), cancellationToken);
+        return dto;
     }
 
     public async Task<AppointmentDto> RescheduleAsync(Guid id, AppointmentRescheduleDto request, CancellationToken cancellationToken)
@@ -348,9 +364,12 @@ public sealed class AppointmentManager(
         if (patient.Status != "Active")
         {
             throw new BusinessException(AppointmentErrorCodes.PatientUnavailable,
-                patient.Status == "Merged"
-                    ? "This patient record was merged into another record. Book with the surviving record."
-                    : "This patient record is inactive.",
+                patient.Status switch
+                {
+                    "Merged" => "This patient record was merged into another record. Book with the surviving record.",
+                    "Deceased" => "This patient is recorded as deceased.",
+                    _ => "This patient record is inactive."
+                },
                 "patientId");
         }
     }

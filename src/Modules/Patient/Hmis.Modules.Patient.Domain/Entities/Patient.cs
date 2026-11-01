@@ -37,7 +37,10 @@ public enum PatientStatus
     Inactive,
 
     /// <summary>Duplicate record merged into another patient; read-only and points to the surviving record.</summary>
-    Merged
+    Merged,
+
+    /// <summary>Died (e.g. recorded by an IPD discharge of type Death). Kept editable for corrections; no new visits or admissions.</summary>
+    Deceased
 }
 
 /// <summary>Address stored inline on the patient (owned value).</summary>
@@ -94,6 +97,7 @@ public sealed class Patient : AuditableEntity, IAggregateRoot, IHasConcurrencyTo
 
     public PatientStatus Status { get; private set; } = PatientStatus.Active;
     public Guid? MergedIntoPatientId { get; private set; }
+    public DateTime? DeceasedAt { get; private set; }
     public uint RowVersion { get; private set; }
 
     public static Patient Register(string mrNumber, PatientDetails details)
@@ -116,10 +120,24 @@ public sealed class Patient : AuditableEntity, IAggregateRoot, IHasConcurrencyTo
         PhotoContentType = contentType;
     }
 
+    /// <summary>Also corrects a death recorded by mistake.</summary>
     public void Activate()
     {
         EnsureNotMerged();
         Status = PatientStatus.Active;
+        DeceasedAt = null;
+    }
+
+    public void MarkDeceased(DateTime diedAt)
+    {
+        EnsureNotMerged();
+        if (Status == PatientStatus.Deceased)
+        {
+            return;
+        }
+
+        Status = PatientStatus.Deceased;
+        DeceasedAt = diedAt;
     }
 
     public void Deactivate()

@@ -48,6 +48,7 @@ public sealed record DoctorDto(
     string RegistrationNumber,
     decimal NewPatientFee,
     decimal FollowUpFee,
+    decimal InpatientVisitFee,
     bool IsAcceptingAppointments,
     EmploymentStatus EmploymentStatus,
     uint RowVersion);
@@ -60,6 +61,7 @@ public sealed record DoctorCreateDto
     public string RegistrationNumber { get; init; } = string.Empty;
     public decimal NewPatientFee { get; init; }
     public decimal FollowUpFee { get; init; }
+    public decimal InpatientVisitFee { get; init; }
 }
 
 public sealed record DoctorUpdateDto
@@ -69,6 +71,7 @@ public sealed record DoctorUpdateDto
     public string RegistrationNumber { get; init; } = string.Empty;
     public decimal NewPatientFee { get; init; }
     public decimal FollowUpFee { get; init; }
+    public decimal InpatientVisitFee { get; init; }
     public bool IsAcceptingAppointments { get; init; }
     public uint RowVersion { get; init; }
 }
@@ -85,6 +88,7 @@ public sealed class DoctorCreateValidator : AbstractValidator<DoctorCreateDto>
         RuleFor(x => x.RegistrationNumber).DoctorRegistration();
         RuleFor(x => x.NewPatientFee).InclusiveBetween(0, 1_000_000).PrecisionScale(18, 2, true);
         RuleFor(x => x.FollowUpFee).InclusiveBetween(0, 1_000_000).PrecisionScale(18, 2, true);
+        RuleFor(x => x.InpatientVisitFee).InclusiveBetween(0, 1_000_000).PrecisionScale(18, 2, true);
     }
 }
 
@@ -97,6 +101,7 @@ public sealed class DoctorUpdateValidator : AbstractValidator<DoctorUpdateDto>
         RuleFor(x => x.RegistrationNumber).DoctorRegistration();
         RuleFor(x => x.NewPatientFee).InclusiveBetween(0, 1_000_000).PrecisionScale(18, 2, true);
         RuleFor(x => x.FollowUpFee).InclusiveBetween(0, 1_000_000).PrecisionScale(18, 2, true);
+        RuleFor(x => x.InpatientVisitFee).InclusiveBetween(0, 1_000_000).PrecisionScale(18, 2, true);
     }
 }
 
@@ -187,7 +192,7 @@ public sealed class DoctorManager(
         await EnsureRegistrationUniqueAsync(request.RegistrationNumber, null, cancellationToken);
 
         var profile = DoctorProfile.Create(employee.Id, request.Specialization, request.Qualifications,
-            request.RegistrationNumber, request.NewPatientFee, request.FollowUpFee);
+            request.RegistrationNumber, request.NewPatientFee, request.FollowUpFee, request.InpatientVisitFee);
         await doctors.AddAsync(profile, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return ToDto(profile, employee, await LoadNamesAsync([employee], cancellationToken));
@@ -200,7 +205,7 @@ public sealed class DoctorManager(
         await EnsureRegistrationUniqueAsync(request.RegistrationNumber, id, cancellationToken);
 
         profile.Update(request.Specialization, request.Qualifications, request.RegistrationNumber,
-            request.NewPatientFee, request.FollowUpFee, request.IsAcceptingAppointments);
+            request.NewPatientFee, request.FollowUpFee, request.InpatientVisitFee, request.IsAcceptingAppointments);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return await GetByIdAsync(id, cancellationToken);
     }
@@ -215,7 +220,7 @@ public sealed class DoctorManager(
             .Select(i => new DoctorSummary(
                 i.Employee.Id, i.Employee.EmployeeCode, i.Employee.FullName, i.Employee.DepartmentId,
                 i.Profile.Specialization, i.Profile.Qualifications, i.Profile.RegistrationNumber, i.Profile.NewPatientFee, i.Profile.FollowUpFee,
-                i.Profile.IsAcceptingAppointments, i.Employee.IsCurrent))
+                i.Profile.InpatientVisitFee, i.Profile.IsAcceptingAppointments, i.Employee.IsCurrent))
             .ToList();
 
     private async Task<DoctorProfile> GetProfileAsync(Guid id, CancellationToken cancellationToken) =>
@@ -242,5 +247,5 @@ public sealed class DoctorManager(
         DoctorProfile p, Employee e, (Dictionary<Guid, string> Departments, Dictionary<Guid, string> Designations) names) =>
         new(p.Id, e.Id, e.EmployeeCode, e.FullName, e.DepartmentId, names.Departments.GetValueOrDefault(e.DepartmentId),
             names.Designations.GetValueOrDefault(e.DesignationId), p.Specialization, p.Qualifications, p.RegistrationNumber,
-            p.NewPatientFee, p.FollowUpFee, p.IsAcceptingAppointments, e.Status, p.RowVersion);
+            p.NewPatientFee, p.FollowUpFee, p.InpatientVisitFee, p.IsAcceptingAppointments, e.Status, p.RowVersion);
 }

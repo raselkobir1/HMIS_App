@@ -45,7 +45,8 @@ public sealed class ClinicalManager(
         var doctor = await doctorLookup.GetAsync(encounter.DoctorId, cancellationToken);
         var vitalList = await vitals.GetForEncounterAsync(EncounterType.Opd, encounterId, cancellationToken);
         var consultation = await consultations.GetByEncounterAsync(EncounterType.Opd, encounterId, cancellationToken);
-        var previous = (await consultations.GetForPatientAsync(encounter.PatientId, HistoryLimit, cancellationToken))
+        var previous = (await consultations.GetForPatientAsync(
+                await patientLookup.GetWithMergedAsync(encounter.PatientId, cancellationToken), HistoryLimit, cancellationToken))
             .Where(c => c.Id != consultation?.Id).ToList();
 
         var names = await GetUserNamesAsync(
@@ -196,7 +197,8 @@ public sealed class ClinicalManager(
         await EnsureCanViewPatientAsync(doctorId, patientId, cancellationToken);
         await AuditViewAsync("PatientClinicalHistory", patientId, cancellationToken);
 
-        var list = await consultations.GetForPatientAsync(patientId, HistoryLimit, cancellationToken);
+        var list = await consultations.GetForPatientAsync(await patientLookup.GetWithMergedAsync(patientId, cancellationToken), HistoryLimit,
+            cancellationToken);
         var doctorNames = await GetDoctorNamesAsync(list.Select(c => c.DoctorId), cancellationToken);
         return list.Select(c => ToSummary(c, doctorNames)).ToList();
     }

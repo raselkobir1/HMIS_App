@@ -2,6 +2,7 @@ using Hmis.BuildingBlocks.Application.Abstractions;
 using Hmis.BuildingBlocks.Application.Exceptions;
 using Hmis.BuildingBlocks.Application.Pagination;
 using Hmis.BuildingBlocks.Application.Security;
+using Hmis.BuildingBlocks.Contracts.Notifications;
 using Hmis.BuildingBlocks.Contracts.Administration;
 using Hmis.BuildingBlocks.Contracts.Billing;
 using Hmis.BuildingBlocks.Contracts.Patient;
@@ -22,7 +23,9 @@ public sealed class InvoiceManager(
     INumberSequenceService numberSequences,
     IPermissionChecker permissions,
     ICurrentUser currentUser,
-    IDateTimeProvider dateTime) : IInvoiceManager, IChargeService
+    IDateTimeProvider dateTime,
+    IBillingSettingsRepository settings,
+    INotificationService notifications) : IInvoiceManager, IChargeService
 {
     // ---------- Queries ----------
 
@@ -110,19 +113,29 @@ public sealed class InvoiceManager(
     // ---------- Discounts ----------
 
     /// <summary>
-    /// Applies at once while the invoice's total discount stays within <see cref="BillingPolicy.DiscountApprovalPercent"/>
-    /// of the subtotal (or the user may approve discounts); otherwise it waits for approval.
+    /// Applies at once while the invoice's total discount stays within the configured approval limit (Billing settings) of the
+    /// subtotal, or when the user may approve discounts; otherwise it waits for approval and approvers are notified.
     /// </summary>
     public async Task<InvoiceDto> RequestDiscountAsync(Guid id, DiscountRequestDto request, CancellationToken cancellationToken)
     {
         var userId = currentUser.UserId ?? throw new UnauthorizedException();
+        var limit = (await BillingSettingsManager.CurrentAsync(settings, cancellationToken)).DiscountApprovalPercent;
+        var pending = false;
         var invoice = await LockedAsync(id, async (invoice, ct) =>
         {
             var amount = invoice.CalculateDiscount(request.Type, request.Value);
-            var withinLimit = invoice.DiscountPercentWith(amount) <= BillingPolicy.DiscountApprovalPercent;
+            var withinLimit = invoice.DiscountPercentWith(amount) <= limit;
             var approvedBy = withinLimit || await HasPermissionAsync(BillingPermissions.DiscountApprove, ct) ? userId : (Guid?)null;
             invoice.RequestDiscount(request.Type, request.Value, request.Reason, approvedBy, dateTime.UtcNow);
+            pending = approvedBy is null;
         }, cancellationToken);
+
+        if (pending)
+        {
+            await notifications.NotifyPermissionAsync(BillingPermissions.DiscountApprove, new NotificationMessage(NotificationTypes.DiscountApproval,
+                $"Discount waiting for approval · {invoice.InvoiceNumber}", $"{request.Reason} (above the {limit:0.##}% limit)", "/billing/approvals"),
+                cancellationToken);
+        }
 
         return await dtos.InvoiceAsync(invoice, cancellationToken);
     }

@@ -8,6 +8,23 @@ public static class ChargeSources
 {
     public const string OpdAppointment = "OpdAppointment";
     public const string IpdAdmission = "IpdAdmission";
+    public const string PatientRegistration = "PatientRegistration";
+}
+
+/// <summary>Price-list services that other modules charge automatically. Seeded by Billing with price 0 (no charge).</summary>
+public static class StandardServiceCodes
+{
+    public const string Registration = "REG";
+    public const string Admission = "ADM";
+}
+
+/// <param name="Category">A <see cref="ChargeCategories"/> value.</param>
+public sealed record ServicePrice(string Code, string Name, string Category, decimal Price);
+
+public interface IServicePriceLookup
+{
+    /// <summary>The current price of an active price-list service, or null when it does not exist or is inactive.</summary>
+    Task<ServicePrice?> GetActiveAsync(string code, CancellationToken cancellationToken);
 }
 
 /// <summary>Service categories understood by Billing (unknown values are billed as "Other").</summary>
