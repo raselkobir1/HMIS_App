@@ -329,3 +329,11 @@ Patient visits, admission history, billing and lab history are **not** stored in
 - `Admissions`: unique `AdmissionNumber` (ADMISSION sequence, ADM), patient, attending doctor, department, source, reason, emergency contact, `AdmittedAt`, `Status` (Admitted/DischargeOrdered/FinalBilled/Discharged), discharge order and summary fields, `DischargedAt` (bill cut-off), `ReleasedAt`, release override (due, reason, by), `Revision`. Unique filtered index: one non-discharged admission per patient.
 - `BedAssignments`: admission, bed, `StartedAt`, `EndedAt`, reason; unique filtered index on `BedId` where `EndedAt IS NULL` (no double booking).
 - `billing.InvoiceLines.ChargeKey` (unique per invoice when set) for posted charges such as `BED:2026-10-31`.
+
+## Inpatient care (Phase 4 step 2)
+- `clinical.ProgressNotes`: admission, patient, doctor, kind (WardRound, OnCall, ConsultantReview, Procedure), SOAP fields, entered-in-error.
+- `clinical.MedicationOrders`: admission, patient, ordering doctor, medicine, strength, form, route, dose, `Frequency`, `StartsAt`, `DurationDays`, PRN indication, instructions, `Status` (Active/Stopped; "Completed" is derived), stop time/doctor/reason, `xmin`.
+- `clinical.VitalSigns` now also holds ward vitals (`EncounterType` = `Ipd`, `EncounterId` = admission id).
+- `nursing.MedicationAdministrations`: order, admission, patient, `ScheduledAt` (null for PRN), status, `OccurredAt`, dose given, reason, notes, entered-in-error. Unique filtered index (`MedicationOrderId`, `ScheduledAt`) where scheduled and not in error.
+- `nursing.IntakeOutputEntries` (direction, category, `VolumeMl` > 0), `nursing.NursingNotes`, `nursing.ShiftHandovers` (unique ward + date + shift, received by/at, `xmin`) with `HandoverItems`.
+- `nursing.NurseAssignments`: ward, date, shift, employee, in charge; unique per ward/date/shift/employee and one in charge per ward/date/shift (filtered).

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-01 — IPD step 2: inpatient care and nursing (Phase 4)
+- Doctors: signed progress notes (SOAP) and inpatient medication orders with standard ward times; stop and re-order to change.
+- Ward vitals on the inpatient chart.
+- New Nursing module (`nursing` schema): ward view with doses due/overdue, Medication Administration Record (given, omitted, refused, held), intake/output with shift and 24-hour balance, nursing notes, shift handover with receipt, and a nurse roster by ward and shift.
+- Allergy banner on the chart, the order dialog and every dose.
+- Corrections only by the author, marked "entered in error"; chart views are audited.
+
 ## 2026-10-31 — IPD step 1: beds, admission, discharge (Phase 4)
 - New IPD module (`ipd` schema): bed categories with daily rent and suggested deposit, wards, beds, bed board with housekeeping statuses.
 - Admission with bed allocation (no double booking), bed transfer with history, attending doctor change.

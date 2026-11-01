@@ -95,3 +95,7 @@ User menu: My Profile · Change Password · Logout
 - IPD: Bed Board (Ipd.View) · Admissions (Ipd.View) · Admit Patient (Ipd.Admit) · Ward & Bed Setup (Ipd.Setup.Manage).
 - Screens: `/ipd/admissions/{id}` (stay, bill and deposit, discharge summary, actions by status), `/ipd/admissions/{id}/summary` (A4 print).
 - Patient profile: "Admit" button (Ipd.Admit). Billing invoice page marks IPD running bills; their bed lines are read-only.
+
+## Implemented menu (Phase 4 step 2)
+- Nursing: Ward Nursing (Nursing.View) · Shift Handover (Nursing.View) · Nurse Roster (Nursing.View or Nursing.Roster.Manage).
+- Screens: `/nursing/patients/{admissionId}` — patient chart with tabs MAR, Orders & notes, Vitals, Intake / output, Nursing notes (tabs follow permissions; doctors open on Orders & notes, nurses on the MAR). The IPD admission page links to it ("Patient chart").

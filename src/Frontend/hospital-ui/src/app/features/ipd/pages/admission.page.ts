@@ -71,6 +71,9 @@ import { Admission, ADMISSION_STATUS_LABELS, DISCHARGE_TYPE_LABELS, IpdApiServic
           @if (a.discharge) {
             <a mat-stroked-button [routerLink]="['/ipd/admissions', s.id, 'summary']"><mat-icon>print</mat-icon> Discharge summary</a>
           }
+          @if (can.chart) {
+            <a mat-stroked-button [routerLink]="['/nursing/patients', s.id]"><mat-icon>clinical_notes</mat-icon> Patient chart</a>
+          }
         </div>
       </header>
 
@@ -248,6 +251,7 @@ export class AdmissionPage implements OnInit {
     override: this.auth.hasPermission(IpdPermissions.dischargeOverride),
     billing: this.auth.hasPermission(BillingPermissions.view),
     collect: this.auth.hasPermission(BillingPermissions.paymentCollect),
+    chart: this.auth.hasAnyPermission([IpdPermissions.clinicalView, 'Nursing.View']),
   };
   protected readonly labels = ADMISSION_STATUS_LABELS;
   protected readonly sources = SOURCE_LABELS;

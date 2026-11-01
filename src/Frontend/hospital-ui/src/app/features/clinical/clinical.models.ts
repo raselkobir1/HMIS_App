@@ -207,6 +207,11 @@ export class ClinicalApiService {
     return this.unwrap(this.http.post<ApiResponse<VitalSign>>(`${this.base}/opd/encounters/${encounterId}/vitals`, request));
   }
 
+  /** Ward vitals: the encounter is the IPD admission. */
+  recordInpatientVitals(admissionId: string, request: VitalSignRequest): Observable<VitalSign> {
+    return this.unwrap(this.http.post<ApiResponse<VitalSign>>(`${this.base}/ipd/admissions/${admissionId}/vitals`, request));
+  }
+
   vitalsInError(id: string, reason: string): Observable<VitalSign> {
     return this.unwrap(this.http.post<ApiResponse<VitalSign>>(`${this.base}/vital-signs/${id}/entered-in-error`, { reason }));
   }

@@ -139,3 +139,15 @@ Detailed permission codes for each later module will be added here when that mod
 | `Ipd.Discharge.Override` | Hospital Administrator | Release with amount due (reason required) |
 
 Diagnoses and the discharge summary are shown only to users with `Clinical.View` or `Ipd.Discharge.Order`; opening the printable summary is audited.
+
+## Inpatient care permissions (implemented, Phase 4 step 2)
+
+| Permission | Default roles | Notes |
+|---|---|---|
+| `Clinical.Inpatient.Write` | Doctor | **Explicit grant.** Progress notes and medication orders; login must be linked to a doctor profile |
+| `Clinical.View` / `Clinical.Vitals.Record` | Doctor, Nurse | Existing permissions also cover the inpatient chart and ward vitals |
+| `Nursing.View` | Nurse, Doctor | **Explicit grant.** Ward view, MAR, intake/output, nursing notes, handovers, roster |
+| `Nursing.Record` | Nurse | **Explicit grant.** Record doses, fluids, nursing notes; write and receive handovers |
+| `Nursing.Roster.Manage` | Hospital Administrator | Assign nurses to wards and shifts (the employee picker needs `HR.Employees.View`) |
+
+Corrections are made only by the author ("entered in error" with a reason); nothing is deleted. Chart, MAR, fluid and nursing-note views are audited.

@@ -54,6 +54,16 @@ export const NAVIGATION: NavItem[] = [
     ],
   },
   {
+    label: 'Nursing',
+    icon: 'vaccines',
+    permissions: [],
+    children: [
+      { label: 'Ward Nursing', icon: 'medication', route: '/nursing/ward', permissions: ['Nursing.View'] },
+      { label: 'Shift Handover', icon: 'sync_alt', route: '/nursing/handover', permissions: ['Nursing.View'] },
+      { label: 'Nurse Roster', icon: 'calendar_month', route: '/nursing/roster', permissions: ['Nursing.View', 'Nursing.Roster.Manage'] },
+    ],
+  },
+  {
     label: 'Billing',
     icon: 'receipt_long',
     permissions: [],

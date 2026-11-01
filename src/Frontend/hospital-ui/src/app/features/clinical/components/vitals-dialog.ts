@@ -14,11 +14,13 @@ import { ClinicalApiService, VitalSign } from '../clinical.models';
 export interface VitalsDialogData {
   encounterId: string;
   patientLabel: string;
+  /** The encounter id is an IPD admission (ward vitals). */
+  inpatient?: boolean;
 }
 
 const num = (min: number, max: number) => new FormControl<number | null>(null, [Validators.min(min), Validators.max(max)]);
 
-/** Records one set of vitals for an OPD encounter. Ranges mirror the server's plausibility checks. */
+/** Records one set of vitals for an OPD visit or an inpatient stay. Ranges mirror the server's plausibility checks. */
 @Component({
   selector: 'app-vitals-dialog',
   imports: [ReactiveFormsModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatButtonModule, FieldError],
@@ -123,7 +125,11 @@ export class VitalsDialog {
     const v = this.form.getRawValue();
     this.saving.set(true);
     this.error.set(null);
-    this.api.recordVitals(this.data.encounterId, { ...v, notes: v.notes?.trim() || null }).subscribe({
+    const request = { ...v, notes: v.notes?.trim() || null };
+    const call = this.data.inpatient
+      ? this.api.recordInpatientVitals(this.data.encounterId, request)
+      : this.api.recordVitals(this.data.encounterId, request);
+    call.subscribe({
       next: (vital) => {
         this.notifications.success('Vitals recorded.');
         this.dialogRef.close(vital);

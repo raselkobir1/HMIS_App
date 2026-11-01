@@ -84,7 +84,8 @@ public sealed class MarManager(
                 throw new BusinessException(NursingErrorCodes.NotScheduled, "A PRN medicine has no scheduled times.", "scheduledAt");
             }
 
-            if (occurredAt < order.StartsAt || (order.EndsAt is { } end && occurredAt >= end))
+            // Times entered by hand have minute precision: a dose given the minute the order was signed is valid.
+            if (occurredAt < order.StartsAt - ClockSkew || (order.EndsAt is { } end && occurredAt >= end))
             {
                 throw new BusinessException(NursingErrorCodes.OrderNotActive, "The order was not active at that time.", "occurredAt");
             }
@@ -95,7 +96,8 @@ public sealed class MarManager(
         }
 
         var entry = MedicationAdministration.Record(order.Id, admissionId, stay.PatientId, scheduledAt,
-            new AdministrationValues(request.Status, occurredAt, request.DoseGiven ?? order.Dose, request.Reason, request.Notes));
+            new AdministrationValues(request.Status, occurredAt,
+                request.Status == AdministrationStatus.Given ? request.DoseGiven ?? order.Dose : null, request.Reason, request.Notes));
         await administrations.AddAsync(entry, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return ToDto(entry, await support.GetUserNamesAsync([entry.CreatedBy], cancellationToken));

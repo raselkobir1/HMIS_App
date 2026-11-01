@@ -1,0 +1,225 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 16px 0;
+}
+
+.section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+
+  h2 {
+    margin: 0;
+    font: var(--mat-sys-title-medium);
+  }
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+
+  &.inactive {
+    opacity: 0.7;
+  }
+}
+
+.grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.secondary {
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+}
+
+.badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font: var(--mat-sys-label-small);
+  background: var(--mat-sys-surface-container-highest);
+  color: var(--mat-sys-on-surface-variant);
+
+  &.Active {
+    background: var(--mat-sys-primary-container);
+    color: var(--mat-sys-on-primary-container);
+  }
+
+  &.Stopped {
+    background: var(--mat-sys-error-container);
+    color: var(--mat-sys-on-error-container);
+  }
+}
+
+.note {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+
+  header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  p {
+    margin: 4px 0;
+    white-space: pre-wrap;
+  }
+
+  &.error p {
+    text-decoration: line-through;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.small {
+  --mat-button-text-label-text-size: 12px;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+table.grid {
+  width: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: 8px;
+    text-align: left;
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+    white-space: nowrap;
+  }
+
+  th {
+    font: var(--mat-sys-label-medium);
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  tr.error td {
+    text-decoration: line-through;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  td.alert {
+    color: var(--mat-sys-error);
+    font-weight: 600;
+  }
+}
+
+/* Dose chips on the MAR */
+.slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.slot {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 92px;
+  padding: 4px 10px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 8px;
+  background: var(--mat-sys-surface);
+  color: inherit;
+  font: var(--mat-sys-body-small);
+  text-align: left;
+
+  &:enabled {
+    cursor: pointer;
+  }
+
+  .time {
+    font: var(--mat-sys-label-large);
+  }
+
+  &.Given {
+    background: var(--mat-sys-primary-container);
+    color: var(--mat-sys-on-primary-container);
+    border-color: transparent;
+  }
+
+  &.Omitted,
+  &.Refused,
+  &.Held {
+    background: var(--mat-sys-secondary-container);
+    color: var(--mat-sys-on-secondary-container);
+    border-color: transparent;
+  }
+
+  &.Due {
+    border: 2px solid var(--mat-sys-tertiary);
+    background: var(--mat-sys-tertiary-container);
+    color: var(--mat-sys-on-tertiary-container);
+  }
+
+  &.Overdue {
+    border: 2px solid var(--mat-sys-error);
+    background: var(--mat-sys-error-container);
+    color: var(--mat-sys-on-error-container);
+  }
+
+  &.Cancelled {
+    text-decoration: line-through;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.entries {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+
+  li.error {
+    text-decoration: line-through;
+  }
+}
+
+.totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+
+  .total {
+    padding: 10px 12px;
+    border: 1px solid var(--mat-sys-outline-variant);
+    border-radius: 8px;
+
+    strong {
+      display: block;
+      font: var(--mat-sys-title-medium);
+    }
+  }
+
+  .total.day {
+    background: var(--mat-sys-surface-container);
+  }
+}
+
+.negative {
+  color: var(--mat-sys-error);
+}

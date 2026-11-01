@@ -51,6 +51,12 @@ Answers are recorded here and then copied into the relevant document.
 | Q-IPD-4 | Phase 4 split | Step 1: beds, admission, transfer, bed charges, deposit, discharge; Step 2: nursing (medication orders, MAR, vitals, intake/output, notes, handover) and doctor progress notes — confirmed | 2026-10-31 |
 | Q-IPD-5 | Building/floor register | Free text on the ward until a building register is needed — default used | 2026-10-31 |
 | Q-IPD-6 | Changing a bed's rate | Applies to bed days not yet posted; days already on the bill keep their price — default used | 2026-10-31 |
+| Q-NUR-1 | Where inpatient notes, orders and nursing records live | Clinical: progress notes, medication orders, ward vitals; new Nursing module: MAR, intake/output, nursing notes, handover, roster — confirmed | 2026-11-01 |
+| Q-NUR-2 | MAR dose times | Standard ward times per frequency (OD 9am, BD 9am/9pm, TDS 8am/2pm/10pm, QID 12am/6am/12pm/6pm), interval frequencies from the start, STAT once, PRN on demand; outcomes Given / Omitted / Refused / Held (reason required) — confirmed | 2026-11-01 |
+| Q-NUR-3 | Nurse–ward assignment | Soft roster: fixed shifts (Morning 8–2, Evening 2–8, Night 8–8); administrators assign nurses per ward and shift; it sets "my ward" but does not limit access; one handover per ward per shift — confirmed | 2026-11-01 |
+| Q-NUR-4 | Billing medicines given on the ward | Not yet: medicine charges come with Pharmacy (Phase 6); orders stay free text like OPD prescriptions — confirmed | 2026-11-01 |
+| Q-NUR-5 | Who writes inpatient notes and orders | Any doctor with `Clinical.Inpatient.Write` linked to a doctor profile (duty and on-call doctors cover wards); after discharge only treating doctors can read the chart — default used | 2026-11-01 |
+| Q-NUR-6 | Recording windows | Dose up to 2 hours early, late documentation allowed; administration and fluid times within the last 24 hours; order start within the last hour or next 7 days; handover for today's or yesterday's shifts — default used | 2026-11-01 |
 | Q-HOSP-4 | Departments to seed | Standard list of 14 (editable); hospital can adjust in the app | 2026-10-31 |
 
 ## Hospital discovery (BRD §13) — affects module activation and phase order

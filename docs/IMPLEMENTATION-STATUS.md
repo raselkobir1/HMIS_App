@@ -14,8 +14,8 @@ Statuses: Not Started · Analysis Completed · Design Completed · Backend Compl
 | Doctor profiles + Appointment & Queue (Phase 2, step 1) | Approved | |
 | Clinical + OPD consultation (Phase 2, step 2) | Approved | |
 | Billing & Payments (Phase 3) | Approved | |
-| IPD step 1: beds, admission, transfer, bed charges, discharge (Phase 4) | Testing Completed | Backend + frontend; 55 API + 23 browser checks; Billing 85/85 regression; awaiting approval |
-| IPD step 2: nursing and progress notes (Phase 4) | Not Started | After step 1 approval |
+| IPD step 1: beds, admission, transfer, bed charges, discharge (Phase 4) | Approved | Backend + frontend; 55 API + 23 browser checks; Billing 85/85 regression |
+| IPD step 2: progress notes, medication orders, MAR, vitals, intake/output, nursing notes, handover, roster (Phase 4) | Testing Completed | Clinical additions + new Nursing module, backend + frontend; 106 API + 28 browser checks; IPD 55/55 and Clinical 45/45 regression; awaiting approval |
 | Laboratory, Radiology | Not Started | |
 | Pharmacy, Inventory, Procurement | Not Started | |
 | HR (full), Asset | Not Started | |
@@ -139,3 +139,14 @@ Isolated environment (database `hmis_test`, API 7101, UI 4301); the developer's 
 | Regression: Billing API script on a fresh database | 85/85 |
 | Browser: administrator adds a bed; bed board (rates, occupant); admit from the board (bed preselected, deposit, phone validation); transfer; doctor orders discharge and prints the summary (Bangla, BMDC); receptionist cannot see the summary, prepares the final bill, cannot discharge with due; cashier settles; receptionist discharges; nurse marks the cabin cleaned; running bill read-only lines at the cash counter; Admit on the patient profile; phone width | 23/23 |
 | Fixes found during testing | Bed-charge job disposed its service scope synchronously (error after every run; now async); discharge summary showed the order time as the discharge time before the final bill |
+
+### IPD step 2 — 2026-11-01
+Isolated environment (database `hmis_test`, API 7101, UI 4301); the developer's `hmis` database was only migrated.
+
+| Check | Result |
+|---|---|
+| `dotnet build` / `ng build` | Pass, 0 warnings |
+| API script: chart access (receptionist, administrator refused; attending and duty doctor, nurse allowed); progress notes (empty, nurse refused, signed by attending and duty doctor, only the author marks in error); medication orders (nurse refused, unknown frequency, PRN without indication, start too far back, duration, STAT ignores duration); ward vitals; roster (nurse refused, in charge, duplicate, second in charge, resigned employee, past date, range limit, remove); current shift and "my ward"; ward view (nurses on duty, doses due, active orders); MAR (doctor cannot record, STAT given, duplicate, not a scheduled time, too early, missing time, refused needs reason and records no dose, PRN with/without time, minute-precision PRN time, another patient's order, time two days back, other nurse cannot correct, author corrects, two nurses record one dose at once — one wins); stop order (stale version, nurse refused, stopped twice, cancelled STAT not givable); standard times (OD, TDS, QID, Q12H) and overdue doses via time travel; late documentation; intake/output (wrong category, zero, receptionist refused, correction by author only, balance and shift totals); nursing notes (Bangla kept, doctor reads, receptionist refused, author-only correction); handover (empty, old date, duplicate patient, unknown admission, revise, other nurse cannot rewrite, author cannot receive, receive, read-only after receipt); after discharge (no notes or nursing records; non-treating doctor refused; attending doctor still reads; IPD relationship opens OPD history; patient leaves the ward view); audit | 106/106 |
+| Regression on a fresh database: IPD step 1 / Clinical (OPD) API scripts | 55/55, 45/45 |
+| Browser: nurse ward view (my ward, nurses on duty, overdue/due), allergy banner, nurse lands on MAR; doctor lands on orders, allergy warning, STAT order, progress note; nurse gives the dose, PRN refusal needs a reason, ward vitals with fever highlight, fluid balance, Bangla nursing note; handover written, not receivable by its author, received by the incoming nurse, received handover read-only; administrator roster (grid, assign); receptionist has no chart link and is redirected; admission page links to the chart; phone width | 28/28 |
+| Fixes found during testing | A PRN dose timed in the minute the order was signed was refused (minute-precision times; now 5 minutes' tolerance and the dialogs send "now" unless the time is changed); a refused/omitted dose stored the ordered dose as given; the IPD test expected a pre-noon day count that the real admission had already posted (test fix) |

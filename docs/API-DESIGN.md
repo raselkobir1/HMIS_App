@@ -224,3 +224,28 @@ All under `/api/v1/ipd`.
 Error codes: `IPD_ALREADY_ADMITTED`, `WARD_CODE_EXISTS`, `BED_NUMBER_EXISTS` (409); `IPD_PATIENT_UNAVAILABLE`, `IPD_DOCTOR_UNAVAILABLE`, `IPD_NOT_A_DOCTOR`, `IPD_BED_INVALID`, `IPD_CATEGORY_INVALID`, `IPD_WARD_INVALID`, `BED_UNAVAILABLE`, `BED_OCCUPIED`, `WARD_OCCUPIED`, `ADMISSION_INVALID_STATUS`, `ADMISSION_TRANSFER_INVALID`, `DISCHARGE_NOT_ORDERED`, `DISCHARGE_FOLLOW_UP_DATE`, `IPD_BILL_NOT_SETTLED` (422).
 
 Billing additions: `IChargeService.AddToRunningBillAsync / FinalizeRunningBillAsync / GetBillAsync`, `IPatientBalanceLookup`; invoice DTO `isRunningBill`, line `isPosted`; `INVOICE_RUNNING_BILL`, `INVOICE_LINE_LOCKED`, `INVOICE_NO_RUNNING_BILL`.
+
+### Inpatient care (implemented, Phase 4 step 2)
+
+Clinical (doctor's side):
+
+| Method | Route | Permission |
+|---|---|---|
+| GET | `/ipd/admissions/{id}/chart` (stay, allergies, progress notes, medication orders, vitals; audited) | Clinical.View |
+| POST | `/ipd/admissions/{id}/progress-notes`, `/progress-notes/{id}/entered-in-error` | Clinical.Inpatient.Write |
+| POST | `/ipd/admissions/{id}/medication-orders`, `/medication-orders/{id}/stop` (`reason`, `rowVersion`) | Clinical.Inpatient.Write |
+| POST | `/ipd/admissions/{id}/vitals` (correction: `/vital-signs/{id}/entered-in-error`) | Clinical.Vitals.Record |
+
+Nursing (all under `/api/v1/nursing`):
+
+| Method | Route | Permission |
+|---|---|---|
+| GET | `/current-shift`, `/wards/{wardId}`, `/admissions/{id}` | Nursing.View |
+| GET / POST | `/admissions/{id}/mar?date=` (audited), `/admissions/{id}/mar` | View / Record |
+| GET / POST | `/admissions/{id}/intake-output?date=` (8am–8am; audited), `/admissions/{id}/intake-output` | View / Record |
+| GET / POST | `/admissions/{id}/notes` (audited) | View / Record |
+| POST | `/mar/{id}/entered-in-error`, `/intake-output/{id}/entered-in-error`, `/notes/{id}/entered-in-error` | Record (author only) |
+| GET / POST | `/handovers?wardId&date`, `/handovers` (create or revise own), `/handovers/{id}/receive` | View / Record |
+| GET / POST / DELETE | `/roster?from&to&wardId` (View or Roster.Manage), `/roster`, `/roster/{id}` | Roster.Manage |
+
+Error codes: `PROGRESS_NOTE_EMPTY`, `PROGRESS_NOTE_NOT_YOURS`, `MEDICATION_START`, `MEDICATION_DURATION`, `MEDICATION_PRN_INDICATION`, `MEDICATION_NOT_ACTIVE`, `IPD_STAY_NOT_ACTIVE`, `MAR_ORDER_INVALID`, `MAR_NOT_SCHEDULED`, `MAR_TOO_EARLY`, `MAR_REASON_REQUIRED`, `MAR_NOT_YOURS`, `NURSING_TIME_INVALID`, `FLUID_CATEGORY_INVALID`, `NURSING_NOTE_NOT_YOURS`, `HANDOVER_*`, `ROSTER_*` (422); `MAR_ALREADY_RECORDED`, `ROSTER_DUPLICATE` (409).
