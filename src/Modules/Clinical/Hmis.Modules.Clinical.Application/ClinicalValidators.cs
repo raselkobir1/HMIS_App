@@ -1,4 +1,5 @@
 using FluentValidation;
+using Hmis.BuildingBlocks.Contracts.Clinical;
 
 namespace Hmis.Modules.Clinical.Application;
 
@@ -69,6 +70,45 @@ public sealed class ConsultationSaveValidator : AbstractValidator<ConsultationSa
             i.RuleFor(x => x.Name).NotEmpty().MaximumLength(150);
             i.RuleFor(x => x.Notes).MaximumLength(300);
         });
+    }
+}
+
+public sealed class ProgressNoteCreateValidator : AbstractValidator<ProgressNoteCreateDto>
+{
+    public ProgressNoteCreateValidator()
+    {
+        RuleFor(x => x.Kind).IsInEnum();
+        RuleFor(x => x.Subjective).MaximumLength(4000);
+        RuleFor(x => x.Objective).MaximumLength(4000);
+        RuleFor(x => x.Assessment).MaximumLength(4000);
+        RuleFor(x => x.Plan).MaximumLength(4000);
+    }
+}
+
+public sealed class MedicationOrderCreateValidator : AbstractValidator<MedicationOrderCreateDto>
+{
+    public MedicationOrderCreateValidator()
+    {
+        RuleFor(x => x.MedicineName).NotEmpty().MaximumLength(150);
+        RuleFor(x => x.Strength).MaximumLength(50);
+        RuleFor(x => x.Form).MaximumLength(30);
+        RuleFor(x => x.Route).NotEmpty().MaximumLength(30);
+        RuleFor(x => x.Dose).NotEmpty().MaximumLength(50);
+        RuleFor(x => x.Frequency).NotEmpty().Must(f => MedicationFrequencies.All.Contains(f))
+            .WithMessage("Choose a frequency: " + string.Join(", ", MedicationFrequencies.All) + ".");
+        RuleFor(x => x.DurationDays).InclusiveBetween(1, 90);
+        RuleFor(x => x.PrnIndication).MaximumLength(200);
+        RuleFor(x => x.PrnIndication).NotEmpty().When(x => x.Frequency == MedicationFrequencies.Prn)
+            .WithMessage("Say when the PRN medicine should be given.");
+        RuleFor(x => x.Instructions).MaximumLength(300);
+    }
+}
+
+public sealed class MedicationOrderStopValidator : AbstractValidator<MedicationOrderStopDto>
+{
+    public MedicationOrderStopValidator()
+    {
+        RuleFor(x => x.Reason).NotEmpty().MaximumLength(250);
     }
 }
 

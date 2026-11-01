@@ -79,6 +79,62 @@ public sealed class VitalSignsController(IClinicalManager manager) : ApiControll
         OkResponse(await manager.MarkVitalsInErrorAsync(id, request, cancellationToken), "Vitals marked as entered in error.");
 }
 
+/// <summary>The doctor's side of an inpatient stay. The admission id comes from IPD.</summary>
+[Route("api/v{version:apiVersion}/ipd/admissions/{admissionId:guid}")]
+public sealed class InpatientClinicalController(IInpatientClinicalManager manager) : ApiControllerBase
+{
+    /// <summary>Progress notes, medication orders and vitals. Access is audited.</summary>
+    [HttpGet("chart")]
+    [HasPermission(ClinicalPermissions.View)]
+    [ProducesResponseType<ApiResponse<InpatientChartDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiResponse>(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetChart(Guid admissionId, CancellationToken cancellationToken) =>
+        OkResponse(await manager.GetChartAsync(admissionId, cancellationToken));
+
+    [HttpPost("progress-notes")]
+    [HasPermission(ClinicalPermissions.InpatientWrite)]
+    [ProducesResponseType<ApiResponse<ProgressNoteDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiResponse>(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> AddProgressNote(Guid admissionId, [FromBody] ProgressNoteCreateDto request, CancellationToken cancellationToken) =>
+        OkResponse(await manager.AddProgressNoteAsync(admissionId, request, cancellationToken), "Progress note signed.");
+
+    [HttpPost("medication-orders")]
+    [HasPermission(ClinicalPermissions.InpatientWrite)]
+    [ProducesResponseType<ApiResponse<MedicationOrderDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiResponse>(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> CreateOrder(Guid admissionId, [FromBody] MedicationOrderCreateDto request, CancellationToken cancellationToken) =>
+        OkResponse(await manager.CreateOrderAsync(admissionId, request, cancellationToken), "Medication ordered.");
+
+    [HttpPost("vitals")]
+    [HasPermission(ClinicalPermissions.VitalsRecord)]
+    [ProducesResponseType<ApiResponse<VitalSignDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiResponse>(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> RecordVitals(Guid admissionId, [FromBody] VitalSignRequestDto request, CancellationToken cancellationToken) =>
+        OkResponse(await manager.RecordVitalsAsync(admissionId, request, cancellationToken), "Vitals recorded.");
+}
+
+[Route("api/v{version:apiVersion}/progress-notes")]
+public sealed class ProgressNotesController(IInpatientClinicalManager manager) : ApiControllerBase
+{
+    [HttpPost("{id:guid}/entered-in-error")]
+    [HasPermission(ClinicalPermissions.InpatientWrite)]
+    [ProducesResponseType<ApiResponse<ProgressNoteDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> MarkEnteredInError(Guid id, [FromBody] EnteredInErrorDto request, CancellationToken cancellationToken) =>
+        OkResponse(await manager.MarkProgressNoteInErrorAsync(id, request, cancellationToken), "Note marked as entered in error.");
+}
+
+[Route("api/v{version:apiVersion}/medication-orders")]
+public sealed class MedicationOrdersController(IInpatientClinicalManager manager) : ApiControllerBase
+{
+    [HttpPost("{id:guid}/stop")]
+    [HasPermission(ClinicalPermissions.InpatientWrite)]
+    [ProducesResponseType<ApiResponse<MedicationOrderDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiResponse>(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ApiResponse>(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> Stop(Guid id, [FromBody] MedicationOrderStopDto request, CancellationToken cancellationToken) =>
+        OkResponse(await manager.StopOrderAsync(id, request, cancellationToken), "Medication order stopped.");
+}
+
 [Route("api/v{version:apiVersion}/patients/{patientId:guid}/consultations")]
 public sealed class PatientConsultationsController(IClinicalManager manager) : ApiControllerBase
 {

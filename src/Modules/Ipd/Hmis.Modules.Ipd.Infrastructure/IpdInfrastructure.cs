@@ -1,6 +1,7 @@
 using Hmis.BuildingBlocks.Application.Pagination;
 using Hmis.BuildingBlocks.Application.Security;
 using Hmis.BuildingBlocks.Contracts.Administration;
+using Hmis.BuildingBlocks.Contracts.Ipd;
 using Hmis.BuildingBlocks.Infrastructure;
 using Hmis.BuildingBlocks.Infrastructure.Persistence;
 using Hmis.Modules.Ipd.Application;
@@ -233,6 +234,12 @@ public sealed class AdmissionRepository(IpdDbContext context)
     public async Task<IReadOnlyList<Admission>> GetInBedAsync(CancellationToken cancellationToken) =>
         await Set.AsNoTracking().Include(a => a.Beds).Where(a => InBed.Contains(a.Status)).AsSplitQuery().ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<Admission>> GetActiveAsync(CancellationToken cancellationToken) =>
+        await Set.AsNoTracking().Include(a => a.Beds).Where(a => a.Status != AdmissionStatus.Discharged).AsSplitQuery().ToListAsync(cancellationToken);
+
+    public Task<bool> IsAttendingDoctorAsync(Guid doctorId, Guid patientId, CancellationToken cancellationToken) =>
+        Set.AnyAsync(a => a.AttendingDoctorId == doctorId && a.PatientId == patientId, cancellationToken);
+
     public async Task<IReadOnlyList<Admission>> GetActiveForBedsAsync(IReadOnlyCollection<Guid> bedIds, CancellationToken cancellationToken) =>
         await Set.AsNoTracking().Include(a => a.Beds)
             .Where(a => a.Status != AdmissionStatus.Discharged && a.Beds.Any(b => b.EndedAt == null && bedIds.Contains(b.BedId)))
@@ -309,6 +316,7 @@ public static class DependencyInjection
         services.AddScoped<BedChargePoster>();
         services.AddScoped<IBedSetupManager, BedSetupManager>();
         services.AddScoped<IAdmissionManager, AdmissionManager>();
+        services.AddScoped<IInpatientLookup, InpatientLookup>();
         services.AddHostedService<BedChargeJob>();
         services.AddSingleton<IPermissionDefinitionProvider, IpdPermissionDefinitionProvider>();
         services.AddSingleton<INumberSequenceDefinitionProvider, IpdNumberSequences>();

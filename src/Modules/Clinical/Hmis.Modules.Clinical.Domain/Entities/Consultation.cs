@@ -4,10 +4,11 @@ using Hmis.BuildingBlocks.Domain.Exceptions;
 
 namespace Hmis.Modules.Clinical.Domain.Entities;
 
-/// <summary>Where the consultation happened. Only OPD in Phase 2; IPD and Emergency follow in later phases.</summary>
+/// <summary>Where the record belongs. For IPD the encounter id is the admission id (vitals); Emergency follows later.</summary>
 public enum EncounterType
 {
-    Opd
+    Opd,
+    Ipd
 }
 
 public enum ConsultationStatus

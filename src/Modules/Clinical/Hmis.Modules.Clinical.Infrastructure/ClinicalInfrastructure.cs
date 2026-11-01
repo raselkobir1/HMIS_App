@@ -1,4 +1,5 @@
 using Hmis.BuildingBlocks.Application.Security;
+using Hmis.BuildingBlocks.Contracts.Clinical;
 using Hmis.BuildingBlocks.Infrastructure;
 using Hmis.BuildingBlocks.Infrastructure.Persistence;
 using Hmis.Modules.Clinical.Application;
@@ -21,6 +22,8 @@ public sealed class ClinicalDbContext(DbContextOptions<ClinicalDbContext> option
 
     public DbSet<Consultation> Consultations => Set<Consultation>();
     public DbSet<VitalSign> VitalSigns => Set<VitalSign>();
+    public DbSet<ProgressNote> ProgressNotes => Set<ProgressNote>();
+    public DbSet<MedicationOrder> MedicationOrders => Set<MedicationOrder>();
 }
 
 public sealed class ClinicalUnitOfWork(ClinicalDbContext context)
@@ -140,6 +143,60 @@ public sealed class VitalSignConfiguration : IEntityTypeConfiguration<VitalSign>
     }
 }
 
+public sealed class ProgressNoteConfiguration : IEntityTypeConfiguration<ProgressNote>
+{
+    public void Configure(EntityTypeBuilder<ProgressNote> builder)
+    {
+        builder.ToTable("ProgressNotes");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Kind).HasConversion<string>().HasMaxLength(30);
+        builder.Property(x => x.Subjective).HasMaxLength(4000);
+        builder.Property(x => x.Objective).HasMaxLength(4000);
+        builder.Property(x => x.Assessment).HasMaxLength(4000);
+        builder.Property(x => x.Plan).HasMaxLength(4000);
+        builder.Property(x => x.ErrorReason).HasMaxLength(250);
+        builder.HasIndex(x => new { x.AdmissionId, x.CreatedAt });
+        builder.HasIndex(x => x.PatientId);
+    }
+}
+
+public sealed class MedicationOrderConfiguration : IEntityTypeConfiguration<MedicationOrder>
+{
+    public void Configure(EntityTypeBuilder<MedicationOrder> builder)
+    {
+        builder.ToTable("MedicationOrders", t => t.HasCheckConstraint("CK_MedicationOrders_Duration", "\"DurationDays\" IS NULL OR \"DurationDays\" > 0"));
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.MedicineName).HasMaxLength(150).IsRequired();
+        builder.Property(x => x.Strength).HasMaxLength(50);
+        builder.Property(x => x.Form).HasMaxLength(30);
+        builder.Property(x => x.Route).HasMaxLength(30).IsRequired();
+        builder.Property(x => x.Dose).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.Frequency).HasMaxLength(10).IsRequired();
+        builder.Property(x => x.PrnIndication).HasMaxLength(200);
+        builder.Property(x => x.Instructions).HasMaxLength(300);
+        builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(x => x.StopReason).HasMaxLength(250);
+        builder.Ignore(x => x.PlannedEndsAt);
+        builder.Ignore(x => x.EndsAt);
+        builder.HasIndex(x => x.AdmissionId);
+        builder.HasIndex(x => x.PatientId);
+    }
+}
+
+public sealed class ProgressNoteRepository(ClinicalDbContext context)
+    : BaseRepository<ProgressNote, ClinicalDbContext>(context), IProgressNoteRepository
+{
+    public async Task<IReadOnlyList<ProgressNote>> GetForAdmissionAsync(Guid admissionId, CancellationToken cancellationToken) =>
+        await Set.AsNoTracking().Where(n => n.AdmissionId == admissionId).OrderByDescending(n => n.CreatedAt).ToListAsync(cancellationToken);
+}
+
+public sealed class MedicationOrderRepository(ClinicalDbContext context)
+    : BaseRepository<MedicationOrder, ClinicalDbContext>(context), IMedicationOrderRepository
+{
+    public async Task<IReadOnlyList<MedicationOrder>> GetForAdmissionsAsync(IReadOnlyCollection<Guid> admissionIds, CancellationToken cancellationToken) =>
+        await Set.AsNoTracking().Where(o => admissionIds.Contains(o.AdmissionId)).OrderBy(o => o.CreatedAt).ToListAsync(cancellationToken);
+}
+
 public sealed class ConsultationRepository(ClinicalDbContext context)
     : BaseRepository<Consultation, ClinicalDbContext>(context), IConsultationRepository
 {
@@ -186,6 +243,11 @@ public static class DependencyInjection
         services.AddScoped<IConsultationRepository, ConsultationRepository>();
         services.AddScoped<IVitalSignRepository, VitalSignRepository>();
         services.AddScoped<IClinicalManager, ClinicalManager>();
+        services.AddScoped<IProgressNoteRepository, ProgressNoteRepository>();
+        services.AddScoped<IMedicationOrderRepository, MedicationOrderRepository>();
+        services.AddScoped<InpatientClinicalManager>();
+        services.AddScoped<IInpatientClinicalManager>(sp => sp.GetRequiredService<InpatientClinicalManager>());
+        services.AddScoped<IMedicationOrderLookup>(sp => sp.GetRequiredService<InpatientClinicalManager>());
         services.AddSingleton<IPermissionDefinitionProvider, ClinicalPermissionDefinitionProvider>();
         return services;
     }

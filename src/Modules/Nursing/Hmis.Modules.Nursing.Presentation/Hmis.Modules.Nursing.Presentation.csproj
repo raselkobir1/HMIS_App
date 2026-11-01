@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Hmis.Modules.Nursing.Application\Hmis.Modules.Nursing.Application.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\Hmis.BuildingBlocks.Presentation\Hmis.BuildingBlocks.Presentation.csproj" />
+  </ItemGroup>
+
+</Project>

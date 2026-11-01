@@ -4,6 +4,7 @@ using Hmis.BuildingBlocks.Application.Exceptions;
 using Hmis.BuildingBlocks.Contracts.Appointment;
 using Hmis.BuildingBlocks.Contracts.HR;
 using Hmis.BuildingBlocks.Contracts.Identity;
+using Hmis.BuildingBlocks.Contracts.Ipd;
 using Hmis.BuildingBlocks.Contracts.Patient;
 using Hmis.Modules.Clinical.Domain.Entities;
 
@@ -19,6 +20,7 @@ public sealed class ClinicalManager(
     IVitalSignRepository vitals,
     IClinicalUnitOfWork unitOfWork,
     IOpdEncounterService encounters,
+    IInpatientLookup inpatients,
     IPatientLookup patientLookup,
     IPatientClinicalSummary clinicalSummary,
     IDoctorLookup doctorLookup,
@@ -216,9 +218,10 @@ public sealed class ClinicalManager(
 
     private async Task EnsureCanViewPatientAsync(Guid? doctorId, Guid patientId, CancellationToken cancellationToken)
     {
-        if (doctorId is { } id && !await encounters.HasRelationshipAsync(id, patientId, cancellationToken))
+        if (doctorId is { } id && !await encounters.HasRelationshipAsync(id, patientId, cancellationToken)
+            && !await inpatients.IsAttendingDoctorAsync(id, patientId, cancellationToken))
         {
-            throw new ForbiddenException("You can view clinical records only of patients who have an appointment with you.");
+            throw new ForbiddenException("You can view clinical records only of patients who have an appointment with you or were admitted under you.");
         }
     }
 

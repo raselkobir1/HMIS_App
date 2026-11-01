@@ -13,6 +13,7 @@ public static class ClinicalPermissions
     public const string View = "Clinical.View";
     public const string VitalsRecord = "Clinical.Vitals.Record";
     public const string ConsultationManage = "Clinical.Consultation.Manage";
+    public const string InpatientWrite = "Clinical.Inpatient.Write";
 }
 
 /// <summary>Clinical permissions require an explicit grant: administrators do not receive them automatically (BRD §11).</summary>
@@ -25,6 +26,8 @@ public sealed class ClinicalPermissionDefinitionProvider : IPermissionDefinition
         new(ClinicalPermissions.VitalsRecord, ClinicalPermissions.Module, "Record vital signs",
             [SystemRoles.Doctor, SystemRoles.Nurse], RequiresExplicitGrant: true),
         new(ClinicalPermissions.ConsultationManage, ClinicalPermissions.Module, "Write, finalize and amend own consultations and prescriptions",
+            [SystemRoles.Doctor], RequiresExplicitGrant: true),
+        new(ClinicalPermissions.InpatientWrite, ClinicalPermissions.Module, "Write inpatient progress notes and medication orders",
             [SystemRoles.Doctor], RequiresExplicitGrant: true)
     ];
 }
@@ -35,6 +38,8 @@ public static class ClinicalErrorCodes
     public const string EncounterNotActive = "ENCOUNTER_NOT_ACTIVE";
     public const string NotYourConsultation = "CONSULTATION_NOT_YOURS";
     public const string NotLinkedToDoctor = "CLINICAL_NOT_A_DOCTOR";
+    public const string StayNotActive = "IPD_STAY_NOT_ACTIVE";
+    public const string MedicationStart = "MEDICATION_START";
 }
 
 // ---------- Vitals ----------

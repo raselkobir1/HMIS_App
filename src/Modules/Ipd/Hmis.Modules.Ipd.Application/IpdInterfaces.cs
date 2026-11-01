@@ -47,6 +47,11 @@ public interface IAdmissionRepository : IRepository<Admission>, IConcurrencyRepo
     /// <summary>Untracked, with bed history: patients still in a bed (admitted or discharge ordered).</summary>
     Task<IReadOnlyList<Admission>> GetInBedAsync(CancellationToken cancellationToken);
 
+    /// <summary>Untracked, with bed history: every patient not yet discharged (including final-billed patients still in a bed).</summary>
+    Task<IReadOnlyList<Admission>> GetActiveAsync(CancellationToken cancellationToken);
+
+    Task<bool> IsAttendingDoctorAsync(Guid doctorId, Guid patientId, CancellationToken cancellationToken);
+
     /// <summary>Untracked: the active admission occupying each of the given beds.</summary>
     Task<IReadOnlyList<Admission>> GetActiveForBedsAsync(IReadOnlyCollection<Guid> bedIds, CancellationToken cancellationToken);
 }
