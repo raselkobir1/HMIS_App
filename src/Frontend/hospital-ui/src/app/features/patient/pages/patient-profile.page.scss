@@ -21,6 +21,15 @@
   &.muted {
     background: var(--mat-sys-surface-container-highest);
   }
+
+  &.info {
+    background: var(--mat-sys-secondary-container);
+    color: var(--mat-sys-on-secondary-container);
+
+    a {
+      color: inherit;
+    }
+  }
 }
 
 .header {

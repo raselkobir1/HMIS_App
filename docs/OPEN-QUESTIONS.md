@@ -57,6 +57,12 @@ Answers are recorded here and then copied into the relevant document.
 | Q-NUR-4 | Billing medicines given on the ward | Not yet: medicine charges come with Pharmacy (Phase 6); orders stay free text like OPD prescriptions — confirmed | 2026-11-01 |
 | Q-NUR-5 | Who writes inpatient notes and orders | Any doctor with `Clinical.Inpatient.Write` linked to a doctor profile (duty and on-call doctors cover wards); after discharge only treating doctors can read the chart — default used | 2026-11-01 |
 | Q-NUR-6 | Recording windows | Dose up to 2 hours early, late documentation allowed; administration and fluid times within the last 24 hours; order start within the last hour or next 7 days; handover for today's or yesterday's shifts — default used | 2026-11-01 |
+| Q-PAT-14 | Merging a duplicate with open work | Blocked until resolved (upcoming appointments, stay in progress, dues, draft bills, deposits, unpaid refunds); the duplicate's past history is shown on the surviving record — confirmed | 2026-11-01 |
+| Q-PAT-15 | Deceased status | Set by an IPD discharge of type Death; no new appointments or admissions; record stays correctable; "Clear deceased status" corrects a mistake (audited) — default used | 2026-11-01 |
+| Q-BILL-9 | Registration fee | Price-list service REG billed automatically at registration as its own invoice when active and priced (seeded at 0) — confirmed | 2026-11-01 |
+| Q-BILL-10 | Inpatient admission and round fees | ADM service posted once at admission; doctor's inpatient visit fee (doctor profile) once per doctor per day on a ward-round or consultant-review note; on-call notes free — confirmed | 2026-11-01 |
+| Q-BILL-11 | Configurable billing rules | Discount approval limit (default 10%) and payment methods in use (cash and advance always on) in Billing settings — default used | 2026-11-01 |
+| Q-NOTIF-1 | In-app notifications | Appointment booked → doctor; patient admitted / discharged → attending doctor; discharge ordered → final-bill staff; final bill ready → cashiers; discount / refund awaiting approval → approvers; each type can be switched off — default used | 2026-11-01 |
 | Q-HOSP-4 | Departments to seed | Standard list of 14 (editable); hospital can adjust in the app | 2026-10-31 |
 
 ## Hospital discovery (BRD §13) — affects module activation and phase order

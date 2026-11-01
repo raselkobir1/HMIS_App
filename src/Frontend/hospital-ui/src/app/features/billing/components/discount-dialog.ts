@@ -7,10 +7,12 @@ import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/materia
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 
+import { map } from 'rxjs';
+
 import { NotificationService } from '../../../core/services/notification.service';
 import { FieldError } from '../../../shared/components/field-error/field-error';
 import { apiErrorMessage, applyServerErrors } from '../../../shared/utilities/server-errors';
-import { BillingApiService, DISCOUNT_APPROVAL_PERCENT, DiscountType, Invoice } from '../billing.models';
+import { BillingApiService, DiscountType, Invoice } from '../billing.models';
 import { TakaPipe } from './taka.pipe';
 
 export interface DiscountDialogData {
@@ -61,7 +63,7 @@ export interface DiscountDialogData {
           <div class="banner span">The discount cannot be more than the amount due.</div>
         } @else if (needsApproval()) {
           <div class="note span">
-            Above {{ limit }}% in total{{ data.canApprove ? ': you can approve this yourself, so it applies at once.' : ': it will wait for an administrator’s approval.' }}
+            Above {{ limitValue() }}% in total{{ data.canApprove ? ': you can approve this yourself, so it applies at once.' : ': it will wait for an administrator’s approval.' }}
           </div>
         }
       </mat-dialog-content>
@@ -89,7 +91,8 @@ export class DiscountDialog {
   private readonly api = inject(BillingApiService);
   private readonly notifications = inject(NotificationService);
 
-  protected readonly limit = DISCOUNT_APPROVAL_PERCENT;
+  /** From Billing settings; 10% until loaded (the server applies the real limit either way). */
+  protected readonly limitValue = toSignal(this.api.settings().pipe(map((s) => s.discountApprovalPercent)), { initialValue: 10 });
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly form = new FormGroup({
@@ -110,7 +113,7 @@ export class DiscountDialog {
       ? Math.round(((this.data.invoice.discountAmount + this.amount()) * 1000) / this.data.invoice.subtotal) / 10
       : 0,
   );
-  protected readonly needsApproval = computed(() => this.totalPercent() > DISCOUNT_APPROVAL_PERCENT);
+  protected readonly needsApproval = computed(() => this.totalPercent() > this.limitValue());
 
   protected save(): void {
     if (this.form.invalid) {

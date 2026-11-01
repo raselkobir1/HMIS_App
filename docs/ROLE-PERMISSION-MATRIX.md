@@ -151,3 +151,12 @@ Diagnoses and the discharge summary are shown only to users with `Clinical.View`
 | `Nursing.Roster.Manage` | Hospital Administrator | Assign nurses to wards and shifts (the employee picker needs `HR.Employees.View`) |
 
 Corrections are made only by the author ("entered in error" with a reason); nothing is deleted. Chart, MAR, fluid and nursing-note views are audited.
+
+## Gap-closure permissions (implemented, 2026-11-01)
+
+| Permission | Default roles | Notes |
+|---|---|---|
+| `Billing.Settings.Manage` | Hospital Administrator | Discount approval limit and payment methods in use |
+| `Notifications.Settings.Manage` | Hospital Administrator | Switch notification types on or off |
+
+Every signed-in user reads and dismisses only their own notifications. Dashboard cards follow existing view permissions.

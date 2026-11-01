@@ -6,6 +6,12 @@ import { BillingPermissions } from './billing.models';
 export default [
   { path: '', pathMatch: 'full', redirectTo: 'invoices' },
   {
+    path: 'settings',
+    title: 'Billing Settings · HMIS',
+    canActivate: [permissionGuard(BillingPermissions.settingsManage)],
+    loadComponent: () => import('./pages/billing-settings.page').then((m) => m.BillingSettingsPage),
+  },
+  {
     path: 'invoices',
     title: 'Invoices · HMIS',
     canActivate: [permissionGuard(BillingPermissions.view)],

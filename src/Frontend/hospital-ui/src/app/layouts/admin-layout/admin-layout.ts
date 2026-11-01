@@ -13,6 +13,7 @@ import { map } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { BrandingService } from '../../core/services/branding.service';
 import { NAVIGATION, NavItem } from '../../core/navigation/navigation';
+import { NotificationBell } from './notification-bell';
 
 @Component({
   selector: 'app-admin-layout',
@@ -26,6 +27,7 @@ import { NAVIGATION, NavItem } from '../../core/navigation/navigation';
     MatIconModule,
     MatButtonModule,
     MatMenuModule,
+    NotificationBell,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './admin-layout.html',

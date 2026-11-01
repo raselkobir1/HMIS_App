@@ -181,7 +181,13 @@ export class PatientFormPage implements OnInit {
     const request$ = existing ? this.api.update(existing.id, { ...details, rowVersion: existing.rowVersion }) : this.api.register(details);
     request$.subscribe({
       next: (saved) => {
-        this.notifications.success(existing ? 'Patient updated.' : `Patient registered — MR number ${saved.mrNumber}.`);
+        const fee = saved.registrationBill;
+        this.notifications.success(
+          existing
+            ? 'Patient updated.'
+            : `Patient registered — MR number ${saved.mrNumber}.` +
+                (fee ? ` Registration fee ৳${fee.amount.toFixed(2)} billed (${fee.invoiceNumber}); collect it at the cash counter.` : ''),
+        );
         void this.router.navigate(['/patients', saved.id]);
       },
       error: (error) => {

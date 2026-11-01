@@ -29,4 +29,10 @@ export default [
     canActivate: [permissionGuard(AdminPermissions.settingsManage)],
     loadComponent: () => import('./pages/system-settings.page').then((m) => m.SystemSettingsPage),
   },
+  {
+    path: 'notifications',
+    title: 'Notification Settings · HMIS',
+    canActivate: [permissionGuard('Notifications.Settings.Manage')],
+    loadComponent: () => import('./pages/notification-settings.page').then((m) => m.NotificationSettingsPage),
+  },
 ] satisfies Routes;

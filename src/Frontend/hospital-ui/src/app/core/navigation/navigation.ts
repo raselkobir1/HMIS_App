@@ -78,6 +78,7 @@ export const NAVIGATION: NavItem[] = [
       },
       { label: 'Collections', icon: 'account_balance_wallet', route: '/billing/collections', permissions: ['Billing.View'] },
       { label: 'Price List', icon: 'sell', route: '/billing/services', permissions: ['Billing.View'] },
+      { label: 'Billing Settings', icon: 'tune', route: '/billing/settings', permissions: ['Billing.Settings.Manage'] },
     ],
   },
   {
@@ -98,6 +99,7 @@ export const NAVIGATION: NavItem[] = [
       { label: 'Departments', icon: 'account_tree', route: '/administration/departments', permissions: ['Admin.Departments.View'] },
       { label: 'Designations', icon: 'badge', route: '/administration/designations', permissions: ['Admin.Designations.View'] },
       { label: 'Settings & Numbering', icon: 'settings', route: '/administration/settings', permissions: ['Admin.Settings.Manage'] },
+      { label: 'Notification Settings', icon: 'notifications_active', route: '/administration/notifications', permissions: ['Notifications.Settings.Manage'] },
     ],
   },
   {

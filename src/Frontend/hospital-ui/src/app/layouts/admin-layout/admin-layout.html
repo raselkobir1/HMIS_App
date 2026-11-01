@@ -54,6 +54,8 @@
       <span class="toolbar-title">{{ branding.name() }}</span>
       <span class="spacer"></span>
 
+      <app-notification-bell />
+
       <button mat-button type="button" [matMenuTriggerFor]="userMenu" aria-label="User menu">
         <mat-icon>account_circle</mat-icon>
         <span class="user-name">{{ user()?.fullName ?? 'User' }}</span>

@@ -21,6 +21,7 @@ import { apiErrorMessage } from '../../../shared/utilities/server-errors';
 import { PatientAppointmentsPanel } from '../../appointment/components/patient-appointments-panel';
 import { AppointmentPermissions } from '../../appointment/appointment.models';
 import { BillingPermissions } from '../../billing/billing.models';
+import { PatientAdmissionsPanel } from '../../ipd/components/patient-admissions-panel';
 import { IpdPermissions } from '../../ipd/ipd.models';
 import { ClinicalPermissions } from '../../clinical/clinical.models';
 import { PatientVisitsPanel } from '../../clinical/components/patient-visits-panel';
@@ -44,6 +45,7 @@ import { Address, ageLabel, bloodGroupLabel, idTypeLabel, MedicalInfo, Patient, 
     DocumentsPanel,
     PatientAppointmentsPanel,
     PatientVisitsPanel,
+    PatientAdmissionsPanel,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './patient-profile.page.html',
@@ -71,6 +73,7 @@ export class PatientProfilePage implements OnInit {
     visitsView: this.auth.hasPermission(ClinicalPermissions.view),
     billingView: this.auth.hasPermission(BillingPermissions.view),
     admit: this.auth.hasPermission(IpdPermissions.admit),
+    admissionsView: this.auth.hasPermission(IpdPermissions.view),
   };
 
   protected readonly patient = signal<Patient | null>(null);
@@ -79,7 +82,8 @@ export class PatientProfilePage implements OnInit {
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
 
-  protected readonly editable = computed(() => this.patient()?.status === 'Active');
+  /** Deceased records stay correctable (demographics, documents); merged and inactive ones are read-only. */
+  protected readonly editable = computed(() => this.patient()?.status === 'Active' || this.patient()?.status === 'Deceased');
   protected readonly activeAllergies = computed(() => (this.medical()?.allergies ?? []).filter((a) => a.status === 'Active'));
   protected readonly age = computed(() => {
     const p = this.patient();
@@ -134,7 +138,9 @@ export class PatientProfilePage implements OnInit {
         data: {
           title: activate ? 'Reactivate record' : 'Deactivate record',
           message: activate
-            ? `Reactivate ${p.fullName} (${p.mrNumber})?`
+            ? p.status === 'Deceased'
+              ? `Clear the deceased status of ${p.fullName} (${p.mrNumber})? Use this only to correct a death recorded by mistake.`
+              : `Reactivate ${p.fullName} (${p.mrNumber})?`
             : `Deactivate ${p.fullName} (${p.mrNumber})? The record is kept but cannot be changed until reactivated.`,
           confirmText: activate ? 'Reactivate' : 'Deactivate',
           destructive: !activate,

@@ -16,6 +16,7 @@ Statuses: Not Started · Analysis Completed · Design Completed · Backend Compl
 | Billing & Payments (Phase 3) | Approved | |
 | IPD step 1: beds, admission, transfer, bed charges, discharge (Phase 4) | Approved | Backend + frontend; 55 API + 23 browser checks; Billing 85/85 regression |
 | IPD step 2: progress notes, medication orders, MAR, vitals, intake/output, nursing notes, handover, roster (Phase 4) | Approved | Clinical additions + new Nursing module, backend + frontend; 106 API + 28 browser checks; IPD 55/55 and Clinical 45/45 regression |
+| Gap closure (Phases 1–4 review) | Testing Completed | Merge guards and merged history, deceased status, registration/admission/visit fees, billing settings, dashboard, in-app notifications; 51 API + 20 browser checks; all earlier API suites and IPD/Nursing/Billing browser suites re-run; awaiting approval |
 | Laboratory, Radiology | Not Started | |
 | Pharmacy, Inventory, Procurement | Not Started | |
 | HR (full), Asset | Not Started | |
@@ -150,3 +151,15 @@ Isolated environment (database `hmis_test`, API 7101, UI 4301); the developer's 
 | Regression on a fresh database: IPD step 1 / Clinical (OPD) API scripts | 55/55, 45/45 |
 | Browser: nurse ward view (my ward, nurses on duty, overdue/due), allergy banner, nurse lands on MAR; doctor lands on orders, allergy warning, STAT order, progress note; nurse gives the dose, PRN refusal needs a reason, ward vitals with fever highlight, fluid balance, Bangla nursing note; handover written, not receivable by its author, received by the incoming nurse, received handover read-only; administrator roster (grid, assign); receptionist has no chart link and is redirected; admission page links to the chart; phone width | 28/28 |
 | Fixes found during testing | A PRN dose timed in the minute the order was signed was refused (minute-precision times; now 5 minutes' tolerance and the dialogs send "now" unless the time is changed); a refused/omitted dose stored the ordered dose as given; the IPD test expected a pre-noon day count that the real admission had already posted (test fix) |
+
+### Gap closure — 2026-11-01
+Review of Phases 1–4 against the BRD found: patient merge ignoring other modules, no deceased status, registration fee never built, no admission history on the profile, admission/round fees not automatic, fixed discount limit and payment methods, placeholder dashboard, no in-app notifications.
+
+| Check | Result |
+|---|---|
+| `dotnet build` / `ng build` | Pass, 0 warnings |
+| API script: visit fee on doctor profile; REG/ADM seeded at 0; registration fee billed when priced; billing settings (cashier refused, cash cannot be off, 5% limit, Rocket off → refused at the counter, 8% discount waits); discount and refund approvers notified, requester not; merge blocked by upcoming appointment, by dues + deposit + unpaid refund, by unpaid registration fee, by a stay in progress; merge after resolving; survivor lists merged record, appointments and bills; admission charge at admission, not for stays begun before pricing; visit fee once per doctor per day, not for on-call or zero-fee doctors, locked line; death discharge → deceased (audited), booking and admission refused, correction; notifications for admission, discharge order, final bill, discharge, appointment; unread count, other user's notification 404, mark read / all; settings (cashier refused, type switched off is not sent); dashboard counts | 51/51 |
+| Regression API scripts on fresh databases: Patient, HR, Appointment, Clinical, Billing, IPD, Nursing | 56, 30, 44, 45, 85, 55, 106 — all passed |
+| Browser: receptionist dashboard; registration fee message; merged record banner and history; deceased banner, no Book/Admit, admissions tab; Rocket not offered at the counter; administrator bell → approvals, approvals card, billing settings (5%, cash locked, save), notification settings toggle; doctor bell, mark all read; phone width | 20/20 |
+| Browser regression: IPD, Nursing, Billing | 23/23, 28/28, 26/26 |
+| Fixes found during testing | Notification switches had no accessible name (label was on the wrapper, not the switch) |

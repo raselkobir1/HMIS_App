@@ -57,6 +57,7 @@ import { ageLabel, PatientListItem, PatientPermissions, PatientSearchQuery, Pati
           <mat-option value="Active">Active</mat-option>
           <mat-option value="Inactive">Inactive</mat-option>
           <mat-option value="Merged">Merged</mat-option>
+          <mat-option value="Deceased">Deceased</mat-option>
         </mat-select>
       </mat-form-field>
     </section>

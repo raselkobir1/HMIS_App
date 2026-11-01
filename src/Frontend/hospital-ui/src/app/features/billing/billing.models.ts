@@ -16,10 +16,16 @@ export const BillingPermissions = {
   refundRequest: 'Billing.Refund.Request',
   refundApprove: 'Billing.Refund.Approve',
   reportsView: 'Billing.Reports.View',
+  settingsManage: 'Billing.Settings.Manage',
 } as const;
 
-/** Total discount above this share of the subtotal needs approval (mirrors BillingPolicy on the server). */
-export const DISCOUNT_APPROVAL_PERCENT = 10;
+/** Discount approval limit and the payment methods offered at the counter (Billing settings). */
+export interface BillingSettings {
+  discountApprovalPercent: number;
+  enabledMethods: PaymentMethod[];
+  allMethods: PaymentMethod[];
+  rowVersion: number;
+}
 
 export type ServiceCategory =
   | 'Registration'
@@ -424,6 +430,14 @@ export class BillingApiService {
 
   approvals(): Observable<Approvals> {
     return this.get('/approvals', {});
+  }
+
+  settings(): Observable<BillingSettings> {
+    return this.get('/settings', {});
+  }
+
+  updateSettings(request: { discountApprovalPercent: number; enabledMethods: PaymentMethod[]; rowVersion: number }): Observable<BillingSettings> {
+    return this.send('put', '/settings', request);
   }
 
   collections(from: string, to: string, cashierId?: string | null): Observable<CollectionReport> {

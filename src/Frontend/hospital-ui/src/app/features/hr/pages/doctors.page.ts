@@ -191,6 +191,12 @@ export class DoctorsPage {
           <input matInput type="number" min="0" formControlName="followUpFee" />
           <mat-error><app-field-error [control]="form.controls.followUpFee" /></mat-error>
         </mat-form-field>
+        <mat-form-field>
+          <mat-label>Inpatient visit fee (৳)</mat-label>
+          <input matInput type="number" min="0" formControlName="inpatientVisitFee" />
+          <mat-hint>Per day, on a ward round or consultant review; 0 = no charge</mat-hint>
+          <mat-error><app-field-error [control]="form.controls.inpatientVisitFee" /></mat-error>
+        </mat-form-field>
         @if (doctor) {
           <mat-checkbox formControlName="isAcceptingAppointments" class="span">Accepting new appointments</mat-checkbox>
         }
@@ -219,6 +225,7 @@ export class DoctorFormDialog {
     registrationNumber: [this.doctor?.registrationNumber ?? '', [Validators.required, Validators.maxLength(30)]],
     newPatientFee: [this.doctor?.newPatientFee ?? 0, [Validators.required, Validators.min(0)]],
     followUpFee: [this.doctor?.followUpFee ?? 0, [Validators.required, Validators.min(0)]],
+    inpatientVisitFee: [this.doctor?.inpatientVisitFee ?? 0, [Validators.required, Validators.min(0)]],
     isAcceptingAppointments: [this.doctor?.isAcceptingAppointments ?? true],
   });
 

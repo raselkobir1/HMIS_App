@@ -99,3 +99,8 @@ User menu: My Profile · Change Password · Logout
 ## Implemented menu (Phase 4 step 2)
 - Nursing: Ward Nursing (Nursing.View) · Shift Handover (Nursing.View) · Nurse Roster (Nursing.View or Nursing.Roster.Manage).
 - Screens: `/nursing/patients/{admissionId}` — patient chart with tabs MAR, Orders & notes, Vitals, Intake / output, Nursing notes (tabs follow permissions; doctors open on Orders & notes, nurses on the MAR). The IPD admission page links to it ("Patient chart").
+
+## Implemented (gap closure)
+- Toolbar bell (all users). Dashboard cards by permission: patients today, appointments today, bed occupancy, collections today, approvals waiting, ward nursing.
+- Billing → Billing Settings (Billing.Settings.Manage). Administration → Notification Settings (Notifications.Settings.Manage).
+- Patient profile: Admissions tab (Ipd.View), deceased and merged-record banners.

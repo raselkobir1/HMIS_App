@@ -15,7 +15,7 @@ export const PatientPermissions = {
 } as const;
 
 export type Gender = 'Male' | 'Female' | 'Other';
-export type PatientStatus = 'Active' | 'Inactive' | 'Merged';
+export type PatientStatus = 'Active' | 'Inactive' | 'Merged' | 'Deceased';
 export type IdentificationType = 'NationalId' | 'BirthRegistration' | 'Passport' | 'Other';
 export type BloodGroup = 'APositive' | 'ANegative' | 'BPositive' | 'BNegative' | 'ABPositive' | 'ABNegative' | 'OPositive' | 'ONegative';
 
@@ -79,6 +79,11 @@ export interface Patient extends PatientDetails {
   status: PatientStatus;
   mergedIntoPatientId: string | null;
   mergedIntoMRNumber: string | null;
+  deceasedAt: string | null;
+  /** Duplicate records merged into this patient; their history is shown here. */
+  mergedRecords: { id: string; mrNumber: string }[];
+  /** Only in the registration response, when a registration fee was billed. */
+  registrationBill?: { invoiceId: string; invoiceNumber: string; amount: number } | null;
   createdAt: string;
   rowVersion: number;
 }

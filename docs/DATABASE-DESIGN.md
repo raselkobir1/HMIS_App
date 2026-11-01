@@ -337,3 +337,9 @@ Patient visits, admission history, billing and lab history are **not** stored in
 - `nursing.MedicationAdministrations`: order, admission, patient, `ScheduledAt` (null for PRN), status, `OccurredAt`, dose given, reason, notes, entered-in-error. Unique filtered index (`MedicationOrderId`, `ScheduledAt`) where scheduled and not in error.
 - `nursing.IntakeOutputEntries` (direction, category, `VolumeMl` > 0), `nursing.NursingNotes`, `nursing.ShiftHandovers` (unique ward + date + shift, received by/at, `xmin`) with `HandoverItems`.
 - `nursing.NurseAssignments`: ward, date, shift, employee, in charge; unique per ward/date/shift/employee and one in charge per ward/date/shift (filtered).
+
+## Gap closure (2026-11-01)
+- `patient.Patients.DeceasedAt`; status value `Deceased`.
+- `hr.DoctorProfiles.InpatientVisitFee`.
+- `billing.BillingSettings` (single row: `DiscountApprovalPercent` 0–100, `DisabledPaymentMethods`, `xmin`); price-list services `REG` and `ADM` seeded at 0.
+- `notify.Notifications` (recipient user, type, title, message, link, created, read; filtered index on unread) and `notify.NotificationSettings` (unique type).

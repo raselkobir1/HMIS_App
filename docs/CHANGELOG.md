@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-01 — Gap closure after reviewing Phases 1–4
+- Patient merge is blocked while the duplicate has upcoming appointments, a stay in progress, dues, a draft bill, a deposit or an unpaid refund; the surviving record shows the merged records' history.
+- A death discharge records the patient as deceased (no new appointments or admissions; correctable).
+- Registration fee (price-list service REG), admission charge (ADM) and doctors' inpatient visit fees are billed automatically.
+- Billing settings: discount approval limit and payment methods in use.
+- Dashboard with today's figures; admissions tab on the patient profile.
+- In-app notifications with a bell, and settings to switch each type off.
+
 ## 2026-11-01 — IPD step 2: inpatient care and nursing (Phase 4)
 - Doctors: signed progress notes (SOAP) and inpatient medication orders with standard ward times; stop and re-order to change.
 - Ward vitals on the inpatient chart.

@@ -14,6 +14,22 @@
     </div>
   } @else if (p.status === 'Inactive') {
     <div class="banner muted" role="status"><mat-icon>block</mat-icon> This record is inactive and cannot be changed.</div>
+  } @else if (p.status === 'Deceased') {
+    <div class="banner muted" role="status">
+      <mat-icon>sentiment_dissatisfied</mat-icon>
+      Recorded as deceased{{ p.deceasedAt ? ' on ' + (p.deceasedAt | date: 'd MMM y, h:mm a') : '' }}. No new appointments or admissions.
+    </div>
+  }
+  @if (p.mergedRecords.length) {
+    <div class="banner info" role="status">
+      <mat-icon>merge</mat-icon>
+      <span>
+        Includes the history of merged record{{ p.mergedRecords.length === 1 ? '' : 's' }}
+        @for (m of p.mergedRecords; track m.id; let last = $last) {
+          <a [routerLink]="['/patients', m.id]">{{ m.mrNumber }}</a>{{ last ? '' : ', ' }}
+        }
+      </span>
+    </div>
   }
 
   @if (activeAllergies().length) {
@@ -73,7 +89,7 @@
         @if (can.deactivate && p.status !== 'Merged') {
           <button mat-menu-item type="button" (click)="toggleStatus()">
             <mat-icon>{{ p.status === 'Active' ? 'block' : 'check_circle' }}</mat-icon>
-            <span>{{ p.status === 'Active' ? 'Deactivate record' : 'Reactivate record' }}</span>
+            <span>{{ p.status === 'Active' ? 'Deactivate record' : p.status === 'Deceased' ? 'Clear deceased status' : 'Reactivate record' }}</span>
           </button>
         }
       </mat-menu>
@@ -131,6 +147,15 @@
         <ng-template matTabContent>
           <div class="tab-body">
             <app-patient-visits-panel [patientId]="p.id" />
+          </div>
+        </ng-template>
+      </mat-tab>
+    }
+    @if (can.admissionsView) {
+      <mat-tab label="Admissions">
+        <ng-template matTabContent>
+          <div class="tab-body">
+            <app-patient-admissions-panel [patientId]="p.id" />
           </div>
         </ng-template>
       </mat-tab>

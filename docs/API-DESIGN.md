@@ -249,3 +249,17 @@ Nursing (all under `/api/v1/nursing`):
 | GET / POST / DELETE | `/roster?from&to&wardId` (View or Roster.Manage), `/roster`, `/roster/{id}` | Roster.Manage |
 
 Error codes: `PROGRESS_NOTE_EMPTY`, `PROGRESS_NOTE_NOT_YOURS`, `MEDICATION_START`, `MEDICATION_DURATION`, `MEDICATION_PRN_INDICATION`, `MEDICATION_NOT_ACTIVE`, `IPD_STAY_NOT_ACTIVE`, `MAR_ORDER_INVALID`, `MAR_NOT_SCHEDULED`, `MAR_TOO_EARLY`, `MAR_REASON_REQUIRED`, `MAR_NOT_YOURS`, `NURSING_TIME_INVALID`, `FLUID_CATEGORY_INVALID`, `NURSING_NOTE_NOT_YOURS`, `HANDOVER_*`, `ROSTER_*` (422); `MAR_ALREADY_RECORDED`, `ROSTER_DUPLICATE` (409).
+
+### Gap closure (implemented, 2026-11-01)
+
+| Method | Route | Permission |
+|---|---|---|
+| GET | `/patients/counts` (registered today, active) | Patient.View |
+| GET | `/appointments/summary?date` (by status) | Appointment.View |
+| GET / PUT | `/billing/settings` (`discountApprovalPercent`, `enabledMethods`, `rowVersion`) | Billing.View / Billing.Settings.Manage |
+| GET | `/notifications?unreadOnly&take`, `/notifications/unread-count` | signed in (own only) |
+| POST | `/notifications/{id}/read`, `/notifications/read-all` | signed in (own only) |
+| GET / PUT | `/notifications/settings`, `/notifications/settings/{type}` | Notifications.Settings.Manage |
+
+Changes: patient DTO adds `deceasedAt`, `mergedRecords`, `registrationBill` (registration response only); patient status `Deceased`; doctor adds `inpatientVisitFee`; patient-filtered lists (appointments, admissions, consultations, billing account) include merged records.
+Error codes: `PATIENT_MERGE_BLOCKED`, `PAYMENT_METHOD_DISABLED`, `BILLING_DISCOUNT_LIMIT`, `BILLING_METHOD_REQUIRED` (422).

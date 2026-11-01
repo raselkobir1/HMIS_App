@@ -20,6 +20,7 @@ export interface Doctor {
   registrationNumber: string;
   newPatientFee: number;
   followUpFee: number;
+  inpatientVisitFee: number;
   isAcceptingAppointments: boolean;
   employmentStatus: string;
   rowVersion: number;
@@ -36,6 +37,8 @@ export interface DoctorRequest {
   registrationNumber: string;
   newPatientFee: number;
   followUpFee: number;
+  /** Charged once per day when the doctor signs a ward-round or consultant-review note for an inpatient. */
+  inpatientVisitFee: number;
 }
 
 @Injectable({ providedIn: 'root' })

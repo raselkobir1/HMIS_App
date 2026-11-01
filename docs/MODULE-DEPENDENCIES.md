@@ -141,3 +141,8 @@ As described in BRD Phase 0 and Phase 1, and the TAD's Stage 1 and Stage 2. **Ea
 ## Implemented (Phase 4 step 2)
 - Clinical → IPD (`IInpatientLookup`) for the stay and treatment relationship; Clinical provides `IMedicationOrderLookup`.
 - Nursing → IPD (`IInpatientLookup`), Clinical (`IMedicationOrderLookup`), Patient (`IPatientLookup`, `IPatientClinicalSummary` for allergies), HR (`IDoctorLookup`, `IEmployeeLookup`), Identity (`IUserEmployeeLookup`, `IPermissionChecker`), Audit. IPD depends on neither Clinical nor Nursing.
+
+## Implemented (gap closure)
+- Patient → Billing (`IServicePriceLookup`, `IChargeService`) for the registration fee; Patient collects `IPatientMergeGuard` from Appointment, IPD and Billing.
+- IPD → Patient (`IPatientStatusService`), Billing (`IServicePriceLookup`); Clinical → Billing (`IChargeService`) for visit fees.
+- Appointment, IPD, Billing → Notifications (`INotificationService`); Notifications → Identity (`IUserDirectory`).

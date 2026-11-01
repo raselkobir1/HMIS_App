@@ -7,6 +7,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 
+import { map } from 'rxjs';
+
 import { NotificationService } from '../../../core/services/notification.service';
 import { FieldError } from '../../../shared/components/field-error/field-error';
 import { apiErrorMessage, applyServerErrors } from '../../../shared/utilities/server-errors';
@@ -48,7 +50,7 @@ export interface PaymentDialogData {
         <mat-form-field>
           <mat-label>Method</mat-label>
           <mat-select formControlName="method">
-            @for (m of methods; track m) {
+            @for (m of methods(); track m) {
               <mat-option [value]="m">{{ labels[m] }}</mat-option>
             }
           </mat-select>
@@ -91,8 +93,12 @@ export class PaymentDialog {
   private readonly requestId = crypto.randomUUID();
 
   protected readonly labels = METHOD_LABELS;
-  protected readonly methods: PaymentMethod[] =
-    this.data.invoice && this.data.advanceAvailable > 0 ? [...MONEY_METHODS, 'Advance'] : MONEY_METHODS;
+  /** Methods switched on in Billing settings (cash always); advance only when paying an invoice with a deposit available. */
+  private readonly enabled = toSignal(this.api.settings().pipe(map((s) => s.enabledMethods)), { initialValue: MONEY_METHODS });
+  protected readonly methods = computed<PaymentMethod[]>(() => {
+    const money = MONEY_METHODS.filter((m) => this.enabled().includes(m));
+    return this.data.invoice && this.data.advanceAvailable > 0 ? [...money, 'Advance'] : money;
+  });
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly form = new FormGroup({
