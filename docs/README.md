@@ -14,6 +14,7 @@ The BRD and the TAD each list a different set of required documents. They are me
 | [NAVIGATION.md](NAVIGATION.md) | UI/UX navigation structure |
 | [SRS.md](SRS.md) | Per-module requirement analysis |
 | [WORKFLOWS.md](WORKFLOWS.md) | Workflow diagrams |
+| [OPD-END-TO-END-GUIDE.md](OPD-END-TO-END-GUIDE.md) | Hands-on walkthrough: setup, register, book, check in, pay, consult, print, reports |
 | [SECURITY.md](SECURITY.md) | Security controls |
 | [CODING-STANDARDS.md](CODING-STANDARDS.md) | Coding conventions |
 | [TESTING.md](TESTING.md) | Testing approach (no test projects, by decision) |
