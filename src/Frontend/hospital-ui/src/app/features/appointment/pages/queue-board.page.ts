@@ -45,6 +45,10 @@ const REFRESH_MS = 15_000;
               }
             </span>
           </div>
+          <div class="completed">
+            <span class="label">Completed</span>
+            <span class="count">{{ s.completedCount }}</span>
+          </div>
         </section>
       } @empty {
         <p class="empty">{{ board() ? 'No sessions are running right now.' : 'Loading…' }}</p>
@@ -61,7 +65,7 @@ const REFRESH_MS = 15_000;
     .clock { display: flex; align-items: center; gap: 8px; font: var(--mat-sys-headline-medium); }
     main { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 20px; }
     .session {
-      display: grid; grid-template-columns: 1fr auto; gap: 12px 24px; padding: 20px 24px; border-radius: 20px;
+      display: grid; grid-template-columns: auto 1fr auto; gap: 12px 24px; padding: 20px 24px; border-radius: 20px;
       background: var(--mat-sys-surface-container); border: 1px solid var(--mat-sys-outline-variant);
     }
     .doctor { grid-column: 1 / -1; }
@@ -69,6 +73,8 @@ const REFRESH_MS = 15_000;
     .meta { color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-title-small); }
     .label { display: block; color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-label-large); text-transform: uppercase; }
     .serving .number { font-size: 88px; line-height: 1; font-weight: 600; color: var(--mat-sys-primary); }
+    .completed { text-align: right; }
+    .completed .count { font: var(--mat-sys-display-small); color: var(--mat-sys-on-surface-variant); }
     .serials { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
     .serial {
       min-width: 48px; padding: 6px 10px; border-radius: 10px; text-align: center; font: var(--mat-sys-headline-small);

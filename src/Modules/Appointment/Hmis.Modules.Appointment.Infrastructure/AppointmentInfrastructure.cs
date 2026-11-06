@@ -1,3 +1,5 @@
+using Hmis.BuildingBlocks.Application.Abstractions;
+using Hmis.BuildingBlocks.Application.Exceptions;
 using Hmis.BuildingBlocks.Application.Pagination;
 using Hmis.BuildingBlocks.Application.Security;
 using Hmis.BuildingBlocks.Contracts.Appointment;
@@ -9,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 using AppointmentEntity = Hmis.Modules.Appointment.Domain.Entities.Appointment;
 
 namespace Hmis.Modules.Appointment.Infrastructure;
@@ -27,8 +30,31 @@ public sealed class AppointmentDbContext(DbContextOptions<AppointmentDbContext> 
     public DbSet<AppointmentEntity> Appointments => Set<AppointmentEntity>();
 }
 
+/// <summary>
+/// Re-implements <see cref="IUnitOfWork.SaveChangesAsync"/> to translate a violation of the one-consultation-per-doctor
+/// index (the database guard behind <see cref="AppointmentErrorCodes.ConsultationInProgress"/>) into the same business
+/// error the queue raises, so two simultaneous "start" requests fail the same way as a sequential second one.
+/// </summary>
 public sealed class AppointmentUnitOfWork(AppointmentDbContext context)
-    : UnitOfWork<AppointmentDbContext>(context), IAppointmentUnitOfWork;
+    : UnitOfWork<AppointmentDbContext>(context), IAppointmentUnitOfWork
+{
+    async Task<int> IUnitOfWork.SaveChangesAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException e) when (e.InnerException is PostgresException
+                                          {
+                                              SqlState: PostgresErrorCodes.UniqueViolation,
+                                              ConstraintName: AppointmentConfiguration.ConsultationInProgressIndex
+                                          })
+        {
+            throw new BusinessException(AppointmentErrorCodes.ConsultationInProgress,
+                "Complete the current consultation before calling the next patient.");
+        }
+    }
+}
 
 public sealed class DoctorScheduleConfiguration : IEntityTypeConfiguration<DoctorSchedule>
 {
@@ -61,6 +87,9 @@ public sealed class DoctorLeaveConfiguration : IEntityTypeConfiguration<DoctorLe
 
 public sealed class AppointmentConfiguration : IEntityTypeConfiguration<AppointmentEntity>
 {
+    /// <summary>A doctor sees one patient at a time: at most one appointment per doctor may be in consultation.</summary>
+    public const string ConsultationInProgressIndex = "IX_Appointments_DoctorId_InConsultation";
+
     public void Configure(EntityTypeBuilder<AppointmentEntity> builder)
     {
         builder.ToTable("Appointments", t => t.HasCheckConstraint("CK_Appointments_Fee", "\"Fee\" >= 0"));
@@ -73,6 +102,9 @@ public sealed class AppointmentConfiguration : IEntityTypeConfiguration<Appointm
         builder.HasIndex(x => new { x.DoctorId, x.AppointmentDate });
         builder.HasIndex(x => new { x.PatientId, x.AppointmentDate });
         builder.HasIndex(x => new { x.AppointmentDate, x.Status });
+
+        // The manager checks before starting; this makes two simultaneous starts for one doctor impossible (Status is stored as text).
+        builder.HasIndex(x => x.DoctorId).IsUnique().HasFilter("\"Status\" = 'InConsultation'").HasDatabaseName(ConsultationInProgressIndex);
 
         builder.Property(x => x.VisitType).HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.Source).HasConversion<string>().HasMaxLength(20);
@@ -123,6 +155,11 @@ public sealed class ScheduleRepository(AppointmentDbContext context)
 
     public async Task<IReadOnlyList<DoctorSchedule>> GetByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken) =>
         await Set.AsNoTracking().Where(s => ids.Contains(s.Id)).ToListAsync(cancellationToken);
+
+    public Task LockDoctorAsync(Guid doctorId, CancellationToken cancellationToken) =>
+        Context.Database.ExecuteSqlInterpolatedAsync(
+            $"SELECT pg_advisory_xact_lock(hashtextextended({$"schedule:{doctorId:N}"}, 0))",
+            cancellationToken);
 }
 
 public sealed class LeaveRepository(AppointmentDbContext context)
@@ -159,15 +196,15 @@ public sealed class AppointmentRepository(AppointmentDbContext context)
     private static readonly AppointmentStatus[] Active = AppointmentEntity.ActiveStatuses;
     private static readonly AppointmentStatus[] Pending = [AppointmentStatus.Scheduled, AppointmentStatus.Confirmed, AppointmentStatus.Waiting];
 
-    public Task LockSessionDayAsync(Guid scheduleId, DateOnly date, CancellationToken cancellationToken) =>
+    public Task LockDoctorDayAsync(Guid doctorId, DateOnly date, CancellationToken cancellationToken) =>
         Context.Database.ExecuteSqlInterpolatedAsync(
-            $"SELECT pg_advisory_xact_lock(hashtextextended({$"appointment:{scheduleId:N}:{date:yyyyMMdd}"}, 0))",
+            $"SELECT pg_advisory_xact_lock(hashtextextended({$"appointment:{doctorId:N}:{date:yyyyMMdd}"}, 0))",
             cancellationToken);
 
-    public async Task<SessionCount> GetSessionCountAsync(Guid scheduleId, DateOnly date, CancellationToken cancellationToken)
+    public async Task<SessionCount> GetSessionCountAsync(Guid scheduleId, DateOnly date, Guid? excludeId, CancellationToken cancellationToken)
     {
         var day = Set.Where(a => a.ScheduleId == scheduleId && a.AppointmentDate == date);
-        var booked = await day.CountAsync(a => Active.Contains(a.Status), cancellationToken);
+        var booked = await day.CountAsync(a => Active.Contains(a.Status) && a.Id != excludeId, cancellationToken);
         var maxSerial = await day.MaxAsync(a => (int?)a.SerialNumber, cancellationToken) ?? 0;
         return new SessionCount(booked, maxSerial);
     }
@@ -246,8 +283,13 @@ public sealed class AppointmentRepository(AppointmentDbContext context)
             .OrderBy(a => a.SerialNumber)
             .ToListAsync(cancellationToken);
 
-    public Task<bool> HasConsultationInProgressAsync(Guid doctorId, Guid? excludeId, CancellationToken cancellationToken) =>
-        Set.AnyAsync(a => a.DoctorId == doctorId && a.Status == AppointmentStatus.InConsultation && a.Id != excludeId, cancellationToken);
+    public Task<bool> HasConsultationInProgressAsync(Guid doctorId, DateOnly date, Guid? excludeId, CancellationToken cancellationToken) =>
+        Set.AnyAsync(a => a.DoctorId == doctorId && a.AppointmentDate == date && a.Status == AppointmentStatus.InConsultation && a.Id != excludeId,
+            cancellationToken);
+
+    public async Task<IReadOnlyList<AppointmentEntity>> GetStaleConsultationsAsync(Guid doctorId, DateOnly before, CancellationToken cancellationToken) =>
+        await Set.Where(a => a.DoctorId == doctorId && a.AppointmentDate < before && a.Status == AppointmentStatus.InConsultation)
+            .ToListAsync(cancellationToken);
 
     public async Task<FutureUsage> GetFutureUsageAsync(Guid scheduleId, DateOnly fromDate, CancellationToken cancellationToken)
     {

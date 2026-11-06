@@ -71,8 +71,14 @@ public sealed class VitalSign : AuditableEntity, IAggregateRoot
         };
     }
 
-    public void MarkEnteredInError(string reason)
+    /// <summary>Only the user who recorded the vitals can void them (the same rule as nursing notes and the MAR).</summary>
+    public void MarkEnteredInError(Guid userId, string reason)
     {
+        if (CreatedBy != userId)
+        {
+            throw new DomainException("VITALS_NOT_YOURS", "Only the user who recorded these vitals can mark them as entered in error.");
+        }
+
         if (IsEnteredInError)
         {
             throw new DomainException("VITALS_ALREADY_IN_ERROR", "These vitals are already marked as entered in error.");

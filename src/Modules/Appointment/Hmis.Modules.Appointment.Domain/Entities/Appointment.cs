@@ -114,6 +114,22 @@ public sealed class Appointment : AuditableEntity, IAggregateRoot, IHasConcurren
         CompletedAt = utcNow;
     }
 
+    /// <summary>
+    /// Closes a consultation the doctor left open on an earlier day, so it cannot block the doctor's queue forever.
+    /// The visit counts as completed; a draft consultation note attached to it can still be finalized.
+    /// </summary>
+    public void CloseStaleConsultation(DateOnly today, DateTime utcNow)
+    {
+        Require(AppointmentStatus.InConsultation);
+        if (AppointmentDate >= today)
+        {
+            throw new DomainException("APPOINTMENT_NOT_STALE", "Only a consultation left open from a previous day can be closed automatically.");
+        }
+
+        Status = AppointmentStatus.Completed;
+        CompletedAt = utcNow;
+    }
+
     /// <summary>Cancelling is possible until the consultation starts (a waiting patient may leave).</summary>
     public void Cancel(string reason, DateTime utcNow)
     {

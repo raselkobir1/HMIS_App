@@ -21,6 +21,12 @@ public interface IScheduleRepository : IRepository<DoctorSchedule>, IConcurrency
     Task<IReadOnlyList<DoctorSchedule>> GetRunningOnAsync(DateOnly date, Guid? doctorId, CancellationToken cancellationToken);
 
     Task<IReadOnlyList<DoctorSchedule>> GetByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Serializes session changes for one doctor (PostgreSQL transaction-scoped advisory lock), so overlap checks
+    /// cannot race. Must be called inside a transaction.
+    /// </summary>
+    Task LockDoctorAsync(Guid doctorId, CancellationToken cancellationToken);
 }
 
 public interface ILeaveRepository : IRepository<DoctorLeave>
@@ -33,12 +39,14 @@ public interface ILeaveRepository : IRepository<DoctorLeave>
 public interface IAppointmentRepository : IRepository<AppointmentEntity>, IConcurrencyRepository<AppointmentEntity>
 {
     /// <summary>
-    /// Serializes bookings for one session on one date (PostgreSQL transaction-scoped advisory lock), so capacity
-    /// checks and serial numbers cannot race. Must be called inside a transaction.
+    /// Serializes bookings for one doctor on one date (PostgreSQL transaction-scoped advisory lock), so capacity
+    /// checks, serial numbers and the one-appointment-per-doctor-per-day rule cannot race across the doctor's
+    /// sessions that day. Must be called inside a transaction.
     /// </summary>
-    Task LockSessionDayAsync(Guid scheduleId, DateOnly date, CancellationToken cancellationToken);
+    Task LockDoctorDayAsync(Guid doctorId, DateOnly date, CancellationToken cancellationToken);
 
-    Task<SessionCount> GetSessionCountAsync(Guid scheduleId, DateOnly date, CancellationToken cancellationToken);
+    /// <summary>Booked count (without <paramref name="excludeId"/>, e.g. the appointment being rescheduled) and highest serial of a session day.</summary>
+    Task<SessionCount> GetSessionCountAsync(Guid scheduleId, DateOnly date, Guid? excludeId, CancellationToken cancellationToken);
 
     Task<IReadOnlyDictionary<Guid, SessionCount>> GetSessionCountsAsync(IReadOnlyCollection<Guid> scheduleIds, DateOnly date, CancellationToken cancellationToken);
 
@@ -48,7 +56,11 @@ public interface IAppointmentRepository : IRepository<AppointmentEntity>, IConcu
 
     Task<IReadOnlyList<AppointmentEntity>> GetForDateAsync(DateOnly date, Guid? doctorId, CancellationToken cancellationToken);
 
-    Task<bool> HasConsultationInProgressAsync(Guid doctorId, Guid? excludeId, CancellationToken cancellationToken);
+    /// <summary>True when the doctor has another appointment in consultation on <paramref name="date"/>.</summary>
+    Task<bool> HasConsultationInProgressAsync(Guid doctorId, DateOnly date, Guid? excludeId, CancellationToken cancellationToken);
+
+    /// <summary>The doctor's appointments still in consultation from days before <paramref name="before"/> (tracked, for closing).</summary>
+    Task<IReadOnlyList<AppointmentEntity>> GetStaleConsultationsAsync(Guid doctorId, DateOnly before, CancellationToken cancellationToken);
 
     Task<FutureUsage> GetFutureUsageAsync(Guid scheduleId, DateOnly fromDate, CancellationToken cancellationToken);
 

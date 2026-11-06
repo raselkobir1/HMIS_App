@@ -114,6 +114,11 @@ namespace Hmis.Modules.Appointment.Infrastructure.Persistence.Migrations
                     b.HasIndex("AppointmentNumber")
                         .IsUnique();
 
+                    b.HasIndex("DoctorId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Appointments_DoctorId_InConsultation")
+                        .HasFilter("\"Status\" = 'InConsultation'");
+
                     b.HasIndex("AppointmentDate", "Status");
 
                     b.HasIndex("DoctorId", "AppointmentDate");

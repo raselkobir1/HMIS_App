@@ -81,12 +81,33 @@ public sealed class ClinicalManager(
         return ToDto(vital, await GetUserNamesAsync([vital.CreatedBy], cancellationToken));
     }
 
+    /// <summary>OPD and ward vitals alike: only the user who recorded them, and only while the visit or stay is still open.</summary>
     public async Task<VitalSignDto> MarkVitalsInErrorAsync(Guid vitalSignId, EnteredInErrorDto request, CancellationToken cancellationToken)
     {
         var vital = await vitals.GetByIdAsync(vitalSignId, cancellationToken) ?? throw new NotFoundException("Vital signs", vitalSignId);
-        vital.MarkEnteredInError(request.Reason);
+        await EnsureEncounterOpenAsync(vital, cancellationToken);
+        vital.MarkEnteredInError(currentUser.UserId ?? throw new UnauthorizedException(), request.Reason);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return ToDto(vital, await GetUserNamesAsync([vital.CreatedBy], cancellationToken));
+    }
+
+    private async Task EnsureEncounterOpenAsync(VitalSign vital, CancellationToken cancellationToken)
+    {
+        if (vital.EncounterType == EncounterType.Ipd)
+        {
+            if (await inpatients.GetAsync(vital.EncounterId, cancellationToken) is not { IsActive: true })
+            {
+                throw new BusinessException(ClinicalErrorCodes.StayNotActive, "The patient has been discharged; the inpatient chart is closed.");
+            }
+
+            return;
+        }
+
+        var encounter = await GetEncounterAsync(vital.EncounterId, cancellationToken);
+        if (encounter.Status is not ("Waiting" or "InConsultation"))
+        {
+            throw new BusinessException(ClinicalErrorCodes.EncounterNotActive, "Vitals can be corrected only while the visit is open.");
+        }
     }
 
     // ---------- Consultation ----------
@@ -115,7 +136,11 @@ public sealed class ClinicalManager(
         }
 
         // Queue first (it enforces one consultation at a time per doctor); retrying is safe if the insert below fails.
-        await encounters.StartAsync(encounterId, cancellationToken);
+        // A draft whose visit was already closed (e.g. left open overnight and closed automatically) is simply reopened for finalizing.
+        if (encounter.Status is "Waiting" or "InConsultation")
+        {
+            await encounters.StartAsync(encounterId, cancellationToken);
+        }
 
         if (consultation is null)
         {

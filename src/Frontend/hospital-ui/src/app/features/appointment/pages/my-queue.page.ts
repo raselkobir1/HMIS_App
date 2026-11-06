@@ -1,11 +1,14 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
+import { filter } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
+import { ConfirmDialog } from '../../../shared/components/confirm-dialog/confirm-dialog';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { apiErrorMessage } from '../../../shared/utilities/server-errors';
 import { ClinicalPermissions } from '../../clinical/clinical.models';
@@ -46,6 +49,9 @@ const REFRESH_MS = 30_000;
             @if (q.current) {
               @if (charting) {
                 <button mat-flat-button type="button" (click)="openVisit(q.current)"><mat-icon>edit_note</mat-icon> Open consultation</button>
+                <button mat-stroked-button type="button" [disabled]="busy()" (click)="closeWithoutConsultation(q.current)">
+                  <mat-icon>person_off</mat-icon> Close without consultation
+                </button>
               } @else {
                 <button mat-flat-button type="button" [disabled]="busy()" (click)="complete(q.current)"><mat-icon>check</mat-icon> Complete</button>
               }
@@ -120,6 +126,7 @@ export class MyQueuePage {
   private readonly api = inject(AppointmentApiService);
   private readonly notifications = inject(NotificationService);
   private readonly router = inject(Router);
+  private readonly dialog = inject(MatDialog);
 
   /** Doctors who write consultations go to the consultation screen instead of completing from the queue. */
   protected readonly charting = inject(AuthService).hasPermission(ClinicalPermissions.consultationManage);
@@ -172,6 +179,22 @@ export class MyQueuePage {
 
   protected complete(a: Appointment): void {
     this.act(this.api.action(a.id, 'complete'), (x) => `Serial ${x.serialNumber} completed.`);
+  }
+
+  /** Releases a patient who was called in by mistake or left: the visit closes with no consultation record. */
+  protected closeWithoutConsultation(a: Appointment): void {
+    this.dialog
+      .open(ConfirmDialog, {
+        data: {
+          title: 'Close without consultation?',
+          message: `Serial ${a.serialNumber} — ${a.patientName} will be marked as completed with no consultation record. Use this when the patient was called by mistake or has left.`,
+          confirmText: 'Close visit',
+          destructive: true,
+        },
+      })
+      .afterClosed()
+      .pipe(filter(Boolean))
+      .subscribe(() => this.complete(a));
   }
 
   private act(
