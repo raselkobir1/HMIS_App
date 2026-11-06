@@ -79,8 +79,9 @@ public sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
         builder.Ignore(x => x.CashHeldAmount);
         builder.Ignore(x => x.PaymentStatus);
 
-        // One invoice per charge source (idempotent posting from other modules).
-        builder.HasIndex(x => new { x.SourceType, x.SourceId }).IsUnique().HasFilter("\"SourceId\" IS NOT NULL");
+        // One invoice per charge source and part (idempotent posting from other modules); part 2+ is a supplementary
+        // bill opened for charges that arrive after the earlier part was finalized.
+        builder.HasIndex(x => new { x.SourceType, x.SourceId, x.SourcePart }).IsUnique().HasFilter("\"SourceId\" IS NOT NULL");
         builder.HasIndex(x => new { x.PatientId, x.Status });
         builder.HasIndex(x => new { x.InvoiceDate, x.Status });
 
@@ -246,8 +247,11 @@ public sealed class InvoiceRepository(BillingDbContext context)
     public Task<Invoice?> GetByDiscountIdAsync(Guid discountId, CancellationToken cancellationToken) =>
         Set.AsNoTracking().FirstOrDefaultAsync(i => i.Discounts.Any(d => d.Id == discountId), cancellationToken);
 
-    public Task<Invoice?> GetBySourceAsync(string sourceType, Guid sourceId, CancellationToken cancellationToken) =>
-        Set.AsNoTracking().FirstOrDefaultAsync(i => i.SourceType == sourceType && i.SourceId == sourceId, cancellationToken);
+    public async Task<IReadOnlyList<Invoice>> GetBySourceAsync(string sourceType, Guid sourceId, CancellationToken cancellationToken) =>
+        await Set.AsNoTracking().Include(i => i.Lines)
+            .Where(i => i.SourceType == sourceType && i.SourceId == sourceId)
+            .OrderBy(i => i.SourcePart)
+            .ToListAsync(cancellationToken);
 
     public async Task<PagedResponse<Invoice>> SearchAsync(InvoiceListQuery query, CancellationToken cancellationToken)
     {

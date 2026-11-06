@@ -38,7 +38,8 @@ export type ServiceCategory =
   | 'Pharmacy'
   | 'Other';
 export type InvoiceStatus = 'Draft' | 'Finalized' | 'Cancelled';
-export type PaymentStatus = 'Unpaid' | 'PartiallyPaid' | 'Paid';
+/** Cancelled: cancelled with no cash returned; Refunded: cancelled after the cash received was refunded. */
+export type PaymentStatus = 'Unpaid' | 'PartiallyPaid' | 'Paid' | 'Cancelled' | 'Refunded';
 export type DiscountType = 'Amount' | 'Percent';
 export type ApprovalStatus = 'Pending' | 'Approved' | 'Rejected';
 export type PaymentMethod = 'Cash' | 'Card' | 'Bkash' | 'Nagad' | 'Rocket' | 'BankTransfer' | 'Advance';
@@ -72,7 +73,13 @@ export const MONEY_METHODS: PaymentMethod[] = ['Cash', 'Card', 'Bkash', 'Nagad',
 
 export const needsReference = (method: PaymentMethod | null | undefined): boolean => !!method && method !== 'Cash' && method !== 'Advance';
 
-export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = { Unpaid: 'Unpaid', PartiallyPaid: 'Partly paid', Paid: 'Paid' };
+export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
+  Unpaid: 'Unpaid',
+  PartiallyPaid: 'Partly paid',
+  Paid: 'Paid',
+  Cancelled: 'Cancelled',
+  Refunded: 'Refunded',
+};
 export const REFUND_STATUS_LABELS: Record<RefundStatus, string> = {
   Requested: 'Awaiting approval',
   Approved: 'Approved, to pay out',
@@ -88,12 +95,16 @@ export function invoiceBadge(i: {
   paymentStatus: PaymentStatus;
   cancellationRequested: boolean;
   sourceType: string | null;
+  isSupplementary: boolean;
 }): {
   label: string;
   css: string;
 } {
-  if (i.status === 'Cancelled') return { label: 'Cancelled', css: 'badge muted' };
-  if (i.status === 'Draft') return i.sourceType ? { label: 'Running', css: 'badge info' } : { label: 'Draft', css: 'badge info' };
+  if (i.status === 'Cancelled') return { label: i.paymentStatus === 'Refunded' ? 'Cancelled · refunded' : 'Cancelled', css: 'badge muted' };
+  if (i.status === 'Draft') {
+    if (i.isSupplementary) return { label: 'Supplementary', css: 'badge warn' };
+    return i.sourceType ? { label: 'Running', css: 'badge info' } : { label: 'Draft', css: 'badge info' };
+  }
   if (i.cancellationRequested) return { label: 'Refund pending', css: 'badge warn' };
   return i.paymentStatus === 'Paid'
     ? { label: 'Paid', css: 'badge ok' }
@@ -186,6 +197,8 @@ export interface InvoiceSummary {
   paidAmount: number;
   dueAmount: number;
   cancellationRequested: boolean;
+  /** Charges that arrived after the source's bill was finalized; the cashier finalizes and collects it. */
+  isSupplementary: boolean;
 }
 
 export interface Payment {
@@ -245,6 +258,8 @@ export interface Invoice {
   cancellationRequested: boolean;
   /** A draft still collecting charges for an IPD stay; it is finalized from the ward at discharge. */
   isRunningBill: boolean;
+  /** Charges that arrived after the source's bill was finalized; the cashier finalizes and collects it. */
+  isSupplementary: boolean;
   finalizedAt: string | null;
   cancelledAt: string | null;
   cancellationReason: string | null;

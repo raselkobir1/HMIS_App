@@ -204,6 +204,9 @@ namespace Hmis.Modules.Billing.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("SourceId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("SourcePart")
+                        .HasColumnType("integer");
+
                     b.Property<string>("SourceReference")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
@@ -230,7 +233,7 @@ namespace Hmis.Modules.Billing.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("PatientId", "Status");
 
-                    b.HasIndex("SourceType", "SourceId")
+                    b.HasIndex("SourceType", "SourceId", "SourcePart")
                         .IsUnique()
                         .HasFilter("\"SourceId\" IS NOT NULL");
 

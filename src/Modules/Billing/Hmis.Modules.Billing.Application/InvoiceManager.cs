@@ -152,9 +152,9 @@ public sealed class InvoiceManager(
 
     async Task<ChargeResult> IChargeService.PostAsync(ChargeRequest request, CancellationToken cancellationToken)
     {
-        if (await invoices.GetBySourceAsync(request.SourceType, request.SourceId, cancellationToken) is { } existing)
+        if (await invoices.GetBySourceAsync(request.SourceType, request.SourceId, cancellationToken) is { Count: > 0 } existing)
         {
-            return ToResult(existing);
+            return ToResult(existing[^1]);
         }
 
         var lines = request.Lines.Select(l => new InvoiceLineValues(null, null, null, l.Description, ToCategory(l.Category), l.Quantity, l.UnitPrice))
@@ -165,9 +165,9 @@ public sealed class InvoiceManager(
         {
             // The patient lock also serializes two posts of the same source; the unique source index backs it up.
             await invoices.LockPatientAsync(request.PatientId, ct);
-            if (await invoices.GetBySourceAsync(request.SourceType, request.SourceId, ct) is { } raced)
+            if (await invoices.GetBySourceAsync(request.SourceType, request.SourceId, ct) is { Count: > 0 } raced)
             {
-                return ToResult(raced);
+                return ToResult(raced[^1]);
             }
 
             var invoice = Invoice.CreateFromCharge(number, request.PatientId, dateTime.LocalToday, request.SourceType, request.SourceId,
@@ -178,91 +178,168 @@ public sealed class InvoiceManager(
         }, cancellationToken);
     }
 
+    /// <summary>
+    /// Every part of the source's bill that holds no cash is cancelled. A part that was paid is kept and the refund team
+    /// (Billing.Refund.Request) is told that a cancellation refund is needed, so the money is not left on the account.
+    /// </summary>
     async Task<ChargeResult?> IChargeService.CancelAsync(string sourceType, Guid sourceId, string reason, CancellationToken cancellationToken)
     {
-        var found = await invoices.GetBySourceAsync(sourceType, sourceId, cancellationToken);
-        if (found is null)
+        var parts = await invoices.GetBySourceAsync(sourceType, sourceId, cancellationToken);
+        if (parts.Count == 0)
         {
             return null;
         }
 
-        var invoice = await LockedAsync(found.Id, (invoice, _) =>
+        var paid = new List<Invoice>();
+        Invoice? last = null;
+        foreach (var part in parts)
         {
-            if (invoice.Status != InvoiceStatus.Cancelled && invoice.CashHeldAmount <= 0 && !invoice.CancellationRequested)
+            last = await LockedAsync(part.Id, (invoice, _) =>
             {
-                invoice.Cancel(reason, dateTime.UtcNow);
-            }
+                if (invoice.Status == InvoiceStatus.Cancelled || invoice.CancellationRequested)
+                {
+                    return Task.CompletedTask;
+                }
 
-            return Task.CompletedTask;
-        }, cancellationToken);
+                if (invoice.CashHeldAmount <= 0)
+                {
+                    invoice.Cancel(reason, dateTime.UtcNow);
+                }
+                else
+                {
+                    paid.Add(invoice);
+                }
 
-        return ToResult(invoice);
+                return Task.CompletedTask;
+            }, cancellationToken);
+        }
+
+        foreach (var invoice in paid)
+        {
+            await notifications.NotifyPermissionAsync(BillingPermissions.RefundRequest, new NotificationMessage(NotificationTypes.RefundApproval,
+                $"Refund needed · {invoice.InvoiceNumber}",
+                $"{reason} — {invoice.CashHeldAmount:0.00} was paid on this invoice. Raise a cancellation refund to return it.",
+                $"/billing/invoices/{invoice.Id}"), cancellationToken);
+        }
+
+        return ToResult(last!);
     }
 
+    /// <summary>
+    /// Charges go on the source's open running bill. Once that bill is finalized (or cancelled), a later charge opens a
+    /// supplementary running bill (next part number) for the cashier to finalize and collect, so it is never lost. A charge
+    /// key already on any part of the bill is skipped, whichever part it is on.
+    /// </summary>
     async Task<BillStatus> IChargeService.AddToRunningBillAsync(RunningChargeRequest request, CancellationToken cancellationToken)
     {
         var charges = request.Lines.Select(l => new InvoiceLineValues(null, null, null, l.Description, ToCategory(l.Category), l.Quantity,
             l.UnitPrice, l.Key)).ToList();
 
-        // Allocated outside the transaction only when the bill does not exist yet (a lost race leaves a gap, never a duplicate).
-        var number = await invoices.GetBySourceAsync(request.SourceType, request.SourceId, cancellationToken) is null
-            ? await numberSequences.NextAsync(BillingNumberSequences.Invoice, cancellationToken)
-            : null;
+        // Allocated outside the transaction only when a new bill is needed (a lost race leaves a gap, never a duplicate).
+        var known = await invoices.GetBySourceAsync(request.SourceType, request.SourceId, cancellationToken);
+        var number = NeedsNewBill(known, charges) ? await numberSequences.NextAsync(BillingNumberSequences.Invoice, cancellationToken) : null;
 
-        return await unitOfWork.ExecuteInTransactionAsync(async ct =>
+        Invoice? opened = null;
+        var status = await unitOfWork.ExecuteInTransactionAsync(async ct =>
         {
             await invoices.LockPatientAsync(request.PatientId, ct);
+            var parts = await invoices.GetBySourceAsync(request.SourceType, request.SourceId, ct);
+            var fresh = charges.Where(c => !parts.Any(p => p.Lines.Any(l => l.ChargeKey == c.ChargeKey))).ToList();
+
             Invoice bill;
-            if (await invoices.GetBySourceAsync(request.SourceType, request.SourceId, ct) is { } found)
+            if (parts.FirstOrDefault(p => p.Status == InvoiceStatus.Draft) is { } open)
             {
-                bill = await invoices.GetWithDetailsAsync(found.Id, ct) ?? throw new NotFoundException("Invoice", found.Id);
+                bill = await invoices.GetWithDetailsAsync(open.Id, ct) ?? throw new NotFoundException("Invoice", open.Id);
+            }
+            else if (parts.Count > 0 && fresh.Count == 0)
+            {
+                return ToBillStatus(parts);
             }
             else
             {
+                var part = parts.Count == 0 ? 1 : parts.Max(p => p.SourcePart) + 1;
                 bill = Invoice.CreateRunning(number ?? await numberSequences.NextAsync(BillingNumberSequences.Invoice, ct), request.PatientId,
-                    dateTime.LocalToday, request.SourceType, request.SourceId, request.SourceReference);
+                    dateTime.LocalToday, request.SourceType, request.SourceId, request.SourceReference, part);
                 await invoices.AddAsync(bill, ct);
+                opened = bill.IsSupplementary ? bill : null;
             }
 
-            bill.AddCharges(charges);
+            bill.AddCharges(fresh);
             await unitOfWork.SaveChangesAsync(ct);
-            return ToBillStatus(bill);
+            return ToBillStatus([.. parts.Where(p => p.Id != bill.Id), bill]);
         }, cancellationToken);
+
+        if (opened is { } supplementary)
+        {
+            await notifications.NotifyPermissionAsync(BillingPermissions.PaymentCollect, new NotificationMessage(NotificationTypes.FinalBillReady,
+                $"Supplementary bill · {supplementary.InvoiceNumber}",
+                $"{request.SourceReference}: {supplementary.NetAmount:0.00} charged after the final bill. Finalize it and collect at the counter.",
+                $"/billing/invoices/{supplementary.Id}"), cancellationToken);
+        }
+
+        return status;
     }
 
+    /// <summary>Finalizes every part of the source's bill that is still a draft (no-op when none is).</summary>
     async Task<BillStatus> IChargeService.FinalizeRunningBillAsync(string sourceType, Guid sourceId, CancellationToken cancellationToken)
     {
-        var found = await invoices.GetBySourceAsync(sourceType, sourceId, cancellationToken)
-            ?? throw new BusinessException(BillingErrorCodes.NoRunningBill, "There is no bill for this stay yet.");
-        var bill = await LockedAsync(found.Id, (invoice, _) =>
+        var known = await invoices.GetBySourceAsync(sourceType, sourceId, cancellationToken);
+        if (known.Count == 0)
         {
-            if (invoice.Status == InvoiceStatus.Draft)
+            throw new BusinessException(BillingErrorCodes.NoRunningBill, "There is no bill for this stay yet.");
+        }
+
+        return await unitOfWork.ExecuteInTransactionAsync(async ct =>
+        {
+            await invoices.LockPatientAsync(known[0].PatientId, ct);
+            var parts = new List<Invoice>();
+            foreach (var part in await invoices.GetBySourceAsync(sourceType, sourceId, ct))
             {
-                invoice.Finalize(dateTime.UtcNow);
+                if (part.Status != InvoiceStatus.Draft)
+                {
+                    parts.Add(part);
+                    continue;
+                }
+
+                var bill = await invoices.GetWithDetailsAsync(part.Id, ct) ?? throw new NotFoundException("Invoice", part.Id);
+                bill.Finalize(dateTime.UtcNow);
+                parts.Add(bill);
             }
 
-            return Task.CompletedTask;
+            await unitOfWork.SaveChangesAsync(ct);
+            return ToBillStatus(parts);
         }, cancellationToken);
-        return ToBillStatus(bill);
     }
 
     async Task<BillStatus?> IChargeService.GetBillAsync(string sourceType, Guid sourceId, CancellationToken cancellationToken) =>
-        await invoices.GetBySourceAsync(sourceType, sourceId, cancellationToken) is { } found
-            ? ToBillStatus(await invoices.GetWithDetailsAsync(found.Id, cancellationToken) ?? found)
-            : null;
+        await invoices.GetBySourceAsync(sourceType, sourceId, cancellationToken) is { Count: > 0 } parts ? ToBillStatus(parts) : null;
 
-    /// <summary>While the bill is still a draft, "due" is everything charged so far (deposits sit in the advance until settlement).</summary>
-    private static BillStatus ToBillStatus(Invoice i) =>
-        new(i.Id, i.InvoiceNumber, i.Status.ToString(), i.Subtotal, i.NetAmount, i.PaidAmount,
-            i.Status switch { InvoiceStatus.Finalized => i.DueAmount, InvoiceStatus.Draft => i.NetAmount - i.PaidAmount, _ => 0 },
-            i.Lines.Count);
+    /// <summary>A new bill is needed when no part is open and a charge key is not on any part yet (or no bill exists).</summary>
+    private static bool NeedsNewBill(IReadOnlyList<Invoice> parts, IReadOnlyList<InvoiceLineValues> charges) =>
+        parts.All(p => p.Status != InvoiceStatus.Draft)
+        && (parts.Count == 0 || charges.Any(c => !parts.Any(p => p.Lines.Any(l => l.ChargeKey == c.ChargeKey))));
+
+    /// <summary>
+    /// The source's bill as other modules see it: the latest part's identity and status, with amounts summed over the parts
+    /// that are not cancelled, so a supplementary bill's due counts (e.g. in the IPD release check). While a part is still a
+    /// draft, its "due" is everything charged so far (deposits sit in the advance until settlement).
+    /// </summary>
+    private static BillStatus ToBillStatus(IReadOnlyList<Invoice> parts)
+    {
+        var latest = parts[^1];
+        var live = parts.Where(p => p.Status != InvoiceStatus.Cancelled).ToList();
+        return new BillStatus(latest.Id, latest.InvoiceNumber, latest.Status.ToString(), live.Sum(p => p.Subtotal), live.Sum(p => p.NetAmount),
+            live.Sum(p => p.PaidAmount), live.Sum(p => p.Status == InvoiceStatus.Finalized ? p.DueAmount : p.NetAmount - p.PaidAmount),
+            live.Sum(p => p.Lines.Count));
+    }
 
     private static ServiceCategory ToCategory(string category) =>
         Enum.TryParse<ServiceCategory>(category, out var parsed) ? parsed : ServiceCategory.Other;
 
+    /// <summary>A running bill is finalized from the ward; a supplementary bill (charges after the final bill) is closed by the cashier.</summary>
     private static void EnsureNotRunningBill(Invoice invoice)
     {
-        if (invoice.IsRunningBill)
+        if (invoice.IsRunningBill && !invoice.IsSupplementary)
         {
             throw new BusinessException(BillingErrorCodes.RunningBill,
                 "This bill is still collecting charges for an ongoing stay. It is finalized from the ward at discharge.");

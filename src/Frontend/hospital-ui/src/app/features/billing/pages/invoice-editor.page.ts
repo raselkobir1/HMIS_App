@@ -146,7 +146,7 @@ interface EditLine {
         </mat-card-content>
         <mat-card-actions align="end">
           <button mat-stroked-button type="button" [disabled]="!canSave()" (click)="save(false)">Save draft</button>
-          @if (!draft()?.isRunningBill) {
+          @if (!draft()?.isRunningBill || draft()?.isSupplementary) {
             <button mat-flat-button type="button" [disabled]="!canSave() || subtotal() <= 0" (click)="save(true)">
               <mat-icon>lock</mat-icon> Save & finalize
             </button>
