@@ -43,14 +43,14 @@ public sealed class InpatientClinicalManager(
     {
         var stay = await GetStayAsync(admissionId, cancellationToken);
         var doctorId = await GetCurrentDoctorIdAsync(cancellationToken);
-        await EnsureCanViewAsync(doctorId, stay, cancellationToken);
+        var noteList = await notes.GetForAdmissionAsync(admissionId, cancellationToken);
+        var orderList = await orders.GetForAdmissionsAsync([admissionId], cancellationToken);
+        await EnsureCanViewAsync(doctorId, stay, noteList, orderList, cancellationToken);
         await auditService.RecordImmediateAsync(
             new AuditEvent("View", ClinicalPermissions.Module, "InpatientChart", admissionId.ToString()), cancellationToken);
 
         var patient = await patientLookup.GetAsync(stay.PatientId, cancellationToken) ?? throw new NotFoundException("Patient", stay.PatientId);
         var summary = await clinicalSummary.GetAsync(stay.PatientId, cancellationToken);
-        var noteList = await notes.GetForAdmissionAsync(admissionId, cancellationToken);
-        var orderList = await orders.GetForAdmissionsAsync([admissionId], cancellationToken);
         var vitalList = await vitals.GetForEncounterAsync(EncounterType.Ipd, admissionId, cancellationToken);
 
         var doctorNames = await GetDoctorNamesAsync(
@@ -131,7 +131,10 @@ public sealed class InpatientClinicalManager(
         var stay = await GetActiveStayAsync(admissionId, cancellationToken);
         var doctorId = await RequireCurrentDoctorIdAsync(cancellationToken);
         var now = dateTime.UtcNow;
-        var startsAt = request.StartsAt?.ToUniversalTime() ?? now;
+        // A start without an offset (Kind Unspecified) is UTC from the API client, never the server's local time.
+        var startsAt = request.StartsAt is { } requested
+            ? requested.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(requested, DateTimeKind.Utc) : requested.ToUniversalTime()
+            : now;
         if (startsAt < now - MaxBackdatedStart || startsAt > now + MaxFutureStart)
         {
             throw new BusinessException(ClinicalErrorCodes.MedicationStart, "The start time must be within the last hour or the next 7 days.", "startsAt");
@@ -195,11 +198,29 @@ public sealed class InpatientClinicalManager(
             : throw new BusinessException(ClinicalErrorCodes.StayNotActive, "The patient has been discharged; the inpatient chart is closed.");
     }
 
-    private async Task EnsureCanViewAsync(Guid? doctorId, InpatientStay stay, CancellationToken cancellationToken)
+    /// <summary>
+    /// Q-NUR-5: while the patient is in hospital any holder of Clinical.View may open the chart. After discharge it is closed
+    /// to nurses and other staff; a doctor may still open it with a treatment relationship: attending doctor, a duty doctor
+    /// who wrote a note or ordered medicines on this stay, or an OPD visit with the patient.
+    /// </summary>
+    private async Task EnsureCanViewAsync(Guid? doctorId, InpatientStay stay, IReadOnlyList<ProgressNote> stayNotes,
+        IReadOnlyList<MedicationOrder> stayOrders, CancellationToken cancellationToken)
     {
-        if (doctorId is { } id && !stay.IsActive
-            && !await inpatients.IsAttendingDoctorAsync(id, stay.PatientId, cancellationToken)
-            && !await encounters.HasRelationshipAsync(id, stay.PatientId, cancellationToken))
+        if (stay.IsActive)
+        {
+            return;
+        }
+
+        if (doctorId is not { } id)
+        {
+            throw new ForbiddenException("The patient has been discharged; the chart is closed. Only the doctors who treated the patient can open it.");
+        }
+
+        var treated = stayNotes.Any(n => n.DoctorId == id)
+                      || stayOrders.Any(o => o.OrderedByDoctorId == id || o.StoppedByDoctorId == id)
+                      || await inpatients.IsAttendingDoctorAsync(id, stay.PatientId, cancellationToken)
+                      || await encounters.HasRelationshipAsync(id, stay.PatientId, cancellationToken);
+        if (!treated)
         {
             throw new ForbiddenException("After discharge, a doctor can view the chart only of patients they treated.");
         }

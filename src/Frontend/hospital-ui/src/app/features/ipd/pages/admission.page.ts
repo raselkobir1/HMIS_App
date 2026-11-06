@@ -67,6 +67,9 @@ import { Admission, ADMISSION_STATUS_LABELS, DISCHARGE_TYPE_LABELS, IpdApiServic
                 </button>
               }
             }
+            @if (can.reopen) {
+              <button mat-stroked-button type="button" [disabled]="busy()" (click)="reopen(a)"><mat-icon>undo</mat-icon> Reopen stay</button>
+            }
           }
           @if (a.discharge) {
             <a mat-stroked-button [routerLink]="['/ipd/admissions', s.id, 'summary']"><mat-icon>print</mat-icon> Discharge summary</a>
@@ -90,6 +93,12 @@ import { Admission, ADMISSION_STATUS_LABELS, DISCHARGE_TYPE_LABELS, IpdApiServic
       @if (a.releasedWithDue) {
         <div class="banner warn">Discharged with {{ a.releasedWithDue | taka }} due — {{ a.releaseOverrideReason }}</div>
       }
+      @if (a.reopenedAt) {
+        <div class="banner info" role="status">
+          <mat-icon>undo</mat-icon>
+          Stay reopened {{ a.reopenedAt | date: 'd MMM y, h:mm a' }} — {{ a.reopenReason }}. The earlier final bill stays payable; new charges go to a supplementary bill.
+        </div>
+      }
 
       <div class="layout">
         <mat-card appearance="outlined">
@@ -98,7 +107,10 @@ import { Admission, ADMISSION_STATUS_LABELS, DISCHARGE_TYPE_LABELS, IpdApiServic
             <dl>
               <dt>Admitted</dt><dd>{{ s.admittedAt | date: 'd MMM y, h:mm a' }} · {{ sources[a.source] }}{{ a.sourceReference ? ' (' + a.sourceReference + ')' : '' }}</dd>
               @if (s.dischargedAt) {
-                <dt>Discharged</dt><dd>{{ s.dischargedAt | date: 'd MMM y, h:mm a' }}{{ a.releasedAt ? '' : ' (bill cut-off)' }}</dd>
+                <dt>Discharged</dt><dd>{{ s.dischargedAt | date: 'd MMM y, h:mm a' }} <span class="secondary">(doctor's order; bed charges stop here)</span></dd>
+              }
+              @if (a.releasedAt) {
+                <dt>Left ward</dt><dd>{{ a.releasedAt | date: 'd MMM y, h:mm a' }}</dd>
               }
               <dt>Days charged</dt><dd>{{ s.days }}</dd>
               <dt>Doctor</dt><dd>{{ s.doctorName }}{{ a.departmentName ? ' · ' + a.departmentName : '' }}</dd>
@@ -117,7 +129,7 @@ import { Admission, ADMISSION_STATUS_LABELS, DISCHARGE_TYPE_LABELS, IpdApiServic
         <mat-card appearance="outlined">
           <mat-card-header>
             <mat-card-title>Bill</mat-card-title>
-            @if (inBed()) {
+            @if (inBed() && can.complete) {
               <button mat-icon-button type="button" class="card-action" (click)="syncCharges(a)" aria-label="Update bed charges"><mat-icon>sync</mat-icon></button>
             }
           </mat-card-header>
@@ -249,6 +261,7 @@ export class AdmissionPage implements OnInit {
     dischargeOrder: this.auth.hasPermission(IpdPermissions.dischargeOrder),
     complete: this.auth.hasPermission(IpdPermissions.dischargeComplete),
     override: this.auth.hasPermission(IpdPermissions.dischargeOverride),
+    reopen: this.auth.hasPermission(IpdPermissions.dischargeReopen),
     billing: this.auth.hasPermission(BillingPermissions.view),
     collect: this.auth.hasPermission(BillingPermissions.paymentCollect),
     chart: this.auth.hasAnyPermission([IpdPermissions.clinicalView, 'Nursing.View']),
@@ -293,12 +306,46 @@ export class AdmissionPage implements OnInit {
     this.confirmThen(
       {
         title: 'Prepare the final bill?',
-        message: 'Now becomes the discharge time: bed charges stop here and the bill is finalized for payment. This cannot be undone.',
+        message: "The doctor's discharge order time becomes the discharge time: bed charges stop there and the bill is finalized for payment. Only an administrator can reopen the stay afterwards.",
         confirmText: 'Prepare final bill',
       },
       () => this.api.prepareFinalBill(a.summary.id, a.rowVersion),
       'Final bill ready for settlement.',
     );
+  }
+
+  protected reopen(a: Admission): void {
+    this.dialog
+      .open(ReasonDialog, {
+        data: {
+          title: 'Reopen the stay?',
+          message: 'The patient stays admitted and the discharge order is cancelled. The final bill already prepared stays payable; bed rent from now on goes to a supplementary bill.',
+          label: 'Reason',
+          confirmText: 'Reopen stay',
+          required: true,
+          destructive: true,
+        },
+      })
+      .afterClosed()
+      .pipe(
+        filter((text): text is string => !!text),
+        switchMap((reason) => {
+          this.busy.set(true);
+          return this.api.reopen(a.summary.id, reason, a.rowVersion);
+        }),
+      )
+      .subscribe({
+        next: (updated) => {
+          this.busy.set(false);
+          this.admission.set(updated);
+          this.notifications.success('Stay reopened. The patient is admitted again.');
+        },
+        error: (err) => {
+          this.busy.set(false);
+          this.notifications.error(apiErrorMessage(err));
+          this.load();
+        },
+      });
   }
 
   protected release(a: Admission, overrideReason: string | null): void {

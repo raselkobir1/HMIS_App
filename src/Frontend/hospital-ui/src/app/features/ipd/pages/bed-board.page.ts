@@ -79,7 +79,7 @@ const REFRESH_MS = 60_000;
               } @else {
                 <div class="state">{{ labels[b.status] }}{{ b.statusNote ? ' — ' + b.statusNote : '' }}</div>
                 <div class="secondary">{{ b.categoryName }} · {{ b.dailyRate | taka }}/day</div>
-                @if (can.admit && (b.status === 'Available' || b.status === 'Reserved')) {
+                @if (can.admit && b.status === 'Available') {
                   <a mat-button routerLink="/ipd/admit" [queryParams]="{ bedId: b.id }" class="admit">Admit here</a>
                 }
               }

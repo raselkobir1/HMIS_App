@@ -72,7 +72,10 @@ public sealed class Admission : AuditableEntity, IAggregateRoot, IHasConcurrency
     public string? DischargeAdvice { get; private set; }
     public DateOnly? FollowUpDate { get; private set; }
 
-    /// <summary>Discharge date and time: bed charges stop here and the bill is finalized.</summary>
+    /// <summary>
+    /// Discharge date and time for billing: the doctor's discharge order time (Q-IPD-1, the day is free when the order is
+    /// before noon). Bed charges stop here and the bill is finalized. The moment the patient actually left is ReleasedAt.
+    /// </summary>
     public DateTime? DischargedAt { get; private set; }
 
     /// <summary>The patient left and the bed was freed.</summary>
@@ -81,6 +84,18 @@ public sealed class Admission : AuditableEntity, IAggregateRoot, IHasConcurrency
     public decimal? ReleasedWithDue { get; private set; }
     public string? ReleaseOverrideReason { get; private set; }
     public Guid? ReleaseOverrideBy { get; private set; }
+
+    /// <summary>
+    /// Bed days priced at or before this instant are on a finalized final bill. Kept when a stay is reopened so the days
+    /// posted afterwards (to a supplementary bill) start after it.
+    /// </summary>
+    public DateTime? FinalBilledUntil { get; private set; }
+
+    /// <summary>An administrator moved the stay back from FinalBilled to Admitted (e.g. the patient could not leave).</summary>
+    public DateTime? ReopenedAt { get; private set; }
+
+    public Guid? ReopenedBy { get; private set; }
+    public string? ReopenReason { get; private set; }
 
     /// <summary>Incremented on every change so the RowVersion check also covers bed history changes.</summary>
     public int Revision { get; private set; }
@@ -172,14 +187,44 @@ public sealed class Admission : AuditableEntity, IAggregateRoot, IHasConcurrency
         Revision++;
     }
 
-    /// <summary>Fixes the discharge time; bed charges stop here and the bill is finalized.</summary>
+    /// <summary>Fixes the discharge time (the discharge order time); bed charges stop here and the bill is finalized.</summary>
     public void MarkFinalBilled(DateTime dischargedAt)
     {
         Require("The doctor must order the discharge before the final bill.", AdmissionStatus.DischargeOrdered);
         Status = AdmissionStatus.FinalBilled;
         DischargedAt = dischargedAt;
+        FinalBilledUntil = dischargedAt;
         Revision++;
     }
+
+    /// <summary>
+    /// Administrator's correction after the final bill: the patient stays after all. The discharge order is cancelled (the
+    /// summary text is kept as a draft), the finalized bill stays payable and later charges go to a supplementary bill.
+    /// </summary>
+    public void Reopen(Guid userId, string reason, DateTime at)
+    {
+        Require("Only a stay with a prepared final bill can be reopened.", AdmissionStatus.FinalBilled);
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            throw new DomainException("ADMISSION_REOPEN_REASON", "Give the reason for reopening the stay.");
+        }
+
+        Status = AdmissionStatus.Admitted;
+        DischargedAt = null;
+        DischargeOrderedAt = null;
+        DischargeOrderedBy = null;
+        ReopenedAt = at;
+        ReopenedBy = userId;
+        ReopenReason = reason.Trim();
+        Revision++;
+    }
+
+    /// <summary>
+    /// The instant bed charges run to: the discharge order time once discharge is ordered (the patient is leaving; a day
+    /// ordered before noon is free), otherwise now. The final bill uses the same cut-off.
+    /// </summary>
+    public DateTime ChargeCutOff(DateTime now) =>
+        Status == AdmissionStatus.DischargeOrdered && DischargeOrderedAt is { } ordered && ordered < now ? ordered : now;
 
     /// <summary>The patient leaves and the bed is freed. <paramref name="due"/> is non-zero only with an override.</summary>
     public void Release(Bed bed, DateTime at, decimal due, Guid? overrideBy, string? overrideReason)

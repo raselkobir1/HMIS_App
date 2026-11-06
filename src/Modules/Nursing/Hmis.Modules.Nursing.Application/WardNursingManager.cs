@@ -79,7 +79,7 @@ public sealed class WardNursingManager(
     }
 
     public async Task<NursingPatientDto> GetPatientAsync(Guid admissionId, CancellationToken cancellationToken) =>
-        await support.GetPatientAsync(await support.GetStayAsync(admissionId, cancellationToken), cancellationToken);
+        await support.GetPatientAsync(await support.GetViewableStayAsync(admissionId, cancellationToken), cancellationToken);
 
     private static WardOptionDto ToOption(WardSummary w) => new(w.Id, w.Code, w.Name);
 }

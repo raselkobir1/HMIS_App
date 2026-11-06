@@ -22,6 +22,9 @@ public sealed class ShiftManager(
 {
     private const int MaxRosterDays = 31;
 
+    /// <summary>Double shifts happen; a third shift in one day does not.</summary>
+    private const int MaxShiftsPerDay = 2;
+
     // ---------- Handover ----------
 
     public async Task<IReadOnlyList<HandoverDto>> GetHandoversAsync(HandoverQuery query, CancellationToken cancellationToken)
@@ -42,11 +45,26 @@ public sealed class ShiftManager(
             throw new BusinessException(NursingErrorCodes.HandoverDate, "A handover can be written for today's or yesterday's shifts only.", "date");
         }
 
+        // The shift must have started: the outgoing nurse hands over the current or the just-ended shift, not a later one.
+        var now = dateTime.UtcNow;
+        if (NursingClock.ShiftWindow(request.Date, request.Shift, dateTime).StartUtc > now)
+        {
+            throw new BusinessException(NursingErrorCodes.HandoverShift, "A handover is written for the current or the just-ended shift, not a shift that has not started.", "shift");
+        }
+
+        // Every note is about a patient still in this ward.
+        var inWard = (await inpatients.GetActiveAsync(ward.Id, cancellationToken)).Select(s => s.AdmissionId).ToHashSet();
         foreach (var admissionId in request.Items.Select(i => i.AdmissionId).Distinct())
         {
-            if (await inpatients.GetAsync(admissionId, cancellationToken) is null)
+            if (!inWard.Contains(admissionId))
             {
-                throw new BusinessException(NursingErrorCodes.HandoverPatient, "A handover note refers to an unknown admission.", "items");
+                var stay = await inpatients.GetAsync(admissionId, cancellationToken);
+                throw new BusinessException(NursingErrorCodes.HandoverPatient, stay switch
+                {
+                    null => "A handover note refers to an unknown admission.",
+                    { IsActive: false } => $"Admission {stay.AdmissionNumber} has been discharged and cannot be in the handover.",
+                    _ => $"Admission {stay.AdmissionNumber} is in {stay.WardName ?? "another ward"}, not in {ward.Name}."
+                }, "items");
             }
         }
 
@@ -116,10 +134,25 @@ public sealed class ShiftManager(
             throw new BusinessException(NursingErrorCodes.EmployeeInvalid, "Select a current employee.", "employeeId");
         }
 
-        var shift = (await assignments.SearchAsync(request.Date, request.Date, ward.Id, cancellationToken)).Where(a => a.Shift == request.Shift).ToList();
+        // The whole day across wards: a nurse works one ward per shift and at most two shifts (a double) in a day.
+        var day = await assignments.SearchAsync(request.Date, request.Date, null, cancellationToken);
+        var shift = day.Where(a => a.WardId == ward.Id && a.Shift == request.Shift).ToList();
         if (shift.Any(a => a.EmployeeId == request.EmployeeId))
         {
             throw new ConflictException("This nurse is already on this shift in this ward.", NursingErrorCodes.RosterDuplicate);
+        }
+
+        var mine = day.Where(a => a.EmployeeId == request.EmployeeId).ToList();
+        if (mine.FirstOrDefault(a => a.Shift == request.Shift) is { } elsewhere)
+        {
+            var wardName = (await inpatients.GetWardsAsync(cancellationToken)).FirstOrDefault(w => w.Id == elsewhere.WardId)?.Name ?? "another ward";
+            throw new ConflictException($"This nurse is already rostered to {wardName} for the {request.Shift.ToString().ToLowerInvariant()} shift on this date.",
+                NursingErrorCodes.RosterConflict);
+        }
+
+        if (mine.Count >= MaxShiftsPerDay)
+        {
+            throw new BusinessException(NursingErrorCodes.RosterMaxShifts, $"A nurse can work at most {MaxShiftsPerDay} shifts in one day.", "shift");
         }
 
         if (request.IsInCharge && shift.Any(a => a.IsInCharge))

@@ -82,6 +82,9 @@ namespace Hmis.Modules.Ipd.Infrastructure.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<DateTime?>("FinalBilledUntil")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("FinalDiagnosis")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
@@ -120,6 +123,16 @@ namespace Hmis.Modules.Ipd.Infrastructure.Persistence.Migrations
                     b.Property<decimal?>("ReleasedWithDue")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("ReopenReason")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<DateTime?>("ReopenedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ReopenedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<int>("Revision")
                         .HasColumnType("integer");

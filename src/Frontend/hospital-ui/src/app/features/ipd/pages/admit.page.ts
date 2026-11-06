@@ -63,7 +63,7 @@ import { AdmissionSource, Bed, groupBeds, IpdApiService, SOURCE_LABELS } from '.
                 <mat-optgroup [label]="g.ward">
                   @for (b of g.beds; track b.id) {
                     <mat-option [value]="b.id">
-                      {{ b.bedNumber }}{{ b.room ? ' (room ' + b.room + ')' : '' }} · {{ b.categoryName }}{{ b.status === 'Reserved' ? ' · reserved' : '' }}
+                      {{ b.bedNumber }}{{ b.room ? ' (room ' + b.room + ')' : '' }} · {{ b.categoryName }}
                     </mat-option>
                   }
                 </mat-optgroup>

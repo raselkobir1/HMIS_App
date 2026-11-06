@@ -45,16 +45,28 @@ public sealed class BedChargePoster(
 {
     public const string KeyPrefix = "BED:";
 
-    /// <param name="until">The discharge time for the final bill; otherwise now.</param>
+    /// <param name="until">
+    /// The cut-off for the final bill; otherwise the stay's own cut-off (the discharge order time once discharge is ordered,
+    /// so a stay ordered out before noon is not charged for that day while the bill is prepared; otherwise now).
+    /// </param>
     public async Task<BillStatus?> PostAsync(Admission admission, DateTime? until, CancellationToken cancellationToken)
     {
+        // A finalized bill ends posting, except for a reopened stay: its later days go to a supplementary running bill.
         var bill = await charges.GetBillAsync(ChargeSources.IpdAdmission, admission.Id, cancellationToken);
-        if (bill is not null && bill.Status != "Draft")
+        if (bill is not null && bill.Status != "Draft" && admission.ReopenedAt is null)
         {
             return bill;
         }
 
-        var days = BedDays.For(admission.AdmittedAt, until ?? dateTime.UtcNow, dateTime);
+        // Days already on a finalized final bill (before a reopen) are never posted again.
+        var days = BedDays.For(admission.AdmittedAt, until ?? admission.ChargeCutOff(dateTime.UtcNow), dateTime)
+            .Where(d => admission.FinalBilledUntil is not { } billed || d.PricedAt > billed)
+            .ToList();
+        if (days.Count == 0)
+        {
+            return bill;
+        }
+
         var bedIds = days.Select(d => admission.BedAt(d.PricedAt)).OfType<Guid>().Distinct().ToList();
         var bedMap = (await beds.GetByIdsAsync(bedIds, cancellationToken)).ToDictionary(b => b.Id);
         var categoryMap = (await categories.GetByIdsAsync(bedMap.Values.Select(b => b.CategoryId).Distinct().ToList(), cancellationToken))

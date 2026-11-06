@@ -29,6 +29,13 @@ public static class NursingClock
         [MedicationFrequencies.Q12H] = 12
     };
 
+    /// <summary>
+    /// A time sent by an API client as UTC. A value without an offset (Kind Unspecified) is taken as UTC, never as the
+    /// server's local time, which would shift it by the server's zone.
+    /// </summary>
+    public static DateTime AsUtc(DateTime value) =>
+        value.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(value, DateTimeKind.Utc) : value.ToUniversalTime();
+
     public static (DateOnly Date, Shift Shift) ShiftAt(DateTime utc, IDateTimeProvider dateTime)
     {
         var date = dateTime.ToLocalDate(utc);

@@ -21,7 +21,7 @@ public sealed class MarManager(
 
     public async Task<MarDto> GetAsync(Guid admissionId, DateOnly? date, CancellationToken cancellationToken)
     {
-        var stay = await support.GetStayAsync(admissionId, cancellationToken);
+        var stay = await support.GetViewableStayAsync(admissionId, cancellationToken);
         await support.AuditViewAsync("MedicationAdministrationRecord", admissionId, cancellationToken);
 
         var day = date ?? dateTime.LocalToday;
@@ -70,7 +70,7 @@ public sealed class MarManager(
         }
 
         var now = dateTime.UtcNow;
-        var occurredAt = request.OccurredAt?.ToUniversalTime() ?? now;
+        var occurredAt = request.OccurredAt is { } occurred ? NursingClock.AsUtc(occurred) : now;
         if (occurredAt > now + ClockSkew || occurredAt < now - MaxBackdate)
         {
             throw new BusinessException(NursingErrorCodes.TimeInvalid, "The time must be within the last 24 hours and not in the future.", "occurredAt");
@@ -119,7 +119,7 @@ public sealed class MarManager(
             throw new BusinessException(NursingErrorCodes.NotScheduled, "Select the scheduled dose time.", "scheduledAt");
         }
 
-        var utc = value.ToUniversalTime();
+        var utc = NursingClock.AsUtc(value);
         var slot = NursingClock.Schedule(order, utc.AddSeconds(-1), utc.AddSeconds(1), dateTime).Cast<DateTime?>().FirstOrDefault()
             ?? throw new BusinessException(NursingErrorCodes.NotScheduled, "That is not a scheduled time for this order.", "scheduledAt");
 

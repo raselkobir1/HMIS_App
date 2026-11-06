@@ -19,7 +19,7 @@ public sealed class NursingRecordManager(
 
     public async Task<IntakeOutputDayDto> GetIntakeOutputAsync(Guid admissionId, DateOnly? date, CancellationToken cancellationToken)
     {
-        var stay = await support.GetStayAsync(admissionId, cancellationToken);
+        var stay = await support.GetViewableStayAsync(admissionId, cancellationToken);
         await support.AuditViewAsync("IntakeOutput", admissionId, cancellationToken);
 
         var day = date ?? NursingClock.FluidDayOf(dateTime.UtcNow, dateTime);
@@ -66,7 +66,7 @@ public sealed class NursingRecordManager(
 
     public async Task<NursingNotesDto> GetNotesAsync(Guid admissionId, CancellationToken cancellationToken)
     {
-        var stay = await support.GetStayAsync(admissionId, cancellationToken);
+        var stay = await support.GetViewableStayAsync(admissionId, cancellationToken);
         await support.AuditViewAsync("NursingNotes", admissionId, cancellationToken);
         var list = await notes.GetForAdmissionAsync(admissionId, cancellationToken);
         var names = await support.GetUserNamesAsync(list.Select(n => n.CreatedBy), cancellationToken);
@@ -95,7 +95,7 @@ public sealed class NursingRecordManager(
     private DateTime CheckTime(DateTime? requested, string field)
     {
         var now = dateTime.UtcNow;
-        var value = requested?.ToUniversalTime() ?? now;
+        var value = requested is { } time ? NursingClock.AsUtc(time) : now;
         return value > now + ClockSkew || value < now - MaxBackdate
             ? throw new BusinessException(NursingErrorCodes.TimeInvalid, "The time must be within the last 24 hours and not in the future.", field)
             : value;

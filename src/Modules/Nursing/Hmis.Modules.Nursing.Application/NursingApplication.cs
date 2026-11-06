@@ -41,10 +41,14 @@ public static class NursingErrorCodes
     public const string WardInvalid = "NURSING_WARD_INVALID";
     public const string EmployeeInvalid = "ROSTER_EMPLOYEE_INVALID";
     public const string RosterDuplicate = "ROSTER_DUPLICATE";
+    public const string RosterConflict = "NURSE_ALREADY_ROSTERED";
+    public const string RosterMaxShifts = "ROSTER_MAX_SHIFTS";
     public const string RosterInCharge = "ROSTER_IN_CHARGE_EXISTS";
     public const string RosterPast = "ROSTER_DATE_PAST";
     public const string HandoverDate = "HANDOVER_DATE_INVALID";
+    public const string HandoverShift = "HANDOVER_SHIFT_INVALID";
     public const string HandoverPatient = "HANDOVER_PATIENT_INVALID";
+    public const string StayClosed = "IPD_STAY_CLOSED";
 }
 
 // ---------- Shared ----------
