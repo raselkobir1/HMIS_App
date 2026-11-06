@@ -18,3 +18,16 @@ export function fromIsoDate(value: string | null | undefined): Date | null {
   const [year, month, day] = value.split('-').map(Number);
   return new Date(year, month - 1, day);
 }
+
+/** The hospital's calendar day (Asia/Dhaka), independent of the workstation's time zone, as "yyyy-MM-dd". */
+export function todayIso(): string {
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka', year: 'numeric', month: '2-digit', day: '2-digit' })
+    .formatToParts(new Date())
+    .reduce<Record<string, string>>((acc, p) => ({ ...acc, [p.type]: p.value }), {});
+  return `${parts['year']}-${parts['month']}-${parts['day']}`;
+}
+
+/** The hospital's calendar day as a local-midnight Date, for date pickers and comparisons. */
+export function hospitalToday(): Date {
+  return fromIsoDate(todayIso())!;
+}

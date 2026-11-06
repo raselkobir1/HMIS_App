@@ -24,7 +24,7 @@ import { ConfirmDialog } from '../../../shared/components/confirm-dialog/confirm
 import { FieldError } from '../../../shared/components/field-error/field-error';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { HasPermissionDirective } from '../../../shared/directives/has-permission.directive';
-import { fromIsoDate, toIsoDate } from '../../../shared/utilities/dates';
+import { fromIsoDate, toIsoDate, todayIso, hospitalToday } from '../../../shared/utilities/dates';
 import { apiErrorMessage } from '../../../shared/utilities/server-errors';
 import { Doctor, DoctorApiService } from '../../hr/doctors.models';
 import {
@@ -191,8 +191,8 @@ export class AppointmentsPage implements OnInit {
   protected readonly statuses = Object.keys(STATUS_LABELS) as AppointmentStatus[];
   protected readonly columns = ['serial', 'patient', 'doctor', 'visit', 'status', 'actions'];
   protected readonly doctors = signal<Doctor[]>([]);
-  protected readonly query = signal<AppointmentQuery>({ pageNumber: 1, pageSize: 50, date: toIsoDate(new Date())! });
-  protected readonly dateValue = signal<Date | null>(new Date());
+  protected readonly query = signal<AppointmentQuery>({ pageNumber: 1, pageSize: 50, date: todayIso() });
+  protected readonly dateValue = signal<Date | null>(hospitalToday());
   protected readonly page = signal<PagedResponse<Appointment> | null>(null);
   protected readonly loading = signal(false);
 
@@ -249,7 +249,7 @@ export class AppointmentsPage implements OnInit {
 
   /** Mirrors the server's status rules so only possible actions are offered. */
   protected can(a: Appointment, action: SimpleAction | 'reschedule' | 'cancel'): boolean {
-    const today = toIsoDate(new Date())!;
+    const today = todayIso();
     const open = a.status === 'Scheduled' || a.status === 'Confirmed';
     switch (action) {
       case 'confirm':
@@ -419,8 +419,8 @@ export class RescheduleDialog {
   private readonly notifications = inject(NotificationService);
 
   protected readonly formatTime = formatTime;
-  protected readonly today = new Date();
-  protected readonly date = signal<Date>(fromIsoDate(this.appointment.appointmentDate) ?? new Date());
+  protected readonly today = hospitalToday();
+  protected readonly date = signal<Date>(fromIsoDate(this.appointment.appointmentDate) ?? hospitalToday());
   protected readonly sessions = signal<SessionAvailability[]>([]);
   protected readonly scheduleId = signal<string | null>(null);
   protected readonly saving = signal(false);

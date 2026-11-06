@@ -12,7 +12,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { RouterLink } from '@angular/router';
 
 import { PageHeader } from '../../../shared/components/page-header/page-header';
-import { toIsoDate } from '../../../shared/utilities/dates';
+import { toIsoDate, hospitalToday } from '../../../shared/utilities/dates';
 import { apiErrorMessage } from '../../../shared/utilities/server-errors';
 import { BillingApiService, CollectionReport, METHOD_LABELS } from '../billing.models';
 import { TakaPipe } from '../components/taka.pipe';
@@ -183,8 +183,8 @@ export class CollectionsPage {
 
   protected readonly maxDays = MAX_DAYS;
   protected readonly methods = METHOD_LABELS;
-  protected from: Date | null = new Date();
-  protected to: Date | null = new Date();
+  protected from: Date | null = hospitalToday();
+  protected to: Date | null = hospitalToday();
   protected cashierId: string | null = null;
   protected readonly report = signal<CollectionReport | null>(null);
   protected readonly error = signal<string | null>(null);

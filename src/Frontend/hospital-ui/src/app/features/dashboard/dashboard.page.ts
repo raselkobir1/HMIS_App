@@ -10,7 +10,7 @@ import { environment } from '../../../environments/environment';
 import { AuthService } from '../../core/auth/auth.service';
 import { ApiResponse } from '../../core/models/api-response.model';
 import { PageHeader } from '../../shared/components/page-header/page-header';
-import { toIsoDate } from '../../shared/utilities/dates';
+import { todayIso } from '../../shared/utilities/dates';
 import { BillingApiService } from '../billing/billing.models';
 import { TakaPipe } from '../billing/components/taka.pipe';
 import { IpdApiService } from '../ipd/ipd.models';
@@ -152,7 +152,7 @@ export class DashboardPage implements OnInit {
   protected readonly empty = computed(() => !Object.values(this.can).some(Boolean));
 
   ngOnInit(): void {
-    const today = toIsoDate(new Date())!;
+    const today = todayIso();
     if (this.can.patients) {
       this.fetch<PatientCounts>('/patients/counts').subscribe((p) => this.patients.set(p));
     }

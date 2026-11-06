@@ -14,7 +14,7 @@ import { Router, RouterLink } from '@angular/router';
 
 import { NotificationService } from '../../../core/services/notification.service';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
-import { toIsoDate } from '../../../shared/utilities/dates';
+import { toIsoDate, hospitalToday } from '../../../shared/utilities/dates';
 import { apiErrorMessage } from '../../../shared/utilities/server-errors';
 import { AdministrationApiService } from '../../administration/administration-api.service';
 import { DepartmentLookupItem } from '../../administration/administration.models';
@@ -59,7 +59,7 @@ export class BookAppointmentPage implements OnInit {
   private readonly picker = viewChild(PatientPicker);
 
   protected readonly formatTime = formatTime;
-  protected readonly today = new Date();
+  protected readonly today = hospitalToday();
   protected readonly maxDate = new Date(Date.now() + 90 * 86_400_000);
 
   protected readonly patient = signal<PatientListItem | null>(null);
@@ -67,7 +67,7 @@ export class BookAppointmentPage implements OnInit {
   protected readonly departmentId = signal<string>('');
   protected readonly doctors = signal<Doctor[]>([]);
   protected readonly doctorId = signal<string>('');
-  protected readonly date = signal<Date>(new Date());
+  protected readonly date = signal<Date>(hospitalToday());
   protected readonly sessions = signal<SessionAvailability[]>([]);
   protected readonly sessionId = signal<string | null>(null);
   protected readonly visitType = signal<VisitType>('New');
@@ -96,7 +96,7 @@ export class BookAppointmentPage implements OnInit {
     // Walk-ins are for today only.
     effect(() => {
       if (this.walkIn()) {
-        this.date.set(new Date());
+        this.date.set(hospitalToday());
       }
     });
 

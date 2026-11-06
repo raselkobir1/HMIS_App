@@ -11,7 +11,7 @@ import { forkJoin } from 'rxjs';
 
 import { NotificationService } from '../../../core/services/notification.service';
 import { FieldError } from '../../../shared/components/field-error/field-error';
-import { fromIsoDate, toIsoDate } from '../../../shared/utilities/dates';
+import { fromIsoDate, toIsoDate, hospitalToday } from '../../../shared/utilities/dates';
 import { applyServerErrors } from '../../../shared/utilities/server-errors';
 import { AdministrationApiService } from '../../administration/administration-api.service';
 import { HrApiService } from '../hr-api.service';
@@ -135,7 +135,7 @@ export class EmployeeFormDialog {
 
   protected readonly genders = GENDERS;
   protected readonly types = EMPLOYMENT_TYPES;
-  protected readonly today = new Date();
+  protected readonly today = hospitalToday();
   protected readonly saving = signal(false);
   protected readonly bannerError = signal<string | null>(null);
   private readonly departments = signal<Option[]>([]);
@@ -157,7 +157,7 @@ export class EmployeeFormDialog {
     departmentId: [this.employee?.departmentId ?? '', Validators.required],
     designationId: [this.employee?.designationId ?? '', Validators.required],
     employmentType: [this.employee?.employmentType ?? ('Permanent' as EmploymentType), Validators.required],
-    joiningDate: [fromIsoDate(this.employee?.joiningDate) ?? (new Date() as Date | null), Validators.required],
+    joiningDate: [fromIsoDate(this.employee?.joiningDate) ?? (hospitalToday() as Date | null), Validators.required],
   });
 
   constructor() {

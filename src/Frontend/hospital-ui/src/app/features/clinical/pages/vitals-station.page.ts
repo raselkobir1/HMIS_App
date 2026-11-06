@@ -12,7 +12,7 @@ import { filter, forkJoin } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/auth.service';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
-import { toIsoDate } from '../../../shared/utilities/dates';
+import { todayIso } from '../../../shared/utilities/dates';
 import { Appointment, AppointmentApiService, formatTime, STATUS_LABELS } from '../../appointment/appointment.models';
 import { ageLabel } from '../../patient/patient.models';
 import { ClinicalPermissions } from '../clinical.models';
@@ -128,7 +128,7 @@ export class VitalsStationPage {
   }
 
   protected load(): void {
-    const date = toIsoDate(new Date())!;
+    const date = todayIso();
     this.loading.set(true);
     forkJoin([
       this.api.search({ pageNumber: 1, pageSize: 100, date, status: 'Waiting' }),

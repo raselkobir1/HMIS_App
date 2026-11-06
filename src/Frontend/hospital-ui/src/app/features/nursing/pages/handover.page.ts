@@ -13,7 +13,7 @@ import { filter } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
-import { fromIsoDate, toIsoDate } from '../../../shared/utilities/dates';
+import { fromIsoDate, toIsoDate, todayIso } from '../../../shared/utilities/dates';
 import { apiErrorMessage } from '../../../shared/utilities/server-errors';
 import { CurrentShift, Handover, NursingApiService, NursingPermissions, Shift, SHIFT_LABELS, WardPatient } from '../nursing.models';
 
@@ -195,7 +195,7 @@ export class HandoverPage implements OnInit {
 
   protected readonly canRecord = inject(AuthService).hasPermission(NursingPermissions.record);
   protected readonly shiftLabels = SHIFT_LABELS;
-  protected readonly today = toIsoDate(new Date())!;
+  protected readonly today = todayIso();
   protected readonly yesterday = toIsoDate(new Date(Date.now() - 86_400_000))!;
   protected readonly shift = signal<CurrentShift | null>(null);
   protected readonly wardId = signal<string | null>(null);

@@ -9,7 +9,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { ConfirmDialog } from '../../../shared/components/confirm-dialog/confirm-dialog';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
-import { fromIsoDate, toIsoDate } from '../../../shared/utilities/dates';
+import { fromIsoDate, toIsoDate, todayIso } from '../../../shared/utilities/dates';
 import { apiErrorMessage } from '../../../shared/utilities/server-errors';
 import { IpdApiService } from '../../ipd/ipd.models';
 import { RosterDialog } from '../components/nursing-dialogs';
@@ -116,7 +116,7 @@ export class RosterPage implements OnInit {
   protected readonly DAYS = DAYS;
   protected readonly canManage = inject(AuthService).hasPermission(NursingPermissions.rosterManage);
   protected readonly shifts = SHIFTS;
-  protected readonly today = toIsoDate(new Date())!;
+  protected readonly today = todayIso();
   protected readonly from = signal(this.today);
   protected readonly days = computed(() => Array.from({ length: DAYS }, (_, i) => addDays(this.from(), i)));
   protected readonly wards = signal<WardOption[]>([]);

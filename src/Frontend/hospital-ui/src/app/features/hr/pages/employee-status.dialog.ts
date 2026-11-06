@@ -10,7 +10,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 
 import { NotificationService } from '../../../core/services/notification.service';
-import { fromIsoDate, toIsoDate } from '../../../shared/utilities/dates';
+import { fromIsoDate, toIsoDate, hospitalToday } from '../../../shared/utilities/dates';
 import { apiErrorMessage } from '../../../shared/utilities/server-errors';
 import { HrApiService } from '../hr-api.service';
 import { EMPLOYMENT_STATUSES, EmployeeListItem, EmploymentStatus } from '../hr.models';
@@ -68,7 +68,7 @@ export class EmployeeStatusDialog {
 
   protected readonly form = inject(NonNullableFormBuilder).group({
     status: [this.employee.status as EmploymentStatus],
-    exitDate: [new Date() as Date | null],
+    exitDate: [hospitalToday() as Date | null],
   });
 
   private readonly status = toSignal(this.form.controls.status.valueChanges, { initialValue: this.employee.status });

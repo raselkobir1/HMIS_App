@@ -16,7 +16,7 @@ import { ConfirmDialog } from '../../../shared/components/confirm-dialog/confirm
 import { FieldError } from '../../../shared/components/field-error/field-error';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { HasPermissionDirective } from '../../../shared/directives/has-permission.directive';
-import { fromIsoDate, toIsoDate } from '../../../shared/utilities/dates';
+import { fromIsoDate, toIsoDate, todayIso, hospitalToday } from '../../../shared/utilities/dates';
 import { apiErrorMessage, applyServerErrors } from '../../../shared/utilities/server-errors';
 import { Doctor, DoctorApiService } from '../../hr/doctors.models';
 import { AppointmentApiService, AppointmentPermissions, DayOfWeek, formatTime, Leave, Schedule, WEEK_DAYS } from '../appointment.models';
@@ -179,7 +179,7 @@ export class SchedulesPage {
       const doctorId = this.doctorId() || undefined;
       this.reload();
       this.api.schedules(doctorId).subscribe({ next: (s) => this.schedules.set(s), error: () => this.schedules.set([]) });
-      this.api.leaves(doctorId, toIsoDate(new Date())!).subscribe({ next: (l) => this.leaves.set(l), error: () => this.leaves.set([]) });
+      this.api.leaves(doctorId, todayIso()).subscribe({ next: (l) => this.leaves.set(l), error: () => this.leaves.set([]) });
     });
   }
 
@@ -342,7 +342,7 @@ export class ScheduleFormDialog {
     endTime: [this.data.schedule ? toTimeInput(this.data.schedule.endTime) : '21:00', Validators.required],
     maxPatients: [this.data.schedule?.maxPatients ?? 30, [Validators.required, Validators.min(1), Validators.max(200)]],
     averageMinutesPerPatient: [this.data.schedule?.averageMinutesPerPatient ?? 8, [Validators.required, Validators.min(1), Validators.max(180)]],
-    effectiveFrom: [fromIsoDate(this.data.schedule?.effectiveFrom) ?? new Date(), Validators.required],
+    effectiveFrom: [fromIsoDate(this.data.schedule?.effectiveFrom) ?? hospitalToday(), Validators.required],
     effectiveTo: [fromIsoDate(this.data.schedule?.effectiveTo) as Date | null],
   });
 
@@ -436,11 +436,11 @@ export class LeaveFormDialog {
   private readonly notifications = inject(NotificationService);
 
   protected readonly formatTime = formatTime;
-  protected readonly today = new Date();
+  protected readonly today = hospitalToday();
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly form = inject(NonNullableFormBuilder).group({
-    date: [new Date() as Date | null, Validators.required],
+    date: [hospitalToday() as Date | null, Validators.required],
     scheduleId: [''],
     reason: ['', [Validators.required, Validators.maxLength(250)]],
   });

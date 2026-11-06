@@ -18,7 +18,7 @@ import { catchError, debounceTime, of, Subject, switchMap, tap } from 'rxjs';
 import { PagedResponse } from '../../../core/models/api-response.model';
 import { PageHeader } from '../../../shared/components/page-header/page-header';
 import { HasPermissionDirective } from '../../../shared/directives/has-permission.directive';
-import { toIsoDate } from '../../../shared/utilities/dates';
+import { toIsoDate, todayIso, hospitalToday } from '../../../shared/utilities/dates';
 import { BillingApiService, BillingPermissions, invoiceBadge, InvoiceQuery, InvoiceStatus, InvoiceSummary, SOURCE_LABELS } from '../billing.models';
 import { TakaPipe } from '../components/taka.pipe';
 
@@ -140,13 +140,13 @@ export class InvoicesPage {
   protected readonly badgeOf = invoiceBadge;
   protected readonly statuses: InvoiceStatus[] = ['Draft', 'Finalized', 'Cancelled'];
   protected readonly columns = ['number', 'patient', 'net', 'due', 'status'];
-  protected readonly from = signal<Date | null>(new Date());
-  protected readonly to = signal<Date | null>(new Date());
+  protected readonly from = signal<Date | null>(hospitalToday());
+  protected readonly to = signal<Date | null>(hospitalToday());
   protected readonly query = signal<InvoiceQuery>({
     pageNumber: 1,
     pageSize: 50,
-    dateFrom: toIsoDate(new Date())!,
-    dateTo: toIsoDate(new Date())!,
+    dateFrom: todayIso(),
+    dateTo: todayIso(),
   });
   protected readonly page = signal<PagedResponse<InvoiceSummary> | null>(null);
   protected readonly loading = signal(false);
