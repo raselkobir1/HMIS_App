@@ -15,6 +15,7 @@ using Hmis.BuildingBlocks.Presentation;
 using Hmis.BuildingBlocks.Presentation.Http;
 using Mapster;
 using MapsterMapper;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Serilog;
@@ -114,10 +115,28 @@ try
     builder.Services.AddHmisSwagger();
     builder.Services.AddHealthChecks().AddCheck<PostgresHealthCheck>("postgres");
 
+    // X-Forwarded-For / X-Forwarded-Proto are honoured only from loopback proxies by default (ASP.NET Core's
+    // KnownProxies/KnownNetworks). ForwardedHeaders:TrustAll=true trusts every sender and is meant only for a
+    // deployment where the API port is not reachable except through the reverse proxy (the Docker stack binds it to
+    // 127.0.0.1 and nginx reaches it over the compose network). Never set it on an API that is published directly.
+    var trustAllProxies = builder.Configuration.GetValue("ForwardedHeaders:TrustAll", false);
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        if (trustAllProxies)
+        {
+            options.KnownIPNetworks.Clear();
+            options.KnownProxies.Clear();
+        }
+    });
+
     // ---------- Pipeline ----------
     var app = builder.Build();
     await app.RunStartupTasksAsync();
+    await app.LogStartupWarningsAsync();
 
+    // First, so the rate limiter, HSTS/HTTPS redirection and the Secure cookie flag see the real client and scheme.
+    app.UseForwardedHeaders();
     app.UseExceptionHandler();
     app.UseSerilogRequestLogging(options =>
         options.EnrichDiagnosticContext = (diagnostics, httpContext) =>

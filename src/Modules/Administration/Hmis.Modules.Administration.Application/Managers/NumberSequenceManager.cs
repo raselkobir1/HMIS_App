@@ -52,11 +52,16 @@ public sealed class NumberSequenceManager(
 /// <summary>INumberSequenceService contract for other modules (e.g. Patient asks for the next MR number).</summary>
 public sealed class NumberSequenceService(INumberSequenceRepository repository, IDateTimeProvider dateTime) : INumberSequenceService
 {
+    /// <summary>A number sequence the caller depends on has not been seeded; a 422 with the key is more useful than a 500.</summary>
+    private const string NumberSequenceMissing = "NUMBER_SEQUENCE_MISSING";
+
     public async Task<string> NextAsync(string key, CancellationToken cancellationToken)
     {
         var year = dateTime.LocalToday.Year;
         var allocated = await repository.AllocateNextAsync(key.ToUpperInvariant(), year, cancellationToken)
-            ?? throw new InvalidOperationException($"Number sequence '{key}' is not configured.");
+            ?? throw new BusinessException(
+                NumberSequenceMissing,
+                $"Number sequence '{key.ToUpperInvariant()}' is not configured. Add it under Administration > Number sequences and try again.");
 
         return NumberSequence.Format(allocated.Prefix, allocated.YearFormat, allocated.PadLength, allocated.Value, year);
     }

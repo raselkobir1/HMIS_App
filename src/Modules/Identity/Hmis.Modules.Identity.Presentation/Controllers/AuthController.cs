@@ -24,13 +24,14 @@ public sealed class AuthController(IAuthManager authManager) : ApiControllerBase
     public async Task<IActionResult> Login([FromBody] LoginRequestDto request, CancellationToken cancellationToken)
     {
         var session = await authManager.LoginAsync(request, cancellationToken);
-        RefreshTokenCookie.Write(Response, session.RefreshToken, session.RefreshTokenExpiresAt);
+        RefreshTokenCookie.Write(HttpContext, session.RefreshToken, session.RefreshTokenExpiresAt);
         return OkResponse(session.Response, "Signed in successfully.");
     }
 
     /// <summary>Exchanges the refresh-token cookie for a new access token (token rotation).</summary>
     [HttpPost("refresh")]
     [AllowAnonymous]
+    [EnableRateLimiting(RateLimitPolicies.Auth)]
     [ProducesResponseType<ApiResponse<AuthResponseDto>>(StatusCodes.Status200OK)]
     [ProducesResponseType<ApiResponse>(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Refresh(CancellationToken cancellationToken)
@@ -38,13 +39,13 @@ public sealed class AuthController(IAuthManager authManager) : ApiControllerBase
         try
         {
             var session = await authManager.RefreshAsync(RefreshTokenCookie.Read(Request), cancellationToken);
-            RefreshTokenCookie.Write(Response, session.RefreshToken, session.RefreshTokenExpiresAt);
+            RefreshTokenCookie.Write(HttpContext, session.RefreshToken, session.RefreshTokenExpiresAt);
             return OkResponse(session.Response, "Session refreshed.");
         }
         catch
         {
             // A rejected refresh token must not linger in the browser.
-            RefreshTokenCookie.Delete(Response);
+            RefreshTokenCookie.Delete(HttpContext);
             throw;
         }
     }
@@ -52,11 +53,12 @@ public sealed class AuthController(IAuthManager authManager) : ApiControllerBase
     /// <summary>Ends the current session and clears the refresh-token cookie.</summary>
     [HttpPost("logout")]
     [AllowAnonymous]
+    [EnableRateLimiting(RateLimitPolicies.Auth)]
     [ProducesResponseType<ApiResponse>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Logout(CancellationToken cancellationToken)
     {
         await authManager.LogoutAsync(RefreshTokenCookie.Read(Request), cancellationToken);
-        RefreshTokenCookie.Delete(Response);
+        RefreshTokenCookie.Delete(HttpContext);
         return OkResponse("Signed out.");
     }
 
@@ -68,7 +70,7 @@ public sealed class AuthController(IAuthManager authManager) : ApiControllerBase
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequestDto request, CancellationToken cancellationToken)
     {
         var session = await authManager.ChangePasswordAsync(request, cancellationToken);
-        RefreshTokenCookie.Write(Response, session.RefreshToken, session.RefreshTokenExpiresAt);
+        RefreshTokenCookie.Write(HttpContext, session.RefreshToken, session.RefreshTokenExpiresAt);
         return OkResponse(session.Response, "Password changed successfully.");
     }
 

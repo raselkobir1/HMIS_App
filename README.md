@@ -29,7 +29,7 @@ This starts PostgreSQL, applies all migrations (`migrator` container, exits when
 | Service | URL |
 |---|---|
 | UI (nginx; proxies `/api` to the API) | http://localhost:4380 |
-| API (direct) | http://localhost:5380/health |
+| API (direct, bound to `127.0.0.1` only) | http://localhost:5380/health |
 
 - Sign in at http://localhost:4380 as `superadmin` with the seed password.
 - Optional demo logins for development: set `HMIS_SEED_DEMO_DATA=true` in `.env` before starting. This seeds one employee per role and the logins `admin1`, `reception1`, `cashier1`, `nurse1` and `doctor1` (doctor profile included), all with password `Demo@2026`. Never enable it on a production install.
@@ -37,7 +37,9 @@ This starts PostgreSQL, applies all migrations (`migrator` container, exits when
 - Logs: `docker compose logs -f api`.
 - Stop: `docker compose down`. Data is kept in the `hmis-pgdata` volume.
 - The Docker stack and the Visual Studio setup below share the same database.
-- Open the UI on `localhost`, not a LAN IP address. The sign-in cookie is marked Secure, and browsers only accept it over plain HTTP on `localhost`.
+- `docker compose ps` shows the API as `healthy` once `/health` answers; the UI container waits for that.
+- The stack serves plain HTTP, which is fine on a workstation or an isolated LAN for evaluation. **Production must terminate TLS at a reverse proxy** (nginx, Caddy, Traefik, a cloud load balancer) in front of the UI port, forwarding `X-Forwarded-Proto`. The sign-in cookie is marked `Secure` only when the request arrives over HTTPS, so without TLS the credentials of every user cross the network in clear text.
+- Only the UI port needs to be reachable from other machines. The API port is published on the host's loopback interface only (`127.0.0.1:5380`); the UI container reaches it over the compose network. Keep it that way: the API trusts forwarded headers from nginx (`ForwardedHeaders__TrustAll=true` in `docker-compose.yml`), which is only safe while nothing else can reach it.
 
 ## First-time setup (Visual Studio / ng serve)
 ```powershell

@@ -23,8 +23,8 @@ ENTRYPOINT ["/migrate.sh"]
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS api
 WORKDIR /app
-# libgssapi: optional Kerberos support probed by Npgsql at startup.
-RUN apt-get update && apt-get install -y --no-install-recommends libgssapi-krb5-2 && rm -rf /var/lib/apt/lists/*
+# libgssapi: optional Kerberos support probed by Npgsql at startup. curl: the compose healthcheck (GET /health).
+RUN apt-get update && apt-get install -y --no-install-recommends libgssapi-krb5-2 curl && rm -rf /var/lib/apt/lists/*
 COPY --from=publish /out .
 RUN mkdir -p /app/logs /app/storage /home/app/.aspnet/DataProtection-Keys     && chown -R app:app /app/logs /app/storage /home/app/.aspnet
 USER app
