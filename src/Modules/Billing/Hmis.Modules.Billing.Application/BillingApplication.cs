@@ -51,9 +51,6 @@ public sealed class BillingPermissionDefinitionProvider : IPermissionDefinitionP
 
 public static class BillingPolicy
 {
-    /// <summary>Total discount on an invoice above this share of the subtotal needs Billing.Discount.Approve (Q-BILL-4).</summary>
-    public const decimal DiscountApprovalPercent = 10m;
-
     /// <summary>Longest period one collection report covers.</summary>
     public const int MaxReportDays = 31;
 
@@ -74,6 +71,8 @@ public static class BillingErrorCodes
     public const string LineLocked = "INVOICE_LINE_LOCKED";
     public const string RunningBill = "INVOICE_RUNNING_BILL";
     public const string NoRunningBill = "INVOICE_NO_RUNNING_BILL";
+    public const string RefundSelfApproval = "REFUND_SELF_APPROVAL";
+    public const string RefundApproverCannotPay = "REFUND_APPROVER_CANNOT_PAY";
 }
 
 /// <summary>Receipt and refund numbers (INVOICE is declared by Administration). Formats are editable in Settings.</summary>
@@ -127,6 +126,12 @@ public sealed class ServiceQuery : PaginationRequest
 // ---------- Invoices ----------
 
 public sealed record PatientBriefDto(Guid Id, string MRNumber, string FullName, string Gender, DateOnly? DateOfBirth, string MobileNumber, string Status);
+
+/// <param name="IsSupplementary">Charges that arrived after the source's bill was finalized; the cashier finalizes and collects it.</param>
+public sealed record InvoiceSummaryDto(
+    Guid Id, string InvoiceNumber, DateOnly InvoiceDate, Guid PatientId, string? PatientMRNumber, string? PatientName,
+    InvoiceStatus Status, PaymentStatus PaymentStatus, string? SourceType, string? SourceReference, decimal Subtotal,
+    decimal DiscountAmount, decimal NetAmount, decimal PaidAmount, decimal DueAmount, bool CancellationRequested, bool IsSupplementary);
 
 /// <param name="IsPosted">Posted by another module (e.g. daily bed rent); never edited by the cashier.</param>
 public sealed record InvoiceLineDto(
@@ -182,11 +187,7 @@ public sealed record DiscountDto(
     Guid Id, DiscountType Type, decimal Value, decimal Amount, string Reason, ApprovalStatus Status, string? RequestedByName,
     DateTime RequestedAt, string? DecidedByName, DateTime? DecidedAt, string? DecisionNote);
 
-public sealed record InvoiceSummaryDto(
-    Guid Id, string InvoiceNumber, DateOnly InvoiceDate, Guid PatientId, string? PatientMRNumber, string? PatientName,
-    InvoiceStatus Status, PaymentStatus PaymentStatus, string? SourceType, string? SourceReference, decimal Subtotal,
-    decimal DiscountAmount, decimal NetAmount, decimal PaidAmount, decimal DueAmount, bool CancellationRequested);
-
+/// <param name="IsSupplementary">Charges that arrived after the source's bill was finalized; the cashier finalizes and collects it.</param>
 public sealed record InvoiceDto(
     Guid Id,
     string InvoiceNumber,
@@ -206,6 +207,7 @@ public sealed record InvoiceDto(
     decimal DueAmount,
     bool CancellationRequested,
     bool IsRunningBill,
+    bool IsSupplementary,
     DateTime? FinalizedAt,
     DateTime? CancelledAt,
     string? CancellationReason,

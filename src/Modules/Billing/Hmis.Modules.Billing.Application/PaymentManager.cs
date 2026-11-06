@@ -143,9 +143,16 @@ public sealed class PaymentManager(
         return await dtos.RefundAsync(refund, cancellationToken);
     }
 
+    /// <summary>Segregation of duties (Q-BILL-5): a refund is never approved by the user who requested it.</summary>
     public Task<RefundDto> ApproveRefundAsync(Guid id, DecisionDto request, CancellationToken cancellationToken) =>
         ChangeRefundAsync(id, (refund, userId, _) =>
         {
+            if (refund.CreatedBy == userId)
+            {
+                throw new BusinessException(BillingErrorCodes.RefundSelfApproval,
+                    "You requested this refund; another administrator must approve it.");
+            }
+
             refund.Approve(userId, request.Note, dateTime.UtcNow);
             return Task.CompletedTask;
         }, cancellationToken);
@@ -160,12 +167,21 @@ public sealed class PaymentManager(
             }
         }, cancellationToken);
 
-    /// <summary>The cashier hands the money back. A cancellation refund also cancels its invoice.</summary>
+    /// <summary>
+    /// The cashier hands the money back. A cancellation refund also cancels its invoice. Segregation of duties (Q-BILL-5):
+    /// the user who approved the refund never pays it out.
+    /// </summary>
     public async Task<RefundDto> PayRefundAsync(Guid id, RefundPayDto request, CancellationToken cancellationToken)
     {
         await EnsureMethodEnabledAsync(request.Method, cancellationToken);
         return await ChangeRefundAsync(id, async (refund, userId, ct) =>
         {
+            if (refund.Status == RefundStatus.Approved && refund.DecidedBy == userId)
+            {
+                throw new BusinessException(BillingErrorCodes.RefundApproverCannotPay,
+                    "You approved this refund; a different cashier must pay it out.");
+            }
+
             refund.MarkPaid(userId, request.Method, request.Reference, dateTime.UtcNow);
             if (refund.InvoiceId is { } invoiceId)
             {

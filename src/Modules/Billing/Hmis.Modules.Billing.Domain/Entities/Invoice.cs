@@ -11,12 +11,18 @@ public enum InvoiceStatus
     Cancelled
 }
 
-/// <summary>Derived from the amounts; not stored.</summary>
+/// <summary>Derived from the status and amounts; not stored.</summary>
 public enum PaymentStatus
 {
     Unpaid,
     PartiallyPaid,
-    Paid
+    Paid,
+
+    /// <summary>Cancelled with no cash returned (nothing was paid, or only advance that went back to the patient's advance).</summary>
+    Cancelled,
+
+    /// <summary>Cancelled after the cash received was refunded.</summary>
+    Refunded
 }
 
 public enum DiscountType
@@ -66,6 +72,12 @@ public sealed class Invoice : AuditableEntity, IAggregateRoot, IHasConcurrencyTo
     public Guid? SourceId { get; private set; }
     public string? SourceReference { get; private set; }
 
+    /// <summary>
+    /// Part number of the source's bill: 1 for the bill itself, 2+ for a supplementary bill opened for charges that
+    /// arrived after the earlier part was finalized. Unique per source together with <see cref="SourceId"/>.
+    /// </summary>
+    public int SourcePart { get; private set; } = 1;
+
     public string? Notes { get; private set; }
 
     public decimal Subtotal { get; private set; }
@@ -104,8 +116,16 @@ public sealed class Invoice : AuditableEntity, IAggregateRoot, IHasConcurrencyTo
     /// <summary>A draft posted to by another module (e.g. an IPD stay); it is finalized by that module, not by the cashier.</summary>
     public bool IsRunningBill => SourceType is not null && Status == InvoiceStatus.Draft;
 
-    public PaymentStatus PaymentStatus =>
-        PaidAmount <= 0 ? PaymentStatus.Unpaid : PaidAmount >= NetAmount ? PaymentStatus.Paid : PaymentStatus.PartiallyPaid;
+    /// <summary>Charges that arrived after the source's bill was finalized; the cashier finalizes and collects it.</summary>
+    public bool IsSupplementary => SourceType is not null && SourcePart > 1;
+
+    /// <summary>A finalized invoice with nothing left to pay (including a zero-amount bill) is settled.</summary>
+    public PaymentStatus PaymentStatus => Status switch
+    {
+        InvoiceStatus.Cancelled => RefundedAmount > 0 ? PaymentStatus.Refunded : PaymentStatus.Cancelled,
+        InvoiceStatus.Finalized when PaidAmount >= NetAmount => PaymentStatus.Paid,
+        _ => PaidAmount <= 0 ? PaymentStatus.Unpaid : PaymentStatus.PartiallyPaid
+    };
 
     public static Invoice CreateDraft(string invoiceNumber, Guid patientId, DateOnly invoiceDate, string? notes) =>
         new()
@@ -129,14 +149,23 @@ public sealed class Invoice : AuditableEntity, IAggregateRoot, IHasConcurrencyTo
         return invoice;
     }
 
-    /// <summary>A draft that another module adds charges to until it is finalized (e.g. an IPD stay).</summary>
+    /// <summary>
+    /// A draft that another module adds charges to until it is finalized (e.g. an IPD stay). A <paramref name="sourcePart"/>
+    /// above 1 opens a supplementary bill for charges that arrive after the earlier part was finalized.
+    /// </summary>
     public static Invoice CreateRunning(string invoiceNumber, Guid patientId, DateOnly invoiceDate, string sourceType, Guid sourceId,
-        string sourceReference)
+        string sourceReference, int sourcePart = 1)
     {
+        if (sourcePart < 1)
+        {
+            throw new DomainException("INVOICE_PART_INVALID", "A bill part number starts at 1.");
+        }
+
         var invoice = CreateDraft(invoiceNumber, patientId, invoiceDate, null);
         invoice.SourceType = sourceType;
         invoice.SourceId = sourceId;
         invoice.SourceReference = sourceReference;
+        invoice.SourcePart = sourcePart;
         return invoice;
     }
 
@@ -199,12 +228,13 @@ public sealed class Invoice : AuditableEntity, IAggregateRoot, IHasConcurrencyTo
         Revision++;
     }
 
+    /// <summary>A bill with lines can be finalized even at a zero total (nothing to pay); an empty one cannot.</summary>
     public void Finalize(DateTime utcNow)
     {
         EnsureDraft();
-        if (_lines.Count == 0 || Subtotal <= 0)
+        if (_lines.Count == 0)
         {
-            throw new DomainException("INVOICE_EMPTY", "Add at least one chargeable line before finalizing.");
+            throw new DomainException("INVOICE_EMPTY", "Add at least one line before finalizing.");
         }
 
         Status = InvoiceStatus.Finalized;

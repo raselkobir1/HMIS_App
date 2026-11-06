@@ -53,7 +53,8 @@ public sealed class BillingDtoFactory(
             invoice.Id, invoice.InvoiceNumber, invoice.InvoiceDate, Brief(names.Patient(invoice.PatientId)), invoice.Status,
             invoice.PaymentStatus, invoice.SourceType, invoice.SourceReference, invoice.Notes, invoice.Subtotal, invoice.DiscountAmount,
             invoice.NetAmount, invoice.PaidAmount, invoice.AdvanceAppliedAmount, invoice.RefundedAmount, invoice.DueAmount,
-            invoice.CancellationRequested, invoice.IsRunningBill, invoice.FinalizedAt, invoice.CancelledAt, invoice.CancellationReason, invoice.CreatedAt,
+            invoice.CancellationRequested, invoice.IsRunningBill, invoice.IsSupplementary, invoice.FinalizedAt, invoice.CancelledAt,
+            invoice.CancellationReason, invoice.CreatedAt,
             names.User(invoice.CreatedBy),
             Lines(invoice),
             invoice.Discounts.OrderBy(d => d.CreatedAt).Select(d => new DiscountDto(
@@ -95,7 +96,7 @@ public sealed class BillingDtoFactory(
         var patient = names.Patient(i.PatientId);
         return new InvoiceSummaryDto(
             i.Id, i.InvoiceNumber, i.InvoiceDate, i.PatientId, patient?.MRNumber, patient?.FullName, i.Status, i.PaymentStatus, i.SourceType,
-            i.SourceReference, i.Subtotal, i.DiscountAmount, i.NetAmount, i.PaidAmount, i.DueAmount, i.CancellationRequested);
+            i.SourceReference, i.Subtotal, i.DiscountAmount, i.NetAmount, i.PaidAmount, i.DueAmount, i.CancellationRequested, i.IsSupplementary);
     }
 
     public static IReadOnlyList<InvoiceLineDto> Lines(Invoice invoice) =>

@@ -35,8 +35,11 @@ public interface IInvoiceRepository : IRepository<Invoice>, IConcurrencyReposito
     /// <summary>Untracked.</summary>
     Task<Invoice?> GetByDiscountIdAsync(Guid discountId, CancellationToken cancellationToken);
 
-    /// <summary>Untracked.</summary>
-    Task<Invoice?> GetBySourceAsync(string sourceType, Guid sourceId, CancellationToken cancellationToken);
+    /// <summary>
+    /// Every part of the source's bill in part order (the bill first, supplementary bills after it), untracked and with
+    /// lines; empty when the source has no invoice.
+    /// </summary>
+    Task<IReadOnlyList<Invoice>> GetBySourceAsync(string sourceType, Guid sourceId, CancellationToken cancellationToken);
 
     Task<PagedResponse<Invoice>> SearchAsync(InvoiceListQuery query, CancellationToken cancellationToken);
 

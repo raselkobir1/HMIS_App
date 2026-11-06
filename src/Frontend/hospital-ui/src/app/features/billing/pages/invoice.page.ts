@@ -55,7 +55,7 @@ import { TakaPipe } from '../components/taka.pipe';
               <a mat-stroked-button [routerLink]="['/billing/invoices', inv.id, 'edit']">
                 <mat-icon>{{ inv.isRunningBill ? 'add' : 'edit' }}</mat-icon> {{ inv.isRunningBill ? 'Add services' : 'Edit' }}
               </a>
-              @if (!inv.isRunningBill) {
+              @if (!inv.isRunningBill || inv.isSupplementary) {
                 <button mat-flat-button type="button" [disabled]="busy()" (click)="finalize(inv)"><mat-icon>lock</mat-icon> Finalize</button>
                 <button mat-button type="button" (click)="cancel(inv)">Discard</button>
               }
@@ -88,7 +88,12 @@ import { TakaPipe } from '../components/taka.pipe';
           <a mat-button [routerLink]="['/billing/receipts', r.payment.id, 'print']"><mat-icon>print</mat-icon> Print receipt</a>
         </div>
       }
-      @if (inv.isRunningBill) {
+      @if (inv.isRunningBill && inv.isSupplementary) {
+        <div class="banner warn" role="status">
+          <mat-icon>post_add</mat-icon>
+          Supplementary bill: these charges arrived after the final bill of this stay. Finalize it and collect the amount due.
+        </div>
+      } @else if (inv.isRunningBill) {
         <div class="banner info" role="status">
           <mat-icon>hotel</mat-icon>
           Running bill for an IPD stay. Bed rent is added daily; the bill is finalized from the ward at discharge. Deposits are taken as advance.
