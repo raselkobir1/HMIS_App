@@ -60,9 +60,11 @@ Legend: ✔ granted by default · — not granted
 | `Patient.Merge.Approve` | ✔ | ✔ | — | — | — | — | — |
 | `Patient.MedicalInfo.View` (allergies, medical history) | ✔ | — | — | ✔ | ✔ | — | — |
 | `Patient.MedicalInfo.Manage` | ✔ | — | — | ✔ | ✔ | — | — |
-| `Patient.Documents.View` | ✔ | — | ✔ | ✔ | ✔ | — | — |
-| `Patient.Documents.Upload` | ✔ | — | ✔ | ✔ | ✔ | — | — |
-| `Patient.Documents.Delete` | ✔ | — | — | — | — | — | — |
+| `Patient.Documents.View` | — | — | ✔ | ✔ | ✔ | — | — |
+| `Patient.Documents.Upload` | — | — | ✔ | ✔ | ✔ | — | — |
+| `Patient.Documents.Delete` | — | — | — | — | — | — | — |
+
+`Patient.Documents.*` follow Q-SEC-1 like `Patient.MedicalInfo.*`: documents hold clinical reports, so the Super Administrator gets them only by explicit grant, and every download is audited.
 
 > **Super Admin and clinical data:** BRD §11 says administrative visibility must not automatically grant clinical access. Super Admin is currently shown with every permission. **Open question Q-SEC-1:** should Super Admin be excluded from `Patient.MedicalInfo.*`?
 
@@ -137,6 +139,7 @@ Detailed permission codes for each later module will be added here when that mod
 | `Ipd.Discharge.Order` | Doctor | **Explicit grant.** Login must be linked to a doctor profile. Writes the discharge summary |
 | `Ipd.Discharge.Complete` | Receptionist, Accountant / Cashier, Hospital Administrator | Prepare the final bill, release a settled patient |
 | `Ipd.Discharge.Override` | Hospital Administrator | Release with amount due (reason required) |
+| `Ipd.Discharge.Reopen` | Hospital Administrator | Reopen a stay after the final bill when the patient stays on (reason required, audited); later charges go to a supplementary bill |
 
 Diagnoses and the discharge summary are shown only to users with `Clinical.View` or `Ipd.Discharge.Order`; opening the printable summary is audited.
 

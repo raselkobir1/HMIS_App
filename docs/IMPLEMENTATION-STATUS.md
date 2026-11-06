@@ -17,6 +17,7 @@ Statuses: Not Started · Analysis Completed · Design Completed · Backend Compl
 | IPD step 1: beds, admission, transfer, bed charges, discharge (Phase 4) | Approved | Backend + frontend; 55 API + 23 browser checks; Billing 85/85 regression |
 | IPD step 2: progress notes, medication orders, MAR, vitals, intake/output, nursing notes, handover, roster (Phase 4) | Approved | Clinical additions + new Nursing module, backend + frontend; 106 API + 28 browser checks; IPD 55/55 and Clinical 45/45 regression |
 | Gap closure (Phases 1–4 review) | Testing Completed | Merge guards and merged history, deceased status, registration/admission/visit fees, billing settings, dashboard, in-app notifications; 51 API + 20 browser checks; all earlier API suites and IPD/Nursing/Billing browser suites re-run; awaiting approval |
+| Business-rule review and fixes (all built modules) | Backend + Frontend Completed | docs/REVIEW-2026-11-06.md: 36 defects fixed across Billing, Appointment/OPD, IPD/Nursing, Phase 1 and platform; 6 migrations; deferred features listed; built clean, deployed to the Docker stack and smoke-tested; full API suites not re-run yet |
 | Laboratory, Radiology | Not Started | |
 | Pharmacy, Inventory, Procurement | Not Started | |
 | HR (full), Asset | Not Started | |
