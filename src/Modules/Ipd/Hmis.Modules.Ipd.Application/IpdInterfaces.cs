@@ -107,6 +107,9 @@ public interface IAdmissionManager
 
     Task<AdmissionDto> PrepareFinalBillAsync(Guid id, AdmissionRowVersionDto request, CancellationToken cancellationToken);
 
+    /// <summary>Administrator's correction: FinalBilled back to Admitted with a reason; the final invoice stays payable.</summary>
+    Task<AdmissionDto> ReopenAsync(Guid id, ReopenDto request, CancellationToken cancellationToken);
+
     Task<AdmissionDto> ReleaseAsync(Guid id, ReleaseDto request, CancellationToken cancellationToken);
 
     Task<DischargeSummaryDto> GetDischargeSummaryAsync(Guid id, CancellationToken cancellationToken);

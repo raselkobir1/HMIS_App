@@ -13,6 +13,7 @@ export const IpdPermissions = {
   dischargeOrder: 'Ipd.Discharge.Order',
   dischargeComplete: 'Ipd.Discharge.Complete',
   dischargeOverride: 'Ipd.Discharge.Override',
+  dischargeReopen: 'Ipd.Discharge.Reopen',
   clinicalView: 'Clinical.View',
 } as const;
 
@@ -198,6 +199,9 @@ export interface Admission {
   releasedAt: string | null;
   releasedWithDue: number | null;
   releaseOverrideReason: string | null;
+  /** Set when an administrator reopened the stay after the final bill. */
+  reopenedAt: string | null;
+  reopenReason: string | null;
   bill: BillInfo | null;
   advanceBalance: number;
   rowVersion: number;
@@ -241,7 +245,10 @@ export interface DischargeSummary {
   wardName: string | null;
   bedNumber: string | null;
   admittedAt: string;
+  /** The discharge (order) time; bed charges stop here. */
   dischargedAt: string | null;
+  /** When the patient actually left the ward. */
+  releasedAt: string | null;
   reason: string;
   discharge: DischargeInfo;
 }
@@ -329,6 +336,11 @@ export class IpdApiService {
 
   prepareFinalBill(id: string, rowVersion: number): Observable<Admission> {
     return this.send('post', `/admissions/${id}/final-bill`, { rowVersion });
+  }
+
+  /** Administrator's correction after the final bill: the patient stays (Ipd.Discharge.Reopen). */
+  reopen(id: string, reason: string, rowVersion: number): Observable<Admission> {
+    return this.send('post', `/admissions/${id}/reopen`, { reason, rowVersion });
   }
 
   release(id: string, overrideReason: string | null, rowVersion: number): Observable<Admission> {

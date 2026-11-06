@@ -70,6 +70,7 @@ public sealed class BedConfiguration : IEntityTypeConfiguration<Bed>
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.StatusNote).HasMaxLength(200);
         builder.Ignore(x => x.CanBeAssigned);
+        builder.Ignore(x => x.UnavailableReason);
         builder.HasIndex(x => new { x.WardId, x.BedNumber }).IsUnique();
         builder.HasIndex(x => x.Status);
         builder.HasOne<Ward>().WithMany().HasForeignKey(x => x.WardId).OnDelete(DeleteBehavior.Restrict);
@@ -99,6 +100,7 @@ public sealed class AdmissionConfiguration : IEntityTypeConfiguration<Admission>
         builder.Property(x => x.DischargeAdvice).HasMaxLength(2000);
         builder.Property(x => x.ReleasedWithDue).HasPrecision(18, 2);
         builder.Property(x => x.ReleaseOverrideReason).HasMaxLength(250);
+        builder.Property(x => x.ReopenReason).HasMaxLength(250);
         builder.Ignore(x => x.CurrentBed);
         builder.Ignore(x => x.IsActive);
 
@@ -162,7 +164,7 @@ public sealed class BedRepository(IpdDbContext context) : BaseRepository<Bed, Ip
 
         if (query.AssignableOnly == true)
         {
-            list = list.Where(b => b.IsActive && (b.Status == BedStatus.Available || b.Status == BedStatus.Reserved) &&
+            list = list.Where(b => b.IsActive && b.Status == BedStatus.Available &&
                                    Context.Wards.Any(w => w.Id == b.WardId && w.IsActive));
         }
 
@@ -259,7 +261,10 @@ public sealed class IpdOptions
     public int BedChargeIntervalMinutes { get; set; } = 30;
 }
 
-/// <summary>Posts bed rent for every patient in a bed, shortly after startup and then periodically.</summary>
+/// <summary>
+/// Posts bed rent for every patient in a bed, shortly after startup and then periodically. Each stay is posted in its own
+/// DI scope (own DbContexts): a failure for one stay cannot leave a poisoned context for the rest of the run.
+/// </summary>
 public sealed class BedChargeJob(IServiceScopeFactory scopes, IConfiguration configuration, ILogger<BedChargeJob> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -283,26 +288,29 @@ public sealed class BedChargeJob(IServiceScopeFactory scopes, IConfiguration con
 
     private async Task RunOnceAsync(CancellationToken cancellationToken)
     {
+        IReadOnlyList<Admission> inBed;
         try
         {
             await using var scope = scopes.CreateAsyncScope();
-            var admissions = scope.ServiceProvider.GetRequiredService<IAdmissionRepository>();
-            var poster = scope.ServiceProvider.GetRequiredService<BedChargePoster>();
-            foreach (var admission in await admissions.GetInBedAsync(cancellationToken))
-            {
-                try
-                {
-                    await poster.PostAsync(admission, null, cancellationToken);
-                }
-                catch (Exception ex) when (ex is not OperationCanceledException)
-                {
-                    logger.LogWarning(ex, "Bed charges for admission {AdmissionNumber} could not be posted", admission.AdmissionNumber);
-                }
-            }
+            inBed = await scope.ServiceProvider.GetRequiredService<IAdmissionRepository>().GetInBedAsync(cancellationToken);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogError(ex, "Bed charge posting failed");
+            logger.LogError(ex, "Bed charge posting failed: patients in bed could not be loaded");
+            return;
+        }
+
+        foreach (var admission in inBed)
+        {
+            try
+            {
+                await using var scope = scopes.CreateAsyncScope();
+                await scope.ServiceProvider.GetRequiredService<BedChargePoster>().PostAsync(admission, null, cancellationToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogWarning(ex, "Bed charges for admission {AdmissionNumber} could not be posted", admission.AdmissionNumber);
+            }
         }
     }
 }

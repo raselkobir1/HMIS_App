@@ -19,6 +19,7 @@ public static class IpdPermissions
     public const string DischargeOrder = "Ipd.Discharge.Order";
     public const string DischargeComplete = "Ipd.Discharge.Complete";
     public const string DischargeOverride = "Ipd.Discharge.Override";
+    public const string DischargeReopen = "Ipd.Discharge.Reopen";
 
     /// <summary>Owned by the Clinical module; holders may read diagnoses and discharge summaries.</summary>
     public const string ClinicalView = "Clinical.View";
@@ -40,6 +41,8 @@ public sealed class IpdPermissionDefinitionProvider : IPermissionDefinitionProvi
         new(IpdPermissions.DischargeComplete, IpdPermissions.Module, "Prepare the final bill and release discharged patients",
             [SystemRoles.Receptionist, SystemRoles.Accountant, SystemRoles.HospitalAdministrator]),
         new(IpdPermissions.DischargeOverride, IpdPermissions.Module, "Release a patient whose bill is not fully paid (with a reason)",
+            [SystemRoles.HospitalAdministrator]),
+        new(IpdPermissions.DischargeReopen, IpdPermissions.Module, "Reopen a stay after the final bill when the patient stays (with a reason)",
             [SystemRoles.HospitalAdministrator])
     ];
 }
@@ -51,7 +54,9 @@ public static class IpdErrorCodes
     public const string DoctorUnavailable = "IPD_DOCTOR_UNAVAILABLE";
     public const string NotADoctor = "IPD_NOT_A_DOCTOR";
     public const string BedInvalid = "IPD_BED_INVALID";
+    public const string BedUnavailable = "IPD_BED_UNAVAILABLE";
     public const string WardInvalid = "IPD_WARD_INVALID";
+    public const string WardInactive = "IPD_WARD_INACTIVE";
     public const string CategoryInvalid = "IPD_CATEGORY_INVALID";
     public const string WardCodeExists = "WARD_CODE_EXISTS";
     public const string BedNumberExists = "BED_NUMBER_EXISTS";
@@ -129,7 +134,7 @@ public sealed class BedQuery
 {
     public Guid? WardId { get; set; }
 
-    /// <summary>Only active beds that can take a patient now (Available or Reserved).</summary>
+    /// <summary>Only active, Available beds in active wards (the beds that can take a patient now).</summary>
     public bool? AssignableOnly { get; set; }
 }
 
@@ -199,6 +204,13 @@ public sealed record ReleaseDto
     public uint RowVersion { get; init; }
 }
 
+/// <summary>Administrator's correction after the final bill (Ipd.Discharge.Reopen): the patient stays after all.</summary>
+public sealed record ReopenDto
+{
+    public string Reason { get; init; } = string.Empty;
+    public uint RowVersion { get; init; }
+}
+
 public sealed class AdmissionListQuery : PaginationRequest
 {
     /// <summary>Patients still in hospital (not yet discharged). Default when no status is given.</summary>
@@ -248,6 +260,9 @@ public sealed record AdmissionDto(
     DateTime? ReleasedAt,
     decimal? ReleasedWithDue,
     string? ReleaseOverrideReason,
+    // Set when an administrator reopened the stay after the final bill.
+    DateTime? ReopenedAt,
+    string? ReopenReason,
     BillInfoDto? Bill,
     decimal AdvanceBalance,
     uint RowVersion);
@@ -256,7 +271,7 @@ public sealed record PatientInfoDto(Guid Id, string MRNumber, string FullName, s
 
 public sealed record DoctorInfoDto(Guid Id, string FullName, string Qualifications, string Specialization, string RegistrationNumber);
 
-/// <summary>Everything the printed discharge summary shows.</summary>
+/// <summary>Everything the printed discharge summary shows. DischargedAt is the discharge (order) time; ReleasedAt when the patient left.</summary>
 public sealed record DischargeSummaryDto(
     string AdmissionNumber, PatientInfoDto? Patient, DoctorInfoDto? Doctor, string? DepartmentName, string? WardName, string? BedNumber,
-    DateTime AdmittedAt, DateTime? DischargedAt, string Reason, DischargeInfoDto Discharge);
+    DateTime AdmittedAt, DateTime? DischargedAt, DateTime? ReleasedAt, string Reason, DischargeInfoDto Discharge);

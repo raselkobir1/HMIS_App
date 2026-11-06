@@ -112,7 +112,21 @@ public sealed class Bed : AuditableEntity, IAggregateRoot, IHasConcurrencyToken
     public bool IsActive { get; private set; } = true;
     public uint RowVersion { get; private set; }
 
-    public bool CanBeAssigned => IsActive && Status is BedStatus.Available or BedStatus.Reserved;
+    /// <summary>Only an active, Available bed takes a patient; a reserved bed is released by housekeeping first.</summary>
+    public bool CanBeAssigned => IsActive && Status == BedStatus.Available;
+
+    /// <summary>Why the bed cannot take a patient now, for the person admitting or transferring.</summary>
+    public string? UnavailableReason => CanBeAssigned
+        ? null
+        : !IsActive
+            ? $"Bed {BedNumber} is not in use."
+            : Status switch
+            {
+                BedStatus.Occupied => $"Bed {BedNumber} is occupied.",
+                BedStatus.Reserved => $"Bed {BedNumber} is reserved{(StatusNote is null ? "" : $" ({StatusNote})")}. Housekeeping must mark it available first.",
+                BedStatus.UnderMaintenance => $"Bed {BedNumber} is under maintenance.",
+                _ => $"Bed {BedNumber} is waiting to be cleaned."
+            };
 
     public static Bed Create(Guid wardId, string bedNumber, string? room, Guid categoryId)
     {
@@ -154,9 +168,9 @@ public sealed class Bed : AuditableEntity, IAggregateRoot, IHasConcurrencyToken
 
     internal void Occupy()
     {
-        if (!CanBeAssigned)
+        if (UnavailableReason is { } reason)
         {
-            throw new DomainException("BED_UNAVAILABLE", $"Bed {BedNumber} is not available ({Status}).");
+            throw new DomainException("BED_UNAVAILABLE", reason);
         }
 
         Status = BedStatus.Occupied;

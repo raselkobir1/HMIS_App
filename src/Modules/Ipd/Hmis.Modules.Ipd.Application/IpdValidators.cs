@@ -99,6 +99,14 @@ public sealed class ReleaseValidator : AbstractValidator<ReleaseDto>
     }
 }
 
+public sealed class ReopenValidator : AbstractValidator<ReopenDto>
+{
+    public ReopenValidator()
+    {
+        RuleFor(x => x.Reason).NotEmpty().MaximumLength(250);
+    }
+}
+
 public sealed class AdmissionListQueryValidator : PaginationRequestValidator<AdmissionListQuery>
 {
     public AdmissionListQueryValidator()

@@ -44,6 +44,9 @@ import { DISCHARGE_TYPE_LABELS, DischargeSummary, IpdApiService } from '../ipd.m
           <span><strong>Ward/Bed:</strong> {{ s.wardName }} {{ s.bedNumber }}</span>
           <span><strong>Admitted:</strong> {{ s.admittedAt | date: 'd MMM y, h:mm a' }}</span>
           <span><strong>Discharged:</strong> {{ s.dischargedAt ? (s.dischargedAt | date: 'd MMM y, h:mm a') : '—' }}</span>
+          @if (s.releasedAt) {
+            <span><strong>Left ward:</strong> {{ s.releasedAt | date: 'd MMM y, h:mm a' }}</span>
+          }
           <span><strong>Type:</strong> {{ types[s.discharge.type] }}</span>
         </section>
 

@@ -84,6 +84,7 @@ public sealed class AdmissionManager(
             bed?.BedNumber,
             admission.AdmittedAt,
             admission.DischargedAt,
+            admission.ReleasedAt,
             admission.Reason,
             (await DischargeInfoAsync(admission, cancellationToken))!);
     }
@@ -111,8 +112,7 @@ public sealed class AdmissionManager(
         }
 
         var doctor = await GetCurrentDoctorAsync(request.AttendingDoctorId, "attendingDoctorId", cancellationToken);
-        var bed = await beds.GetByIdAsync(request.BedId, cancellationToken)
-            ?? throw new BusinessException(IpdErrorCodes.BedInvalid, "Select a bed.", "bedId");
+        var bed = await GetAssignableBedAsync(request.BedId, cancellationToken);
 
         // Allocated outside the save (Administration's own atomic statement); a failed save leaves a gap, never a duplicate.
         var number = await numberSequences.NextAsync(IpdNumberSequences.Admission, cancellationToken);
@@ -139,8 +139,7 @@ public sealed class AdmissionManager(
         admissions.SetExpectedRowVersion(admission, request.RowVersion);
         var current = await beds.GetByIdAsync(admission.CurrentBed?.BedId ?? Guid.Empty, cancellationToken)
             ?? throw new BusinessException(IpdErrorCodes.BedInvalid, "The patient has no current bed.");
-        var target = await beds.GetByIdAsync(request.BedId, cancellationToken)
-            ?? throw new BusinessException(IpdErrorCodes.BedInvalid, "Select a bed.", "bedId");
+        var target = await GetAssignableBedAsync(request.BedId, cancellationToken);
 
         // Bed days already passed are posted at the old bed's price before the move.
         await PostChargesSafelyAsync(admission, cancellationToken);
@@ -209,6 +208,35 @@ public sealed class AdmissionManager(
     }
 
     /// <summary>
+    /// Administrator's correction after the final bill (e.g. the patient's condition changed before leaving): the stay goes
+    /// back to Admitted and the discharge order is cancelled. The finalized final invoice stays payable; bed days from here
+    /// on are posted through the same charge contract, which Billing routes to a supplementary running bill.
+    /// </summary>
+    public async Task<AdmissionDto> ReopenAsync(Guid id, ReopenDto request, CancellationToken cancellationToken)
+    {
+        var userId = currentUser.UserId ?? throw new UnauthorizedException();
+        var admission = await GetAdmissionAsync(id, cancellationToken);
+        admissions.SetExpectedRowVersion(admission, request.RowVersion);
+        if (admission.Status != AdmissionStatus.FinalBilled)
+        {
+            throw new BusinessException("ADMISSION_INVALID_STATUS", admission.Status == AdmissionStatus.Discharged
+                ? "The patient has already left. Admit the patient again instead."
+                : "Only a stay with a prepared final bill can be reopened; cancel the discharge order instead.");
+        }
+
+        admission.Reopen(userId, request.Reason, dateTime.UtcNow);
+        auditService.Record(new AuditEvent("Reopened", IpdPermissions.Module, nameof(Admission), admission.Id.ToString(),
+            new { Status = AdmissionStatus.FinalBilled }, new { Status = AdmissionStatus.Admitted, request.Reason }));
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        var dto = await ToDtoAsync(admission, cancellationToken);
+        await notifications.NotifyEmployeeAsync(admission.AttendingDoctorId, new NotificationMessage(NotificationTypes.PatientAdmitted,
+            $"Stay reopened · {dto.Summary.WardName} bed {dto.Summary.BedNumber}",
+            $"{dto.Summary.PatientName} ({dto.Summary.PatientMRNumber}) stays after the final bill — {admission.ReopenReason}",
+            $"/ipd/admissions/{admission.Id}"), cancellationToken);
+        return dto;
+    }
+
+    /// <summary>
     /// Fixes the discharge time, posts the remaining bed days (noon rule) and finalizes the bill so the cashier can settle it.
     /// Each step is safe to repeat: a retry finds the bill already finalized.
     /// </summary>
@@ -223,7 +251,9 @@ public sealed class AdmissionManager(
                 : "The final bill has already been prepared.");
         }
 
-        var dischargedAt = dateTime.UtcNow;
+        // The discharge time is the doctor's order time, not when the cashier prepares the bill (Q-IPD-1: a patient
+        // ordered out before noon is not charged for that day, however long the paperwork takes).
+        var dischargedAt = admission.ChargeCutOff(dateTime.UtcNow);
         await chargePoster.PostAsync(admission, dischargedAt, cancellationToken);
         await charges.FinalizeRunningBillAsync(ChargeSources.IpdAdmission, admission.Id, cancellationToken);
         admission.MarkFinalBilled(dischargedAt);
@@ -334,6 +364,25 @@ public sealed class AdmissionManager(
         }
     }
 
+    /// <summary>A bed that can take a patient now: in use, Available (not reserved, occupied or out of service) and in an active ward.</summary>
+    private async Task<Bed> GetAssignableBedAsync(Guid bedId, CancellationToken cancellationToken)
+    {
+        var bed = await beds.GetByIdAsync(bedId, cancellationToken)
+            ?? throw new BusinessException(IpdErrorCodes.BedInvalid, "Select a bed.", "bedId");
+        if (bed.UnavailableReason is { } reason)
+        {
+            throw new BusinessException(IpdErrorCodes.BedUnavailable, $"{reason} Choose another bed.", "bedId");
+        }
+
+        var ward = await wards.GetByIdAsync(bed.WardId, cancellationToken);
+        if (ward is not { IsActive: true })
+        {
+            throw new BusinessException(IpdErrorCodes.WardInactive, $"Ward {ward?.Name ?? "of this bed"} is closed. Choose a bed in an active ward.", "bedId");
+        }
+
+        return bed;
+    }
+
     private async Task<DoctorSummary> GetCurrentDoctorAsync(Guid doctorId, string field, CancellationToken cancellationToken) =>
         await doctorLookup.GetAsync(doctorId, cancellationToken) is { IsCurrent: true } doctor
             ? doctor
@@ -399,7 +448,7 @@ public sealed class AdmissionManager(
         var patient = context.Patients.GetValueOrDefault(a.PatientId);
         var stay = a.CurrentBed ?? a.Beds.OrderBy(b => b.StartedAt).LastOrDefault();
         var bed = stay is null ? null : context.Beds.GetValueOrDefault(stay.BedId);
-        var days = BedDays.For(a.AdmittedAt, a.DischargedAt ?? dateTime.UtcNow, dateTime).Count;
+        var days = BedDays.For(a.AdmittedAt, a.DischargedAt ?? a.ChargeCutOff(dateTime.UtcNow), dateTime).Count;
         return new AdmissionSummaryDto(
             a.Id, a.AdmissionNumber, a.PatientId, patient?.MRNumber, patient?.FullName, patient?.Gender, patient?.DateOfBirth, a.AttendingDoctorId,
             context.Doctors.GetValueOrDefault(a.AttendingDoctorId)?.FullName, bed is null ? null : context.Wards.GetValueOrDefault(bed.WardId)?.Name,
@@ -439,6 +488,8 @@ public sealed class AdmissionManager(
             a.ReleasedAt,
             a.ReleasedWithDue,
             a.ReleaseOverrideReason,
+            a.ReopenedAt,
+            a.ReopenReason,
             bill is null ? null : new BillInfoDto(bill.InvoiceId, bill.InvoiceNumber, bill.Status, bill.Subtotal, bill.NetAmount, bill.PaidAmount, bill.DueAmount),
             balance.AdvanceBalance,
             a.RowVersion);

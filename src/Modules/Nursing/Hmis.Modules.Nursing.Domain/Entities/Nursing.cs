@@ -295,6 +295,8 @@ public sealed class ShiftHandover : AuditableEntity, IAggregateRoot, IHasConcurr
     }
 }
 
+/// <summary>One patient's note in a handover. Audited like the handover itself: every revision's items are captured.</summary>
+[Audited]
 public sealed class HandoverItem : BaseEntity
 {
     private HandoverItem() { }

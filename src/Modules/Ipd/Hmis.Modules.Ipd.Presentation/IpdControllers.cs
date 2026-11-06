@@ -140,9 +140,9 @@ public sealed class AdmissionsController(IAdmissionManager manager) : ApiControl
     public async Task<IActionResult> ChangeDoctor(Guid id, [FromBody] ChangeDoctorDto request, CancellationToken cancellationToken) =>
         OkResponse(await manager.ChangeDoctorAsync(id, request, cancellationToken), "Attending doctor changed.");
 
-    /// <summary>Posts bed rent due so far (the periodic job does this too).</summary>
+    /// <summary>Posts bed rent due so far (the periodic job does this too). Billing staff only, like the final bill.</summary>
     [HttpPost("{id:guid}/charges/sync")]
-    [HasPermission(IpdPermissions.View)]
+    [HasPermission(IpdPermissions.DischargeComplete)]
     [ProducesResponseType<ApiResponse<AdmissionDto>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> SyncCharges(Guid id, CancellationToken cancellationToken) =>
         OkResponse(await manager.SyncChargesAsync(id, cancellationToken), "Charges updated.");
@@ -168,6 +168,14 @@ public sealed class AdmissionsController(IAdmissionManager manager) : ApiControl
     [ProducesResponseType<ApiResponse>(StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> PrepareFinalBill(Guid id, [FromBody] AdmissionRowVersionDto request, CancellationToken cancellationToken) =>
         OkResponse(await manager.PrepareFinalBillAsync(id, request, cancellationToken), "Final bill prepared.");
+
+    /// <summary>Administrator's correction after the final bill: the patient stays. The final invoice stays payable; later charges go to a supplementary bill.</summary>
+    [HttpPost("{id:guid}/reopen")]
+    [HasPermission(IpdPermissions.DischargeReopen)]
+    [ProducesResponseType<ApiResponse<AdmissionDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiResponse>(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> Reopen(Guid id, [FromBody] ReopenDto request, CancellationToken cancellationToken) =>
+        OkResponse(await manager.ReopenAsync(id, request, cancellationToken), "Stay reopened.");
 
     /// <summary>Frees the bed. Needs a settled bill, or an override reason from an administrator.</summary>
     [HttpPost("{id:guid}/release")]

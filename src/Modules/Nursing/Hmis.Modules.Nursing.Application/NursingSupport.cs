@@ -1,6 +1,7 @@
 using Hmis.BuildingBlocks.Application.Abstractions;
 using Hmis.BuildingBlocks.Application.Auditing;
 using Hmis.BuildingBlocks.Application.Exceptions;
+using Hmis.BuildingBlocks.Contracts.Clinical;
 using Hmis.BuildingBlocks.Contracts.HR;
 using Hmis.BuildingBlocks.Contracts.Identity;
 using Hmis.BuildingBlocks.Contracts.Ipd;
@@ -11,6 +12,7 @@ namespace Hmis.Modules.Nursing.Application;
 /// <summary>Lookups shared by the nursing managers: the stay, the patient header, names and audit.</summary>
 public sealed class NursingSupport(
     IInpatientLookup inpatients,
+    IMedicationOrderLookup orderLookup,
     IPatientLookup patientLookup,
     IPatientClinicalSummary clinicalSummary,
     IDoctorLookup doctorLookup,
@@ -22,6 +24,33 @@ public sealed class NursingSupport(
 
     public async Task<InpatientStay> GetStayAsync(Guid admissionId, CancellationToken cancellationToken) =>
         await inpatients.GetAsync(admissionId, cancellationToken) ?? throw new NotFoundException("Admission", admissionId);
+
+    /// <summary>
+    /// The stay for reading nursing records (Q-NUR-5). While the patient is in hospital any holder of Nursing.View may read.
+    /// After discharge the records are closed to nurses and other staff; only a doctor who treated the patient (attending,
+    /// or a duty doctor who ordered medicines on this stay) may still open them.
+    /// </summary>
+    public async Task<InpatientStay> GetViewableStayAsync(Guid admissionId, CancellationToken cancellationToken)
+    {
+        var stay = await GetStayAsync(admissionId, cancellationToken);
+        if (stay.IsActive)
+        {
+            return stay;
+        }
+
+        var employeeId = await GetCurrentEmployeeIdAsync(cancellationToken);
+        var doctorId = employeeId is { } id && await doctorLookup.GetAsync(id, cancellationToken) is not null ? id : (Guid?)null;
+        if (doctorId is { } doctor
+            && (await inpatients.IsAttendingDoctorAsync(doctor, stay.PatientId, cancellationToken)
+                || (await orderLookup.GetForAdmissionsAsync([admissionId], cancellationToken)).Any(o => o.OrderedByDoctorId == doctor)))
+        {
+            return stay;
+        }
+
+        throw new ForbiddenException(doctorId is null
+            ? "The patient has been discharged; nursing records are closed. Only the doctors who treated the patient can open them."
+            : "After discharge, a doctor can open the nursing records only of patients they treated.");
+    }
 
     /// <summary>Nursing records are written only while the patient is in hospital.</summary>
     public async Task<InpatientStay> GetActiveStayAsync(Guid admissionId, CancellationToken cancellationToken)
