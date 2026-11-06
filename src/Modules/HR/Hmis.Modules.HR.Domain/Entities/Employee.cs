@@ -34,6 +34,8 @@ public enum EmploymentStatus
 [Audited]
 public sealed class Employee : AuditableEntity, IAggregateRoot, IHasConcurrencyToken
 {
+    public const int MinMobileDigits = 6;
+
     private Employee() { }
 
     /// <summary>Generated from the EMPLOYEE_CODE number sequence; never changes.</summary>
@@ -106,13 +108,25 @@ public sealed class Employee : AuditableEntity, IAggregateRoot, IHasConcurrencyT
         FullName = fullName.Trim();
         Gender = gender;
         DateOfBirth = dateOfBirth;
-        MobileNumber = mobileNumber.Trim();
+        MobileNumber = NormalizeMobile(mobileNumber);
         Email = string.IsNullOrWhiteSpace(email) ? null : email.Trim();
         Address = string.IsNullOrWhiteSpace(address) ? null : address.Trim();
         DepartmentId = departmentId;
         DesignationId = designationId;
         EmploymentType = employmentType;
         JoiningDate = joiningDate;
+    }
+
+    /// <summary>Stored as digits only so "+88 01712-345678" and "01712345678" match in search and lookups.</summary>
+    public static string NormalizeMobile(string value)
+    {
+        var digits = new string(value.Where(char.IsDigit).ToArray());
+        if (digits.Length < MinMobileDigits)
+        {
+            throw new DomainException("EMPLOYEE_MOBILE_INVALID", $"A mobile number needs at least {MinMobileDigits} digits.");
+        }
+
+        return digits;
     }
 
     /// <summary>

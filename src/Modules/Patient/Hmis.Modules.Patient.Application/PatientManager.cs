@@ -37,8 +37,11 @@ public sealed class PatientManager(
 
     public async Task<IReadOnlyList<DuplicateCandidateDto>> FindDuplicatesAsync(DuplicateCheckQuery query, CancellationToken cancellationToken)
     {
+        // Stored numbers are digits only, so the typed value is reduced the same way before comparing.
+        var mobileDigits = new string((query.MobileNumber ?? string.Empty).Where(char.IsDigit).ToArray());
         var rows = await repository.FindDuplicateCandidatesAsync(query with
         {
+            MobileNumber = mobileDigits.Length >= PatientEntity.MinMobileDigits ? mobileDigits : null,
             IdentificationNumber = PatientEntity.NormalizeIdentification(query.IdentificationNumber)
         }, cancellationToken);
 
@@ -91,6 +94,7 @@ public sealed class PatientManager(
     public async Task<PatientDto> SetStatusAsync(Guid id, PatientStatusUpdateDto request, CancellationToken cancellationToken)
     {
         var patient = await GetAsync(id, cancellationToken);
+        repository.SetExpectedRowVersion(patient, request.RowVersion);
         if (request.IsActive)
         {
             patient.Activate();
@@ -213,7 +217,7 @@ public sealed class PatientManager(
         new(d.FullName, d.FullNameBangla, d.Gender, d.DateOfBirth, d.IsDateOfBirthEstimated, d.BloodGroup, d.MobileNumber, d.Email,
             ToAddress(d.PresentAddress), ToAddress(d.PermanentAddress), d.IdentificationType, d.IdentificationNumber,
             d.GuardianName, d.GuardianRelation,
-            d.EmergencyContacts.Select(c => new EmergencyContact(c.Name.Trim(), c.Relation.Trim(), c.MobileNumber.Trim())).ToList());
+            d.EmergencyContacts.Select(c => new EmergencyContact(c.Name, c.Relation, c.MobileNumber)).ToList());
 
     private static Address ToAddress(AddressDto a)
     {

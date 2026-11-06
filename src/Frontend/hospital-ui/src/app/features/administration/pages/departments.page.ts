@@ -241,7 +241,7 @@ export class DepartmentsPage {
       .afterClosed()
       .pipe(
         filter(Boolean),
-        switchMap(() => this.api.setDepartmentStatus(department.id, activate)),
+        switchMap(() => this.api.setDepartmentStatus(department.id, activate, department.rowVersion)),
       )
       .subscribe({
         next: () => {

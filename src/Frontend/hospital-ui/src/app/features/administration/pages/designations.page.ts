@@ -196,7 +196,7 @@ export class DesignationsPage {
   }
 
   protected toggle(designation: Designation): void {
-    this.api.setDesignationStatus(designation.id, !designation.isActive).subscribe({
+    this.api.setDesignationStatus(designation.id, !designation.isActive, designation.rowVersion).subscribe({
       next: () => {
         this.notifications.success(designation.isActive ? 'Designation deactivated.' : 'Designation activated.');
         this.query.update((q) => ({ ...q }));

@@ -58,8 +58,8 @@ export class PatientApiService {
     return this.send<Patient>('put', `/${id}`, details);
   }
 
-  setStatus(id: string, isActive: boolean): Observable<Patient> {
-    return this.send<Patient>('patch', `/${id}/status`, { isActive });
+  setStatus(id: string, isActive: boolean, rowVersion: number): Observable<Patient> {
+    return this.send<Patient>('patch', `/${id}/status`, { isActive, rowVersion });
   }
 
   photo(id: string): Observable<Blob> {

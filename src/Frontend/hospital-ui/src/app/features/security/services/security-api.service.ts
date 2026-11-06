@@ -40,8 +40,8 @@ export class SecurityApiService {
     return this.send<UserDetail>('put', `/users/${id}`, request);
   }
 
-  setUserStatus(id: string, isActive: boolean): Observable<UserDetail> {
-    return this.send<UserDetail>('patch', `/users/${id}/status`, { isActive });
+  setUserStatus(id: string, isActive: boolean, rowVersion: number): Observable<UserDetail> {
+    return this.send<UserDetail>('patch', `/users/${id}/status`, { isActive, rowVersion });
   }
 
   resetPassword(id: string, newPassword: string): Observable<unknown> {

@@ -3,6 +3,7 @@ using Hmis.BuildingBlocks.Application.Exceptions;
 using Hmis.BuildingBlocks.Application.Pagination;
 using Hmis.BuildingBlocks.Contracts.Administration;
 using Hmis.BuildingBlocks.Contracts.HR;
+using Hmis.BuildingBlocks.Contracts.Identity;
 using Hmis.Modules.HR.Domain.Entities;
 
 namespace Hmis.Modules.HR.Application;
@@ -38,7 +39,8 @@ public sealed class EmployeeManager(
     IHrUnitOfWork unitOfWork,
     IDepartmentLookup departmentLookup,
     IDesignationLookup designationLookup,
-    INumberSequenceService numberSequences) : IEmployeeManager
+    INumberSequenceService numberSequences,
+    IUserAccountService userAccounts) : IEmployeeManager
 {
     public async Task<PagedResponse<EmployeeListItemDto>> SearchAsync(EmployeeListQuery query, CancellationToken cancellationToken)
     {
@@ -107,6 +109,18 @@ public sealed class EmployeeManager(
     {
         var employee = await GetAsync(id, cancellationToken);
         employee.ChangeStatus(request.Status, request.ExitDate);
+
+        if (!employee.IsCurrent)
+        {
+            // Leaving staff lose their login at once. Identity saves first so one of its rules (e.g. the last active
+            // Super Administrator) blocks the status change cleanly; if the HR save below still fails, the login is
+            // already off and an administrator re-enables it.
+            // Returning to Active/OnLeave does NOT reactivate the login: an administrator does that deliberately in
+            // Security > Users after checking the person really is back.
+            await userAccounts.DeactivateForEmployeeAsync(employee.Id,
+                $"Employee {employee.EmployeeCode} marked {employee.Status} (exit date {employee.ExitDate:yyyy-MM-dd})", cancellationToken);
+        }
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return await ToDetailAsync(employee, cancellationToken);
     }

@@ -31,6 +31,11 @@ public sealed class NumberSequenceManager(
         var sequence = await GetAsync(key, cancellationToken);
         var previousNext = sequence.PreviewNext(Year);
         sequence.SetNextValue(request.NextValue);
+        if (sequence.PreviewNext(Year) == previousNext)
+        {
+            // Already at that value: nothing to save or audit.
+            return ToDto(sequence);
+        }
 
         // CurrentValue is [NotAudited] (it changes on every allocation), so record this manual jump explicitly.
         auditService.Record(new AuditEvent("NextValueChanged", "Administration", nameof(NumberSequence), sequence.Key,

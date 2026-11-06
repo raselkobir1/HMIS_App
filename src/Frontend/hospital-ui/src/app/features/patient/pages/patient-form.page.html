@@ -154,12 +154,24 @@
               <mat-option [value]="t.value">{{ t.label }}</mat-option>
             }
           </mat-select>
-          <mat-error><app-field-error [control]="form.controls.identificationType" /></mat-error>
+          <mat-error>
+            @if (form.controls.identificationType.hasError('identificationTypeRequired')) {
+              Select the ID document type for the number entered.
+            } @else {
+              <app-field-error [control]="form.controls.identificationType" />
+            }
+          </mat-error>
         </mat-form-field>
         <mat-form-field>
           <mat-label>ID number</mat-label>
           <input matInput formControlName="identificationNumber" />
-          <mat-error><app-field-error [control]="form.controls.identificationNumber" /></mat-error>
+          <mat-error>
+            @if (form.controls.identificationNumber.hasError('identificationNumberRequired')) {
+              Enter the number of the selected ID document.
+            } @else {
+              <app-field-error [control]="form.controls.identificationNumber" />
+            }
+          </mat-error>
         </mat-form-field>
         <mat-form-field>
           <mat-label>Guardian name</mat-label>

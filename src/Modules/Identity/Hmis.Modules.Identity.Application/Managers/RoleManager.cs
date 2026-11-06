@@ -32,10 +32,16 @@ public sealed class RoleManager(
     public async Task<RoleDetailDto> CreateAsync(RoleCreateDto request, CancellationToken cancellationToken)
     {
         await EnsureNameAvailableAsync(request.Name, null, cancellationToken);
-        var permissionIds = await ValidatePermissionsAsync(request.PermissionIds, cancellationToken);
+        var permissions = await ValidatePermissionsAsync(request.PermissionIds, cancellationToken);
 
         var role = Role.Create(request.Name, request.Description);
-        role.SetPermissions(permissionIds);
+        role.SetPermissions(permissions.Select(p => p.Id));
+        if (permissions.Count > 0)
+        {
+            // Same explicit event as SetPermissionsAsync, so the audit trail shows every permission grant (from none).
+            auditService.Record(new AuditEvent("PermissionsChanged", "Identity", nameof(Role), role.Id.ToString(),
+                new { Permissions = Array.Empty<string>() }, new { Permissions = permissions.Select(p => p.Code).Order().ToList() }));
+        }
 
         await roleRepository.AddAsync(role, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -75,14 +81,14 @@ public sealed class RoleManager(
     public async Task<RoleDetailDto> SetPermissionsAsync(Guid id, RolePermissionsUpdateDto request, CancellationToken cancellationToken)
     {
         var role = await GetRoleAsync(id, cancellationToken);
-        var permissionIds = await ValidatePermissionsAsync(request.PermissionIds, cancellationToken);
+        var permissions = await ValidatePermissionsAsync(request.PermissionIds, cancellationToken);
 
         var superAdminRole = await superAdminGuard.GetRoleAsync(cancellationToken);
         if (role.Id == superAdminRole.Id)
         {
             await superAdminGuard.EnsureCallerIsSuperAdministratorAsync(cancellationToken);
 
-            var granted = (await permissionRepository.GetByIdsAsync(permissionIds, cancellationToken)).Select(p => p.Code).ToHashSet();
+            var granted = permissions.Select(p => p.Code).ToHashSet();
             if (!SuperAdministratorRequiredPermissions.All(granted.Contains))
             {
                 throw new BusinessException(
@@ -94,9 +100,9 @@ public sealed class RoleManager(
 
         var oldCodes = (await permissionRepository.GetByIdsAsync(role.Permissions.Select(p => p.PermissionId).ToList(), cancellationToken))
             .Select(p => p.Code).Order().ToList();
-        var newCodes = (await permissionRepository.GetByIdsAsync(permissionIds, cancellationToken)).Select(p => p.Code).Order().ToList();
+        var newCodes = permissions.Select(p => p.Code).Order().ToList();
 
-        role.SetPermissions(permissionIds);
+        role.SetPermissions(permissions.Select(p => p.Id));
         auditService.Record(new AuditEvent("PermissionsChanged", "Identity", nameof(Role), role.Id.ToString(),
             new { Permissions = oldCodes }, new { Permissions = newCodes }));
 
@@ -115,7 +121,7 @@ public sealed class RoleManager(
         }
     }
 
-    private async Task<List<Guid>> ValidatePermissionsAsync(IReadOnlyCollection<Guid> requested, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<Permission>> ValidatePermissionsAsync(IReadOnlyCollection<Guid> requested, CancellationToken cancellationToken)
     {
         var permissionIds = requested.Distinct().ToList();
         var found = await permissionRepository.GetByIdsAsync(permissionIds, cancellationToken);
@@ -124,6 +130,6 @@ public sealed class RoleManager(
             throw new BusinessException(IdentityErrorCodes.PermissionNotFound, "One or more permissions do not exist.", "permissionIds");
         }
 
-        return permissionIds;
+        return found;
     }
 }

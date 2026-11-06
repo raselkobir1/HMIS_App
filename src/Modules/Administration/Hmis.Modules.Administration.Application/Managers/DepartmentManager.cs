@@ -54,6 +54,7 @@ public sealed class DepartmentManager(
     public async Task<DepartmentDto> SetStatusAsync(Guid id, StatusUpdateDto request, CancellationToken cancellationToken)
     {
         var department = await GetDepartmentAsync(id, cancellationToken);
+        repository.SetExpectedRowVersion(department, request.RowVersion);
 
         if (request.IsActive)
         {
@@ -148,6 +149,7 @@ public sealed class DesignationManager(IDesignationRepository repository, IAdmin
     public async Task<DesignationDto> SetStatusAsync(Guid id, StatusUpdateDto request, CancellationToken cancellationToken)
     {
         var designation = await GetAsync(id, cancellationToken);
+        repository.SetExpectedRowVersion(designation, request.RowVersion);
         if (request.IsActive)
         {
             designation.Activate();

@@ -74,13 +74,24 @@ public sealed class NumberSequence : AuditableEntity, IAggregateRoot, IHasConcur
         ResetPolicy = resetPolicy;
     }
 
-    /// <summary>Moves the counter forward so the next issued number is <paramref name="nextValue"/>. Never backwards.</summary>
+    /// <summary>The counter value the next allocation will use (ignoring a pending yearly reset).</summary>
+    public long NextValue => CurrentValue + 1;
+
+    /// <summary>
+    /// Moves the counter forward so the next issued number is <paramref name="nextValue"/>. Setting the value it already
+    /// has is a no-op; moving backwards would re-issue numbers and is refused.
+    /// </summary>
     public void SetNextValue(long nextValue)
     {
-        if (nextValue <= CurrentValue + 1)
+        if (nextValue == NextValue)
+        {
+            return;
+        }
+
+        if (nextValue < NextValue)
         {
             throw new DomainException("SEQUENCE_CANNOT_DECREASE",
-                $"The next number must be greater than {CurrentValue + 1}; sequences can only move forward.");
+                $"The next number is already {NextValue}; a sequence can only move forward, so enter {NextValue} or more.");
         }
 
         CurrentValue = nextValue - 1;

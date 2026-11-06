@@ -14,6 +14,8 @@ public sealed class PatientRepository(PatientDbContext context)
     : BaseRepository<PatientEntity, PatientDbContext>(context), IPatientRepository
 {
     // Missing inputs are NULL parameters, so every match flag is COALESCEd to false (SQL three-valued logic).
+    // "MobileNumber" holds digits only (normalized in the domain and by the NormalizeMobileNumbers migration), and the
+    // manager reduces the typed number the same way, so the equality below is a normalized comparison.
     // Trigram similarity thresholds (0..1). Lower for same-mobile matches ("Rahim" vs "Md. Rahim Uddin"),
     // higher when only date of birth and gender agree.
     private const double SameMobileNameThreshold = 0.3;
@@ -99,7 +101,7 @@ public sealed class PatientRepository(PatientDbContext context)
         NpgsqlParameter[] parameters =
         [
             new("name", NpgsqlDbType.Text) { Value = (object?)query.FullName?.Trim() ?? DBNull.Value },
-            new("mobile", NpgsqlDbType.Varchar) { Value = (object?)query.MobileNumber?.Trim() ?? DBNull.Value },
+            new("mobile", NpgsqlDbType.Varchar) { Value = (object?)query.MobileNumber ?? DBNull.Value },
             new("dob", NpgsqlDbType.Date) { Value = (object?)query.DateOfBirth ?? DBNull.Value },
             new("gender", NpgsqlDbType.Varchar) { Value = (object?)query.Gender?.ToString() ?? DBNull.Value },
             new("idType", NpgsqlDbType.Varchar) { Value = (object?)query.IdentificationType?.ToString() ?? DBNull.Value },

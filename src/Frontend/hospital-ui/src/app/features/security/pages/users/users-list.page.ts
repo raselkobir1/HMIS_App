@@ -158,7 +158,7 @@ export class UsersListPage {
       .afterClosed()
       .pipe(
         filter(Boolean),
-        switchMap(() => this.api.setUserStatus(user.id, activate)),
+        switchMap(() => this.api.setUserStatus(user.id, activate, user.rowVersion)),
       )
       .subscribe({
         next: () => {

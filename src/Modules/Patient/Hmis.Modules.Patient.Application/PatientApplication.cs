@@ -41,11 +41,12 @@ public sealed class PatientPermissionDefinitionProvider : IPermissionDefinitionP
             [SystemRoles.Doctor, SystemRoles.Nurse], RequiresExplicitGrant: true),
         new(PatientPermissions.MedicalInfoManage, PatientPermissions.Module, "Record allergies and medical history",
             [SystemRoles.Doctor, SystemRoles.Nurse], RequiresExplicitGrant: true),
+        // Documents are clinical content (reports, referrals): explicit, audited grant like medical info (Q-SEC-1).
         new(PatientPermissions.DocumentsView, PatientPermissions.Module, "View patient documents",
-            [SystemRoles.Receptionist, SystemRoles.Doctor, SystemRoles.Nurse]),
+            [SystemRoles.Receptionist, SystemRoles.Doctor, SystemRoles.Nurse], RequiresExplicitGrant: true),
         new(PatientPermissions.DocumentsUpload, PatientPermissions.Module, "Upload patient documents",
-            [SystemRoles.Receptionist, SystemRoles.Doctor, SystemRoles.Nurse]),
-        new(PatientPermissions.DocumentsDelete, PatientPermissions.Module, "Remove patient documents", [])
+            [SystemRoles.Receptionist, SystemRoles.Doctor, SystemRoles.Nurse], RequiresExplicitGrant: true),
+        new(PatientPermissions.DocumentsDelete, PatientPermissions.Module, "Remove patient documents", [], RequiresExplicitGrant: true)
     ];
 }
 
@@ -106,6 +107,9 @@ public sealed record PatientUpdateDto : PatientDetailsDto
 public sealed record PatientStatusUpdateDto
 {
     public bool IsActive { get; init; }
+
+    /// <summary>Row version the client last saw; a stale value is rejected (409) so two users cannot overwrite each other.</summary>
+    public uint RowVersion { get; init; }
 }
 
 public sealed record PatientDto(

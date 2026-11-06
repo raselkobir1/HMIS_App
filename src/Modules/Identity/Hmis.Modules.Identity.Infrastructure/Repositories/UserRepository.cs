@@ -31,6 +31,9 @@ public sealed class UserRepository(IdentityDbContext context)
     public Task<bool> EmployeeLinkedAsync(Guid employeeId, Guid? excludeUserId, CancellationToken cancellationToken) =>
         Set.AnyAsync(u => u.EmployeeId == employeeId && u.Id != excludeUserId, cancellationToken);
 
+    public async Task<IReadOnlyList<User>> GetByEmployeeIdAsync(Guid employeeId, CancellationToken cancellationToken) =>
+        await Set.Include(u => u.Roles).Where(u => u.EmployeeId == employeeId).ToListAsync(cancellationToken);
+
     public async Task<PagedResponse<UserListItemDto>> SearchAsync(UserListQuery query, DateTime utcNow, CancellationToken cancellationToken)
     {
         var users = Set.AsNoTracking();
@@ -81,7 +84,8 @@ public sealed class UserRepository(IdentityDbContext context)
                     .Where(ur => ur.UserId == u.Id)
                     .Join(Context.Roles, ur => ur.RoleId, r => r.Id, (_, r) => r.Name)
                     .OrderBy(name => name)
-                    .ToList()))
+                    .ToList(),
+                u.RowVersion))
             .ToListAsync(cancellationToken);
 
         return PagedResponse<UserListItemDto>.Create(items, total, query);

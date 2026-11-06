@@ -1,6 +1,7 @@
 using FluentValidation;
 using Hmis.BuildingBlocks.Application.Abstractions;
 using Hmis.BuildingBlocks.Application.Validators;
+using Hmis.Modules.HR.Domain.Entities;
 
 namespace Hmis.Modules.HR.Application;
 
@@ -79,7 +80,9 @@ public sealed class EmployeeLookupQueryValidator : AbstractValidator<EmployeeLoo
 internal static class HrRules
 {
     public static IRuleBuilderOptions<T, string> EmployeeMobile<T>(this IRuleBuilder<T, string> rule) =>
-        rule.NotEmpty().MaximumLength(20).Matches(@"^\+?[0-9\s-]{6,20}$").WithMessage("Mobile number is not valid.");
+        rule.NotEmpty().MaximumLength(20).Matches(@"^\+?[0-9\s-]{6,20}$").WithMessage("Mobile number is not valid.")
+            .Must(m => m.Count(char.IsDigit) >= Employee.MinMobileDigits)
+            .WithMessage($"Mobile number needs at least {Employee.MinMobileDigits} digits.");
 
     /// <summary>Joining dates up to a year ahead are allowed so new hires can be registered before they start.</summary>
     public static IRuleBuilderOptions<T, DateOnly> JoiningDate<T>(this IRuleBuilder<T, DateOnly> rule, DateOnly today) =>
