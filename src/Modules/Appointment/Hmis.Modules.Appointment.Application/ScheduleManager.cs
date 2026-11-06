@@ -31,10 +31,15 @@ public sealed class ScheduleManager(
 
         var schedule = DoctorSchedule.Create(request.DoctorId, request.DayOfWeek, request.StartTime, request.EndTime,
             request.MaxPatients, request.AverageMinutesPerPatient, request.Room, request.EffectiveFrom, request.EffectiveTo);
-        await EnsureNoOverlapAsync(schedule, cancellationToken);
 
-        await schedules.AddAsync(schedule, cancellationToken);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        await unitOfWork.ExecuteInTransactionAsync(async ct =>
+        {
+            await EnsureNoOverlapAsync(schedule, ct);
+            await schedules.AddAsync(schedule, ct);
+            await unitOfWork.SaveChangesAsync(ct);
+            return true;
+        }, cancellationToken);
+
         return ToDto(schedule, new Dictionary<Guid, DoctorSummary> { [doctor.DoctorId] = doctor });
     }
 
@@ -69,8 +74,14 @@ public sealed class ScheduleManager(
 
         schedule.Update(request.DayOfWeek, request.StartTime, request.EndTime, request.MaxPatients,
             request.AverageMinutesPerPatient, request.Room, request.EffectiveFrom, request.EffectiveTo);
-        await EnsureNoOverlapAsync(schedule, cancellationToken);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await unitOfWork.ExecuteInTransactionAsync(async ct =>
+        {
+            await EnsureNoOverlapAsync(schedule, ct);
+            await unitOfWork.SaveChangesAsync(ct);
+            return true;
+        }, cancellationToken);
+
         return ToDto(schedule, await DoctorsAsync([schedule.DoctorId], cancellationToken));
     }
 
@@ -80,7 +91,12 @@ public sealed class ScheduleManager(
         if (request.IsActive)
         {
             schedule.Activate();
-            await EnsureNoOverlapAsync(schedule, cancellationToken);
+            await unitOfWork.ExecuteInTransactionAsync(async ct =>
+            {
+                await EnsureNoOverlapAsync(schedule, ct);
+                await unitOfWork.SaveChangesAsync(ct);
+                return true;
+            }, cancellationToken);
         }
         else
         {
@@ -92,9 +108,9 @@ public sealed class ScheduleManager(
             }
 
             schedule.Deactivate();
+            await unitOfWork.SaveChangesAsync(cancellationToken);
         }
 
-        await unitOfWork.SaveChangesAsync(cancellationToken);
         return ToDto(schedule, await DoctorsAsync([schedule.DoctorId], cancellationToken));
     }
 
@@ -159,8 +175,13 @@ public sealed class ScheduleManager(
     private async Task<DoctorSchedule> GetAsync(Guid id, CancellationToken cancellationToken) =>
         await schedules.GetByIdAsync(id, cancellationToken) ?? throw new NotFoundException("Session", id);
 
+    /// <summary>
+    /// Overlap check under the per-doctor lock (call inside the transaction that saves the session), so two
+    /// concurrent saves for the same doctor cannot both pass the read-then-write check.
+    /// </summary>
     private async Task EnsureNoOverlapAsync(DoctorSchedule schedule, CancellationToken cancellationToken)
     {
+        await schedules.LockDoctorAsync(schedule.DoctorId, cancellationToken);
         var existing = await schedules.GetActiveForDoctorAsync(schedule.DoctorId, cancellationToken);
         if (existing.FirstOrDefault(schedule.OverlapsWith) is { } clash)
         {

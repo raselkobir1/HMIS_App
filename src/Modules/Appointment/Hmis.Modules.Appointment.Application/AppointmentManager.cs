@@ -9,6 +9,7 @@ using Hmis.BuildingBlocks.Contracts.HR;
 using Hmis.BuildingBlocks.Contracts.Identity;
 using Hmis.BuildingBlocks.Contracts.Patient;
 using Hmis.Modules.Appointment.Domain.Entities;
+using Microsoft.Extensions.Logging;
 using AppointmentEntity = Hmis.Modules.Appointment.Domain.Entities.Appointment;
 
 namespace Hmis.Modules.Appointment.Application;
@@ -25,7 +26,8 @@ public sealed class AppointmentManager(
     IChargeService charges,
     ICurrentUser currentUser,
     IDateTimeProvider dateTime,
-    INotificationService notifications) : IAppointmentManager, IOpdEncounterService
+    INotificationService notifications,
+    ILogger<AppointmentManager> logger) : IAppointmentManager, IOpdEncounterService
 {
     // ---------- Availability ----------
 
@@ -206,6 +208,7 @@ public sealed class AppointmentManager(
     public async Task<MyQueueDto> GetMyQueueAsync(QueueQuery query, CancellationToken cancellationToken)
     {
         var doctorId = await GetCurrentDoctorIdAsync(cancellationToken);
+        await CloseStaleConsultationsAsync(doctorId, cancellationToken);
         var date = query.Date ?? dateTime.LocalToday;
         var list = await appointments.GetForDateAsync(date, doctorId, cancellationToken);
         var context = await LoadContextAsync(list, cancellationToken);
@@ -322,9 +325,14 @@ public sealed class AppointmentManager(
         return await ToDtoAsync(appointment, cancellationToken);
     }
 
+    /// <summary>
+    /// One patient at a time per doctor, checked against today's queue only; the database index behind it
+    /// (translated by the unit of work) catches two simultaneous starts.
+    /// </summary>
     private async Task StartAsync(AppointmentEntity appointment, CancellationToken cancellationToken)
     {
-        if (await appointments.HasConsultationInProgressAsync(appointment.DoctorId, appointment.Id, cancellationToken))
+        await CloseStaleConsultationsAsync(appointment.DoctorId, cancellationToken);
+        if (await appointments.HasConsultationInProgressAsync(appointment.DoctorId, dateTime.LocalToday, appointment.Id, cancellationToken))
         {
             throw new BusinessException(AppointmentErrorCodes.ConsultationInProgress, "Complete the current consultation before calling the next patient.");
         }
@@ -333,17 +341,45 @@ public sealed class AppointmentManager(
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    /// <summary>Capacity check + next serial under the session-day lock (call inside a transaction).</summary>
+    /// <summary>
+    /// A consultation the doctor never completed on an earlier day is closed as Completed when the doctor next opens
+    /// the queue or calls a patient; left open it would block the queue (and the one-in-consultation index) forever.
+    /// A draft consultation note attached to such a visit can still be finalized (Clinical completes idempotently).
+    /// </summary>
+    private async Task CloseStaleConsultationsAsync(Guid doctorId, CancellationToken cancellationToken)
+    {
+        var today = dateTime.LocalToday;
+        var stale = await appointments.GetStaleConsultationsAsync(doctorId, today, cancellationToken);
+        if (stale.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var appointment in stale)
+        {
+            appointment.CloseStaleConsultation(today, dateTime.UtcNow);
+            logger.LogWarning("Appointment {AppointmentNumber} of {AppointmentDate} was left in consultation; closed automatically for doctor {DoctorId}",
+                appointment.AppointmentNumber, appointment.AppointmentDate, doctorId);
+        }
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Capacity check + next serial under the doctor-day lock (call inside a transaction). One lock per doctor and date
+    /// covers all of that doctor's sessions, so the one-appointment-per-doctor-per-day check is serialized as well.
+    /// </summary>
     private async Task<int> ReserveSerialAsync(DoctorSchedule schedule, DateOnly date, Guid patientId, Guid? excludeAppointmentId, CancellationToken cancellationToken)
     {
-        await appointments.LockSessionDayAsync(schedule.Id, date, cancellationToken);
+        await appointments.LockDoctorDayAsync(schedule.DoctorId, date, cancellationToken);
 
         if (await appointments.PatientHasActiveWithDoctorAsync(patientId, schedule.DoctorId, date, excludeAppointmentId, cancellationToken))
         {
             throw new ConflictException("This patient already has an appointment with this doctor on that date.", AppointmentErrorCodes.AlreadyBooked);
         }
 
-        var count = await appointments.GetSessionCountAsync(schedule.Id, date, cancellationToken);
+        // An appointment rescheduled within its own session keeps its place, so it does not count against capacity.
+        var count = await appointments.GetSessionCountAsync(schedule.Id, date, excludeAppointmentId, cancellationToken);
         if (count.Booked >= schedule.MaxPatients)
         {
             throw new BusinessException(AppointmentErrorCodes.SessionFull, $"This session is full ({schedule.MaxPatients} patients).");
