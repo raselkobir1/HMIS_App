@@ -60,6 +60,9 @@ public sealed record SystemSettingsUpdateDto
 public sealed record StatusUpdateDto
 {
     public bool IsActive { get; init; }
+
+    /// <summary>Row version the client last saw; a stale value is rejected (409) so two administrators cannot overwrite each other.</summary>
+    public uint RowVersion { get; init; }
 }
 
 // ---------- Departments ----------

@@ -68,8 +68,8 @@ export class AdministrationApiService {
     return this.send<Department>('put', `/departments/${id}`, request);
   }
 
-  setDepartmentStatus(id: string, isActive: boolean): Observable<Department> {
-    return this.send<Department>('patch', `/departments/${id}/status`, { isActive });
+  setDepartmentStatus(id: string, isActive: boolean, rowVersion: number): Observable<Department> {
+    return this.send<Department>('patch', `/departments/${id}/status`, { isActive, rowVersion });
   }
 
   searchDesignations(query: DesignationQuery): Observable<PagedResponse<Designation>> {
@@ -84,8 +84,8 @@ export class AdministrationApiService {
     return this.send<Designation>('put', `/designations/${id}`, request);
   }
 
-  setDesignationStatus(id: string, isActive: boolean): Observable<Designation> {
-    return this.send<Designation>('patch', `/designations/${id}/status`, { isActive });
+  setDesignationStatus(id: string, isActive: boolean, rowVersion: number): Observable<Designation> {
+    return this.send<Designation>('patch', `/designations/${id}/status`, { isActive, rowVersion });
   }
 
   getSequences(): Observable<NumberSequence[]> {

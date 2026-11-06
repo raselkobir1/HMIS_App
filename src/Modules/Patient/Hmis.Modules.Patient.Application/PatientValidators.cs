@@ -22,7 +22,7 @@ public class PatientDetailsValidator<T> : AbstractValidator<T> where T : Patient
             .LessThanOrEqualTo(today).WithMessage("Date of birth cannot be in the future.")
             .GreaterThan(today.AddYears(-130)).WithMessage("Date of birth is not plausible.");
         RuleFor(x => x.BloodGroup).IsInEnum();
-        RuleFor(x => x.MobileNumber).NotEmpty().Matches(@"^\+?[0-9\s-]{6,20}$").WithMessage("Mobile number is not valid.");
+        RuleFor(x => x.MobileNumber).Mobile();
         RuleFor(x => x.Email).MaximumLength(256).EmailAddress().When(x => !string.IsNullOrWhiteSpace(x.Email));
         RuleFor(x => x.PresentAddress).NotNull().SetValidator(new AddressValidator());
         RuleFor(x => x.PermanentAddress).NotNull().SetValidator(new AddressValidator());
@@ -69,8 +69,18 @@ public sealed class EmergencyContactValidator : AbstractValidator<EmergencyConta
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(150);
         RuleFor(x => x.Relation).NotEmpty().MaximumLength(50);
-        RuleFor(x => x.MobileNumber).NotEmpty().Matches(@"^\+?[0-9\s-]{6,20}$").WithMessage("Mobile number is not valid.");
+        RuleFor(x => x.MobileNumber).Mobile();
     }
+}
+
+internal static class PatientRules
+{
+    /// <summary>Spaces, dashes and a leading '+' are accepted for typing; the stored value is digits only (Q-PAT-4).</summary>
+    public static IRuleBuilderOptions<T, string> Mobile<T>(this IRuleBuilder<T, string> rule) =>
+        rule.NotEmpty()
+            .Matches(@"^\+?[0-9\s-]{6,20}$").WithMessage("Mobile number is not valid.")
+            .Must(m => m.Count(char.IsDigit) >= PatientEntity.MinMobileDigits)
+            .WithMessage($"Mobile number needs at least {PatientEntity.MinMobileDigits} digits.");
 }
 
 public sealed class PatientSearchQueryValidator : PaginationRequestValidator<PatientSearchQuery>

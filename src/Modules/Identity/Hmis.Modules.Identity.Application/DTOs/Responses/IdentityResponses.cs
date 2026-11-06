@@ -25,7 +25,8 @@ public sealed record UserListItemDto(
     bool IsLockedOut,
     bool MustChangePassword,
     DateTime? LastLoginAt,
-    IReadOnlyList<string> Roles);
+    IReadOnlyList<string> Roles,
+    uint RowVersion);
 
 public sealed record UserDetailDto(
     Guid Id,

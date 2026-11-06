@@ -23,6 +23,9 @@ public interface IUserRepository : IRepository<User>, IConcurrencyRepository<Use
 
     Task<bool> EmployeeLinkedAsync(Guid employeeId, Guid? excludeUserId, CancellationToken cancellationToken);
 
+    /// <summary>Login accounts linked to an HR employee, with roles (tracked; normally one account).</summary>
+    Task<IReadOnlyList<User>> GetByEmployeeIdAsync(Guid employeeId, CancellationToken cancellationToken);
+
     Task<PagedResponse<UserListItemDto>> SearchAsync(UserListQuery query, DateTime utcNow, CancellationToken cancellationToken);
 
     Task<UserDetailDto?> GetDetailAsync(Guid id, DateTime utcNow, CancellationToken cancellationToken);

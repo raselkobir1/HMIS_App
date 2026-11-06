@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { FormArray, FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormArray, FormGroup, NonNullableFormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCardModule } from '@angular/material/card';
@@ -35,6 +35,17 @@ import {
 } from '../patient.models';
 
 const MOBILE_PATTERN = /^\+?[0-9\s-]{6,20}$/;
+
+/** An ID document needs both its type and number (the API rejects one without the other). */
+function identificationTypeRequired(control: AbstractControl): ValidationErrors | null {
+  const number = control.parent?.get('identificationNumber')?.value as string | null | undefined;
+  return !control.value && number?.trim() ? { identificationTypeRequired: true } : null;
+}
+
+function identificationNumberRequired(control: AbstractControl): ValidationErrors | null {
+  const type = control.parent?.get('identificationType')?.value as string | null | undefined;
+  return type && !(control.value as string)?.trim() ? { identificationNumberRequired: true } : null;
+}
 
 type DuplicateQuery = {
   fullName: string | null;
@@ -106,8 +117,8 @@ export class PatientFormPage implements OnInit {
     presentAddress: this.addressGroup(),
     sameAsPresent: [true],
     permanentAddress: this.addressGroup(),
-    identificationType: [null as IdentificationType | null],
-    identificationNumber: ['', [Validators.maxLength(30), Validators.pattern(/^[A-Za-z0-9\s-]*$/)]],
+    identificationType: [null as IdentificationType | null, identificationTypeRequired],
+    identificationNumber: ['', [Validators.maxLength(30), Validators.pattern(/^[A-Za-z0-9\s-]*$/), identificationNumberRequired]],
     guardianName: ['', Validators.maxLength(150)],
     guardianRelation: ['', Validators.maxLength(50)],
     emergencyContacts: this.fb.array<FormGroup>([]),
@@ -121,6 +132,15 @@ export class PatientFormPage implements OnInit {
   }
 
   constructor() {
+    // Each ID field's validity depends on the other, so a change to one re-validates its partner.
+    const { identificationType, identificationNumber } = this.form.controls;
+    identificationType.valueChanges
+      .pipe(distinctUntilChanged(), takeUntilDestroyed())
+      .subscribe(() => this.revalidatePartner(identificationNumber, identificationType.dirty));
+    identificationNumber.valueChanges
+      .pipe(distinctUntilChanged(), takeUntilDestroyed())
+      .subscribe(() => this.revalidatePartner(identificationType, identificationNumber.dirty));
+
     // Live duplicate check while the receptionist types (warnings; an exact ID match blocks saving).
     this.form.valueChanges
       .pipe(
@@ -197,6 +217,13 @@ export class PatientFormPage implements OnInit {
     });
   }
 
+  private revalidatePartner(control: AbstractControl, showNow: boolean): void {
+    control.updateValueAndValidity();
+    if (showNow && control.invalid) {
+      control.markAsTouched();
+    }
+  }
+
   private addressGroup() {
     return this.fb.group({
       line: ['', Validators.maxLength(250)],
@@ -265,8 +292,8 @@ export class PatientFormPage implements OnInit {
       email: blank(v.email),
       presentAddress: present,
       permanentAddress: v.sameAsPresent ? present : address(v.permanentAddress),
-      identificationType: blank(v.identificationNumber) ? v.identificationType : null,
-      identificationNumber: v.identificationType ? blank(v.identificationNumber) : null,
+      identificationType: v.identificationType,
+      identificationNumber: blank(v.identificationNumber),
       guardianName: blank(v.guardianName),
       guardianRelation: blank(v.guardianRelation),
       emergencyContacts: this.contacts.getRawValue().map((c) => ({

@@ -24,6 +24,7 @@ export interface UserListItem {
   mustChangePassword: boolean;
   lastLoginAt: string | null;
   roles: string[];
+  rowVersion: number;
 }
 
 export interface UserDetail {

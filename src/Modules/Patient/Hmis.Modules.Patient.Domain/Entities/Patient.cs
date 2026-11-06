@@ -59,6 +59,7 @@ public sealed record EmergencyContact(string Name, string Relation, string Mobil
 public sealed class Patient : AuditableEntity, IAggregateRoot, IHasConcurrencyToken
 {
     public const int MaxEmergencyContacts = 3;
+    public const int MinMobileDigits = 6;
 
     private Patient() { }
 
@@ -194,7 +195,7 @@ public sealed class Patient : AuditableEntity, IAggregateRoot, IHasConcurrencyTo
         DateOfBirth = d.DateOfBirth;
         IsDateOfBirthEstimated = d.IsDateOfBirthEstimated;
         BloodGroup = d.BloodGroup;
-        MobileNumber = d.MobileNumber.Trim();
+        MobileNumber = NormalizeMobile(d.MobileNumber);
         Email = Clean(d.Email);
         PresentAddress = d.PresentAddress;
         PermanentAddress = d.PermanentAddress;
@@ -202,7 +203,24 @@ public sealed class Patient : AuditableEntity, IAggregateRoot, IHasConcurrencyTo
         IdentificationNumber = NormalizeIdentification(d.IdentificationNumber);
         GuardianName = Clean(d.GuardianName);
         GuardianRelation = Clean(d.GuardianRelation);
-        EmergencyContacts = d.EmergencyContacts.ToList();
+        EmergencyContacts = d.EmergencyContacts
+            .Select(c => c with { Name = c.Name.Trim(), Relation = c.Relation.Trim(), MobileNumber = NormalizeMobile(c.MobileNumber) })
+            .ToList();
+    }
+
+    /// <summary>
+    /// Mobile numbers are stored as digits only (Q-PAT-4): "+88 01712-345678" and "01712345678" are the same number for
+    /// duplicate detection and search, however the receptionist typed them.
+    /// </summary>
+    public static string NormalizeMobile(string value)
+    {
+        var digits = new string(value.Where(char.IsDigit).ToArray());
+        if (digits.Length < MinMobileDigits)
+        {
+            throw new DomainException("PATIENT_MOBILE_INVALID", $"A mobile number needs at least {MinMobileDigits} digits.");
+        }
+
+        return digits;
     }
 
     /// <summary>ID numbers are compared without spaces or dashes and case-insensitively.</summary>

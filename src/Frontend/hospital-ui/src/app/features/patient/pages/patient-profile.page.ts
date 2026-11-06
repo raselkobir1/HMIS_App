@@ -149,7 +149,7 @@ export class PatientProfilePage implements OnInit {
       .afterClosed()
       .pipe(
         filter(Boolean),
-        switchMap(() => this.api.setStatus(p.id, activate)),
+        switchMap(() => this.api.setStatus(p.id, activate, p.rowVersion)),
       )
       .subscribe({
         next: (updated) => this.patient.set(updated),

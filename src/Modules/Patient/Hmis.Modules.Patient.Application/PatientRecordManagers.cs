@@ -125,7 +125,8 @@ public sealed class PatientDocumentManager(
     IPatientUnitOfWork unitOfWork,
     IFileStorageService fileStorage,
     IDateTimeProvider dateTime,
-    ICurrentUser currentUser) : IPatientDocumentManager
+    ICurrentUser currentUser,
+    IAuditService auditService) : IPatientDocumentManager
 {
     public const long MaxDocumentBytes = 10 * 1024 * 1024;
 
@@ -190,6 +191,13 @@ public sealed class PatientDocumentManager(
     public async Task<DocumentContent> OpenAsync(Guid patientId, Guid documentId, CancellationToken cancellationToken)
     {
         var document = await GetDocumentAsync(patientId, documentId, cancellationToken);
+
+        // Opening a clinical document is a sensitive read and is recorded like a medical-info view (BRD 11).
+        await auditService.RecordImmediateAsync(
+            new AuditEvent("Download", PatientPermissions.Module, nameof(PatientDocument), documentId.ToString(),
+                NewValues: new { PatientId = patientId, document.Category, document.FileName }),
+            cancellationToken);
+
         var stream = await fileStorage.OpenReadAsync(document.StoragePath, cancellationToken)
             ?? throw new NotFoundException("Document file", documentId);
         return new DocumentContent(stream, document.ContentType, document.FileName);

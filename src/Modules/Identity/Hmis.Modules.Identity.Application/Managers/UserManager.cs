@@ -73,6 +73,7 @@ public sealed class UserManager(
     {
         EnsureNotSelf(id, "You cannot change the status of your own account.");
         var user = await GetUserAsync(id, cancellationToken);
+        userRepository.SetExpectedRowVersion(user, request.RowVersion);
 
         if (request.IsActive)
         {
@@ -111,6 +112,8 @@ public sealed class UserManager(
     public async Task<UserDetailDto> UnlockAsync(Guid id, CancellationToken cancellationToken)
     {
         var user = await GetUserAsync(id, cancellationToken);
+        await EnsureCanManageSuperAdministratorAsync(user, cancellationToken);
+
         user.Unlock();
         auditService.Record(new AuditEvent("Unlocked", Module, nameof(User), user.Id.ToString()));
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -134,6 +137,8 @@ public sealed class UserManager(
     public async Task<UserDetailDto> SetPermissionsAsync(Guid id, UserPermissionsUpdateDto request, CancellationToken cancellationToken)
     {
         var user = await GetUserAsync(id, cancellationToken);
+        // Direct grants widen or narrow a Super Administrator's access just like a role change would.
+        await EnsureCanManageSuperAdministratorAsync(user, cancellationToken);
         var permissionIds = request.PermissionIds.Distinct().ToList();
 
         var found = await permissionRepository.GetByIdsAsync(permissionIds, cancellationToken);
