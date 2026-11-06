@@ -7,6 +7,7 @@ x-api-env: &api-env
   ConnectionStrings__HmisDatabase: Host=postgres;Port=5432;Database=hmis;Username=${HMIS_DB_USER:-hmis};Password=${HMIS_DB_PASSWORD:-hmis_dev_password}
   Jwt__SigningKey: ${HMIS_JWT_SIGNING_KEY:-}
   Identity__SeedAdmin__Password: ${HMIS_SEED_ADMIN_PASSWORD:-}
+  DemoData__Enabled: ${HMIS_SEED_DEMO_DATA:-false}
 
 services:
   postgres:

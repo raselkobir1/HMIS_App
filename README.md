@@ -32,6 +32,7 @@ This starts PostgreSQL, applies all migrations (`migrator` container, exits when
 | API (direct) | http://localhost:5380/health |
 
 - Sign in at http://localhost:4380 as `superadmin` with the seed password.
+- Optional demo logins for development: set `HMIS_SEED_DEMO_DATA=true` in `.env` before starting. This seeds one employee per role and the logins `admin1`, `reception1`, `cashier1`, `nurse1` and `doctor1` (doctor profile included), all with password `Demo@2026`. Never enable it on a production install.
 - After pulling new code, run `docker compose up -d --build` again. New migrations are applied automatically.
 - Logs: `docker compose logs -f api`.
 - Stop: `docker compose down`. Data is kept in the `hmis-pgdata` volume.
@@ -63,6 +64,7 @@ npm start
 ```
 
 Sign in at http://localhost:4300 as `superadmin` with the seed password. You must change it at first sign-in.
+In the Development environment the demo logins (`admin1`, `reception1`, `cashier1`, `nurse1`, `doctor1` / `Demo@2026`) are seeded as well, via `DemoData:Enabled` in `appsettings.Development.json`.
 To see the configured seed password: `dotnet user-secrets list --project src/Api/Hmis.Api`.
 
 New migration: `./scripts/add-migration.ps1 -Module Identity -Name <MigrationName>`.

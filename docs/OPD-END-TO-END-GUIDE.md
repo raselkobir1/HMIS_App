@@ -50,6 +50,22 @@ one login. It does **not** hold the clinical permissions (vitals, consultations)
 granted to the super administrator automatically. For Part B you therefore need real role logins,
 and in any case one login per role shows exactly what each role can do.
 
+**Shortcut for development installs.** With demo data enabled (`HMIS_SEED_DEMO_DATA=true` in `.env`
+for Docker, or the Development environment for `dotnet run`), steps A3 to A6 are already done for a
+demo team. The seed creates one employee per role, a doctor profile for the demo doctor, and these
+logins, all with password `Demo@2026` and no forced password change:
+
+| Username | Role | Linked employee |
+|---|---|---|
+| admin1 | Hospital Administrator | Demo Administrator |
+| reception1 | Receptionist | Demo Receptionist |
+| cashier1 | Accountant / Cashier | Demo Cashier |
+| nurse1 | Nurse | Demo Nurse |
+| doctor1 | Doctor | Dr. Demo Doctor (Consultant, General Medicine, fees 500 / 300) |
+
+You still need A8 (doctor sessions) before anything can be booked. Never enable demo data on a
+production install.
+
 ### A2. Check departments and designations
 
 Menu: **Administration > Departments** and **Administration > Designations**.

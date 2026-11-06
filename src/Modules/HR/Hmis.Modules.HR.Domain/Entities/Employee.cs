@@ -67,9 +67,16 @@ public sealed class Employee : AuditableEntity, IAggregateRoot, IHasConcurrencyT
         Guid departmentId,
         Guid designationId,
         EmploymentType employmentType,
-        DateOnly joiningDate)
+        DateOnly joiningDate,
+        Guid? id = null)
     {
         var employee = new Employee { EmployeeCode = employeeCode };
+        if (id is { } fixedId)
+        {
+            // Only startup seeding passes an id, so demo records keep a well-known identity across restarts.
+            employee.Id = fixedId;
+        }
+
         employee.Update(fullName, gender, dateOfBirth, mobileNumber, email, address, departmentId, designationId, employmentType, joiningDate);
         return employee;
     }

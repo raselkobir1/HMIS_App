@@ -18,6 +18,9 @@ public interface IDepartmentLookup
     Task<DepartmentSummary?> GetAsync(Guid id, CancellationToken cancellationToken);
 
     Task<IReadOnlyList<DepartmentSummary>> GetManyAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
+
+    /// <summary>All active departments, by name.</summary>
+    Task<IReadOnlyList<DepartmentSummary>> GetActiveAsync(CancellationToken cancellationToken);
 }
 
 public interface IDesignationLookup
@@ -25,6 +28,9 @@ public interface IDesignationLookup
     Task<DesignationSummary?> GetAsync(Guid id, CancellationToken cancellationToken);
 
     Task<IReadOnlyList<DesignationSummary>> GetManyAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
+
+    /// <summary>All active designations, by name.</summary>
+    Task<IReadOnlyList<DesignationSummary>> GetActiveAsync(CancellationToken cancellationToken);
 }
 
 /// <summary>

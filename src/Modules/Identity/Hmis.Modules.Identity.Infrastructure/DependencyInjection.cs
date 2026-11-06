@@ -26,6 +26,8 @@ public static class DependencyInjection
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
         services.Configure<AccountSecurityOptions>(configuration.GetSection(AccountSecurityOptions.SectionName));
         services.Configure<SeedAdminOptions>(configuration.GetSection(SeedAdminOptions.SectionName));
+        services.Configure<Hmis.BuildingBlocks.Application.Seeding.DemoDataOptions>(
+            configuration.GetSection(Hmis.BuildingBlocks.Application.Seeding.DemoDataOptions.SectionName));
 
         // Repositories
         services.AddScoped<IUserRepository, UserRepository>();
@@ -43,6 +45,7 @@ public static class DependencyInjection
         services.AddScoped<Hmis.BuildingBlocks.Contracts.Identity.IUserDirectory, UserDirectory>();
         services.AddSingleton<IPermissionDefinitionProvider, IdentityPermissionDefinitionProvider>();
         services.AddScoped<IStartupTask, IdentitySeedTask>();
+        services.AddScoped<IStartupTask, IdentityDemoUsersSeedTask>();
 
         // Managers
         services.AddScoped<IAuthManager, AuthManager>();

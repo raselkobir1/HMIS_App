@@ -142,6 +142,10 @@ public static class DependencyInjection
         services.AddSingleton<IPermissionDefinitionProvider, HrPermissionDefinitionProvider>();
         services.AddSingleton<IPermissionDefinitionProvider, DoctorPermissionDefinitionProvider>();
         services.AddSingleton<INumberSequenceDefinitionProvider, HrNumberSequences>();
+
+        services.Configure<Hmis.BuildingBlocks.Application.Seeding.DemoDataOptions>(
+            configuration.GetSection(Hmis.BuildingBlocks.Application.Seeding.DemoDataOptions.SectionName));
+        services.AddScoped<IStartupTask, HrDemoSeedTask>();
         return services;
     }
 }

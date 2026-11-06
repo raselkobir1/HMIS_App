@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-06 — Demo data seed and OPD guide
+- `DemoData:Enabled` (off by default; on in Development and via `HMIS_SEED_DEMO_DATA=true` for Docker) seeds one demo employee per role, a doctor profile for the demo doctor, and the logins `admin1`, `reception1`, `cashier1`, `nurse1`, `doctor1` with the configured demo password. Idempotent; never for production.
+- Department and designation lookups expose the active lists to other modules.
+- `docs/OPD-END-TO-END-GUIDE.md`: hands-on walkthrough of setup, registration, booking, check-in, payment, consultation and reports.
+
 ## 2026-11-01 — Gap closure after reviewing Phases 1–4
 - Patient merge is blocked while the duplicate has upcoming appointments, a stay in progress, dues, a draft bill, a deposit or an unpaid refund; the surviving record shows the merged records' history.
 - A death discharge records the patient as deceased (no new appointments or admissions; correctable).

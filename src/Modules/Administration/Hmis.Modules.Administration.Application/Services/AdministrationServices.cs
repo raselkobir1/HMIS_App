@@ -24,6 +24,16 @@ public sealed class AdministrationLookups(
             .Select(d => new DepartmentSummary(d.Id, d.Code, d.Name, d.ParentDepartmentId, d.IsActive))
             .ToList();
 
+    async Task<IReadOnlyList<DepartmentSummary>> IDepartmentLookup.GetActiveAsync(CancellationToken cancellationToken) =>
+        (await departments.GetActiveLookupAsync(cancellationToken))
+            .Select(d => new DepartmentSummary(d.Id, d.Code, d.Name, d.ParentDepartmentId, true))
+            .ToList();
+
+    async Task<IReadOnlyList<DesignationSummary>> IDesignationLookup.GetActiveAsync(CancellationToken cancellationToken) =>
+        (await designations.GetActiveLookupAsync(cancellationToken))
+            .Select(d => new DesignationSummary(d.Id, d.Name, d.Category.ToString(), true))
+            .ToList();
+
     async Task<IReadOnlyList<DesignationSummary>> IDesignationLookup.GetManyAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken) =>
         (await designations.GetByIdsAsync(ids, cancellationToken))
             .Select(d => new DesignationSummary(d.Id, d.Name, d.Category.ToString(), d.IsActive))
